@@ -43,7 +43,7 @@ import type { PanelComponent } from "./types";
  *
  * There is no branch anywhere in this file on subject, provider or domain. If a
  * new subject cannot express itself with these thirty components, the fix is a
- * thirty-first component plus a new `PanelType` — never a conditional.
+ * thirty-first component plus a new `PanelType`, never a conditional.
  */
 export const PANEL_REGISTRY: Record<PanelType, PanelComponent> = {
   curriculum: CurriculumPanel,
