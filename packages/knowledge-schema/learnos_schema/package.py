@@ -415,7 +415,10 @@ def load_all_packages(root: str | Path, *, skip_unpublished: bool = False) -> di
     packages: dict[str, SubjectPackage] = {}
     for directory in discover_packages(root):
         package = load_subject_package(directory)
-        if skip_unpublished and package.manifest.status is not LifecycleStatus.PUBLISHED:
+        # By value, not identity: see ``SchemaModel``. As an identity check this
+        # skipped every package, published ones included, and returned an empty
+        # catalogue without raising.
+        if skip_unpublished and package.manifest.status != LifecycleStatus.PUBLISHED:
             continue
         packages[package.id] = package
     return packages

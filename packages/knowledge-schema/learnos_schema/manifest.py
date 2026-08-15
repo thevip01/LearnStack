@@ -93,6 +93,9 @@ class SubjectManifest(SchemaModel):
 
     @model_validator(mode="after")
     def _published_needs_hash(self) -> "SubjectManifest":
-        if self.status is LifecycleStatus.PUBLISHED and not self.content_hash:
+        # By value, not identity: see ``SchemaModel``. ``use_enum_values`` has already
+        # coerced ``status`` by the time an after-validator runs, so as an identity
+        # check this validator never fired and the guard existed only in the source.
+        if self.status == LifecycleStatus.PUBLISHED and not self.content_hash:
             raise ValueError("a published manifest must carry a content_hash")
         return self
