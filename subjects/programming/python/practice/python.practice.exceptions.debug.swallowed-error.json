@@ -1,0 +1,120 @@
+{
+  "id": "python.practice.exceptions.debug.swallowed-error",
+  "kind": "debug",
+  "title": "The except block that hides the real failure",
+  "subject_id": "programming.python",
+  "concept_id": "python.exceptions",
+  "skills": ["python.skill.define-error-contracts"],
+  "difficulty": 6,
+  "estimated_minutes": 20,
+  "prompt_md": "`load_config` reads a JSON file and returns the parsed dict. Someone wrapped it in a broad `try/except` to \"make it robust\". Now, when anything goes wrong, callers get an empty dict and no idea why — a missing file, a permissions error, and a typo in the JSON all look identical, and unrelated bugs (like a `KeyError` in a callback) get swallowed too.\n\nRewrite the error handling so the function honours a clear contract instead of hiding failures. It must:\n\n- Raise `FileNotFoundError` when the file does not exist (do not convert it to an empty dict).\n- Raise a `ConfigError` (provided) when the file exists but contains invalid JSON, chaining the original `json.JSONDecodeError` with `raise ... from`.\n- Not catch exceptions it has no business handling (e.g. `KeyError`, `KeyboardInterrupt`).\n- Return the parsed dict on success.\n\nDo not change the tests or the `ConfigError` class.",
+  "symptom_md": "```python\n>>> load_config(\"does-not-exist.json\")\n{}                              # should raise FileNotFoundError\n>>> load_config(\"broken.json\")  # file contains: {\"a\": 1,,}\n{}                              # should raise ConfigError explaining the parse failure\n```\n\nEvery failure mode collapses to the same silent `{}`. There is no way for a caller to tell \"no config yet\" from \"the config is corrupt\", and a stray bug inside the try block would vanish the same way.",
+  "tags": ["exceptions", "error-contract", "exception-chaining", "bare-except", "raise-from"],
+  "requirements_md": [
+    "A missing file raises `FileNotFoundError` (not a swallowed `{}`).",
+    "Invalid JSON raises `ConfigError`, chained from the original error with `raise ConfigError(...) from exc`.",
+    "Only the anticipated errors are caught; unrelated exceptions propagate.",
+    "On success the parsed dict is returned unchanged.",
+    "Do not modify the test file or the `ConfigError` definition."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "config.py",
+  "broken_files": [
+    {
+      "path": "config.py",
+      "content": "\"\"\"Load a JSON config file.\"\"\"\nimport json\n\n\nclass ConfigError(Exception):\n    \"\"\"Raised when a config file exists but cannot be parsed.\"\"\"\n\n\ndef load_config(path):\n    \"\"\"Return the parsed config dict from `path`.\"\"\"\n    try:\n        with open(path) as f:\n            return json.load(f)\n    except Exception:\n        # \"robust\": never blow up, just return an empty config\n        return {}\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "config.py",
+      "content": "\"\"\"Load a JSON config file.\"\"\"\nimport json\n\n\nclass ConfigError(Exception):\n    \"\"\"Raised when a config file exists but cannot be parsed.\"\"\"\n\n\ndef load_config(path):\n    \"\"\"Return the parsed config dict from `path`.\n\n    Raises FileNotFoundError if the file is absent and ConfigError if it exists\n    but is not valid JSON. Any other error propagates untouched.\n    \"\"\"\n    with open(path) as f:            # a missing file raises FileNotFoundError, as it should\n        try:\n            return json.load(f)\n        except json.JSONDecodeError as exc:\n            raise ConfigError(f\"invalid JSON in {path}: {exc}\") from exc\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-config-missing-file",
+      "name": "a missing file raises FileNotFoundError",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_missing.py",
+      "body": "import pytest\n\nfrom config import load_config\n\n\ndef test_missing_file_raises(tmp_path):\n    missing = tmp_path / \"nope.json\"\n    with pytest.raises(FileNotFoundError):\n        load_config(str(missing))\n"
+    },
+    {
+      "id": "test-config-invalid-json",
+      "name": "invalid JSON raises ConfigError chained from the parse error",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_invalid.py",
+      "body": "import json\n\nimport pytest\n\nfrom config import ConfigError, load_config\n\n\ndef test_invalid_json_raises_config_error(tmp_path):\n    p = tmp_path / \"broken.json\"\n    p.write_text('{\"a\": 1,,}')\n    with pytest.raises(ConfigError) as info:\n        load_config(str(p))\n    # the original decode error must be chained, not discarded\n    assert isinstance(info.value.__cause__, json.JSONDecodeError)\n"
+    },
+    {
+      "id": "test-config-success-and-passthrough",
+      "name": "valid config returns the dict; unrelated errors are not swallowed",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_success.py",
+      "body": "import pytest\n\nfrom config import load_config\n\n\ndef test_valid_config_returned(tmp_path):\n    p = tmp_path / \"ok.json\"\n    p.write_text('{\"debug\": true, \"retries\": 3}')\n    assert load_config(str(p)) == {\"debug\": True, \"retries\": 3}\n\n\ndef test_unrelated_error_not_swallowed(tmp_path, monkeypatch):\n    p = tmp_path / \"ok.json\"\n    p.write_text('{\"x\": 1}')\n\n    # If json.load raised something unexpected, it must propagate, not become {}.\n    import config\n\n    def boom(*a, **k):\n        raise KeyError(\"unexpected\")\n\n    monkeypatch.setattr(config.json, \"load\", boom)\n    with pytest.raises(KeyError):\n        load_config(str(p))\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "`except Exception: return {}` catches *everything* — the missing-file error, the JSON parse error, and any unrelated bug — and throws away the information. The first step is to stop catching broadly and only handle the specific things you can describe.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "Let `open()` raise `FileNotFoundError` on its own (don't wrap it). Put a narrow `try` around only `json.load`, catch `json.JSONDecodeError`, and re-raise your domain error: `raise ConfigError(...) from exc`. The `from exc` preserves the original as `__cause__` so the traceback shows both.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "```python\ndef load_config(path):\n    with open(path) as f:                    # missing file -> FileNotFoundError\n        try:\n            return json.load(f)\n        except json.JSONDecodeError as exc:\n            raise ConfigError(f\"invalid JSON in {path}: {exc}\") from exc\n```\nNarrow `except`, explicit chaining with `from exc`, and no catch-all — so a `KeyError` from anywhere else still propagates.",
+      "reveals_solution": true
+    }
+  ],
+  "root_cause_md": "`except Exception: return {}` is a **catch-all that erases the error contract**. Three very different situations — the file is absent (`FileNotFoundError`), the file is present but malformed (`json.JSONDecodeError`), and some unrelated bug (a `KeyError`, an `AttributeError`, even `MemoryError`) — are all flattened into the same silent empty dict. Callers can no longer distinguish \"there is no config\" from \"the config is corrupt\", and genuine bugs are hidden instead of surfaced.\n\nThe fix restores an explicit contract. Don't wrap `open()`, so a missing file raises `FileNotFoundError` as callers expect. Wrap only the parse step and catch only `json.JSONDecodeError`, translating it into the domain-specific `ConfigError` with `raise ConfigError(...) from exc`. The `from exc` sets `__cause__`, so the chained traceback shows both the high-level \"invalid config\" message and the exact decode error underneath — you get a meaningful contract *and* keep the diagnostic detail. Because nothing else is caught, unrelated exceptions propagate normally.",
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "debugging"
+  },
+  "sources": [
+    {
+      "source_id": "python.pep3134",
+      "url": "https://peps.python.org/pep-3134/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 3134 — Exception Chaining and Embedded Tracebacks"
+    },
+    {
+      "source_id": "python.docs.tutorial",
+      "url": "https://docs.python.org/3/tutorial/errors.html#raising-and-handling-multiple-unrelated-exceptions",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Errors and Exceptions — raising and handling"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

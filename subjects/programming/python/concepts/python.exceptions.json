@@ -1,0 +1,245 @@
+{
+  "id": "python.exceptions",
+  "title": "Exceptions and error contracts",
+  "subject_id": "programming.python",
+  "category": "Correctness",
+  "summary": "An exception is part of a function's interface, not an accident that happens to it. Deciding which exceptions a function raises, which it translates, and which it lets pass through is design work — and `except Exception: pass` is the decision to have no contract at all.",
+  "definition": "An exception is an instance of a class deriving from `BaseException`, raised to abandon the current execution path and unwind the stack until a matching `except` clause is found. The unwinding runs `finally` blocks and context-manager `__exit__` methods on the way out, and the traceback records the frames it passed through.",
+  "purpose": "Every function has two ways to finish, and only one of them is usually designed. Callers need to know what can go wrong in order to handle it: a retry loop needs to distinguish a timeout from a validation failure, and an HTTP layer needs to know which failures are the client's fault. Getting this right is also the difference between a traceback that names the cause and a log line saying `None` where an object was expected, three layers away from where the error actually happened.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "Python's control flow around exceptions has five clauses, and the two people forget are the useful ones:\n\n```python\ntry:\n    result = risky()\nexcept TimeoutError as exc:      # narrowest first; ordering is top-down\n    ...\nexcept OSError:                   # TimeoutError is a subclass — order matters\n    ...\nelse:\n    # runs only if no exception; keeps the try block down to the risky line\n    use(result)\nfinally:\n    # always runs: normal exit, exception, return, break\n    release()\n```\n\n`else` exists so that the `try` block contains only the statement that can fail. Putting `use(result)` inside `try` means an unrelated `TimeoutError` raised by `use` is caught by the handler written for `risky`, which is how a handler ends up lying about what failed.\n\nBecause `except` clauses are tested in order and match subclasses, a broad clause above a narrow one makes the narrow one dead code — and unlike most dead code, this kind changes behaviour silently.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/compound_stmts.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "8.4. The try statement"
+        },
+        {
+          "source_id": "python.docs.tutorial",
+          "url": "https://docs.python.org/3/tutorial/errors.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "8. Errors and Exceptions"
+        }
+      ]
+    },
+    {
+      "type": "diagram",
+      "format": "mermaid",
+      "caption": "The hierarchy that decides what your `except` clause catches",
+      "source": "graph TD\n  BE[BaseException] --> SE[SystemExit]\n  BE --> KI[KeyboardInterrupt]\n  BE --> GE[GeneratorExit]\n  BE --> E[Exception]\n  E --> AE[ArithmeticError]\n  E --> LE[LookupError]\n  E --> OS[OSError]\n  E --> VE[ValueError]\n  E --> TE[TypeError]\n  E --> RE[RuntimeError]\n  LE --> KE[KeyError]\n  LE --> IE[IndexError]\n  OS --> TO[TimeoutError]\n  OS --> CE[ConnectionError]\n  VE --> UDE[UnicodeDecodeError]"
+    },
+    {
+      "type": "callout",
+      "variant": "danger",
+      "title": "`except Exception: pass` is where outages come from",
+      "md": "It converts a loud failure into a quiet wrong answer. The job reports success, the metric stays green, and the missing rows are discovered a week later by someone reconciling totals.\n\nIf you must catch broadly — at a task boundary, a request handler, a plugin call site — then log with `exc_info=True`, record a failure metric, and re-raise or return an explicit error value. The rule worth internalising: catch an exception only when you can either fix the situation or add information. Otherwise let it travel.\n\nAlso note `except Exception` deliberately does *not* catch `KeyboardInterrupt` or `SystemExit`, because those derive from `BaseException` directly. `except BaseException` (or a bare `except:`) catches them, which is how a worker becomes unkillable by Ctrl-C."
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "Chaining: `raise ... from` is what keeps the cause in the traceback",
+      "runnable": true,
+      "code": "class ConfigError(Exception):\n    \"\"\"The caller's problem: the config file is wrong.\"\"\"\n\ndef load(raw):\n    try:\n        return int(raw[\"retries\"])\n    except KeyError as exc:\n        # Explicit cause: the traceback shows both, and __cause__ is set.\n        raise ConfigError(\"missing 'retries'\") from exc\n    except ValueError as exc:\n        raise ConfigError(f\"retries must be an integer, got {raw['retries']!r}\") from exc\n\ntry:\n    load({\"retries\": \"lots\"})\nexcept ConfigError as exc:\n    print(type(exc).__name__, \"|\", exc, \"| caused by\", type(exc.__cause__).__name__)",
+      "expected_output": "ConfigError | retries must be an integer, got 'lots' | caused by ValueError"
+    },
+    {
+      "type": "prose",
+      "md": "Chaining is the mechanism behind \"During handling of the above exception, another exception occurred\". If you raise inside an `except` block, Python sets `__context__` automatically and prints both. Writing `from exc` sets `__cause__` instead, which changes the wording to \"The above exception was the direct cause\" and states that the relationship is intentional. `from None` suppresses the chain entirely — appropriate when the inner error is an implementation detail the caller must not depend on, and inappropriate when someone will have to debug it at 3am.\n\nThe practical rule for layering: translate at boundaries and preserve the cause. A repository turning `asyncpg.UniqueViolationError` into `AlreadyExists` gives its callers a stable contract; doing it without `from exc` throws away the constraint name that says *which* uniqueness failed.",
+      "sources": [
+        {
+          "source_id": "python.pep3134",
+          "url": "https://peps.python.org/pep-3134/",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "PEP 3134 — Exception Chaining and Embedded Tracebacks"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "Reading a traceback: bottom-up, and the last frame is rarely the bug",
+      "runnable": false,
+      "code": "Traceback (most recent call last):\n  File \"app/handlers.py\", line 42, in create_user\n    profile = build_profile(payload)          # <- your code: start here\n  File \"app/profiles.py\", line 17, in build_profile\n    return Profile(name=payload[\"name\"])     # <- the failing statement\nKeyError: 'name'                              # <- the type and its argument\n\n# Read: the innermost frame is where it surfaced; the *cause* is usually the\n# frame above it that passed bad data. 'name' is the missing key, so the\n# question is which caller built a payload without it."
+    },
+    {
+      "type": "table",
+      "columns": ["Situation", "Raise", "Why not something else"],
+      "rows": [
+        ["A caller passed a value of the right type but an unusable value", "`ValueError`", "`TypeError` claims the type was wrong, which sends the reader hunting the wrong bug"],
+        ["A caller passed the wrong type entirely", "`TypeError`", "reserved for it; do not overload `ValueError`"],
+        ["A required key or index is absent", "`KeyError` / `IndexError`", "both are `LookupError`, so one clause can catch either"],
+        ["The object is in the wrong state for this call", "a custom subclass, or `RuntimeError`", "`ValueError` implies the argument was at fault"],
+        ["Not implemented yet, on purpose", "`NotImplementedError`", "`NotImplemented` is a *value* used by comparison dunders — a different thing entirely"],
+        ["A domain rule was violated", "your own `Exception` subclass", "callers need to catch this without also catching library bugs"],
+        ["An external system failed", "translate to your own error, `from exc`", "leaking the driver's exception type makes it part of your public API"]
+      ]
+    },
+    {
+      "type": "steps",
+      "title": "Designing a function's error contract",
+      "steps": [
+        "List the ways this function can fail that a caller could plausibly respond to differently. That list is the contract.",
+        "Give each one a type: a stdlib exception when the meaning matches exactly, otherwise a subclass of one project-level base exception.",
+        "Document them in the docstring. An undocumented raise is a bug the caller will find in production.",
+        "Translate foreign exceptions at the boundary with `raise MyError(...) from exc`, so the driver's types never reach callers.",
+        "Let everything else propagate. Unexpected exceptions are information, and catching them destroys it.",
+        "Put cleanup in `finally` or a context manager — never rely on the happy path to release a resource."
+      ]
+    },
+    {
+      "type": "term",
+      "term": "exception group",
+      "definition_md": "`ExceptionGroup` (3.11+) carries several unrelated exceptions raised concurrently — the normal outcome when a `TaskGroup` has multiple failing children. `except*` matches by type *within* the group and can handle some members while re-raising the rest, which plain `except` cannot express.",
+      "aliases": ["ExceptionGroup", "except*"]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.exceptions.quiz.contracts"
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "What operators need from your exceptions",
+      "md": "A message that identifies the specific instance, not the category. `\"config invalid\"` costs a debugging session; `\"config key 'retries' must be an integer, got 'lots'\"` costs nothing.\n\nAlso: never put secrets in an exception message, because messages end up in logs, error trackers and sometimes HTTP responses. Sanitise at the raise site — a connection error that includes the DSN has just written the password to your log aggregator.\n\nAnd keep the mapping to HTTP status codes in one place. Scattering `except ValueError: return 400` through handlers means the twentieth handler will disagree with the first."
+    }
+  ],
+  "components": [
+    { "name": "exception class", "role": "The type; what `except` matches on and the primary signal to the caller.", "required": true },
+    { "name": "message / args", "role": "The instance-specific detail that makes a log line actionable.", "required": true },
+    { "name": "__cause__ / __context__", "role": "The chain. `from exc` sets the cause explicitly; raising inside a handler sets context automatically.", "required": false },
+    { "name": "traceback", "role": "The frames the exception unwound through; the reading order is bottom-up.", "required": true },
+    { "name": "finally / __exit__", "role": "Cleanup that runs during unwinding, which is the only cleanup you can rely on.", "required": true }
+  ],
+  "prerequisites": ["python.control-flow-truthiness", "python.functions-and-signatures"],
+  "related": ["python.classes-and-dunders", "python.decorators"],
+  "common_errors": [
+    {
+      "error": "A failure disappears: the job logs success, but rows are missing.",
+      "cause": "`except Exception: pass`, or a handler that logs at DEBUG and continues.",
+      "fix": "Catch only what you can act on. When a broad catch is structurally necessary, log with `exc_info=True`, count a failure metric, and re-raise or return an explicit error.",
+      "sources": [
+        {
+          "source_id": "python.docs.tutorial",
+          "url": "https://docs.python.org/3/tutorial/errors.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "8.3. Handling Exceptions"
+        }
+      ]
+    },
+    {
+      "error": "A narrow `except TimeoutError` clause never fires.",
+      "cause": "A broader clause (`except OSError`) is listed above it, and clauses are tested in order with subclass matching.",
+      "fix": "Order handlers narrowest-first. If two are unrelated, order does not matter — but check the hierarchy before assuming they are."
+    },
+    {
+      "error": "A worker cannot be stopped with Ctrl-C, or exits with the wrong status code.",
+      "cause": "A bare `except:` or `except BaseException:` swallowing `KeyboardInterrupt` and `SystemExit`.",
+      "fix": "`except Exception:` for application errors. Only catch `BaseException` to run cleanup, and always re-raise."
+    },
+    {
+      "error": "A production traceback ends at your own wrapper exception with no sign of the real cause.",
+      "cause": "`raise MyError(str(exc))` discards the chain; `from None` suppresses it deliberately.",
+      "fix": "`raise MyError(...) from exc`. Reserve `from None` for cases where the inner error genuinely must not leak."
+    },
+    {
+      "error": "A `return` inside `try` appears to be overridden, or an exception vanishes without a handler.",
+      "cause": "A `return`, `break` or `continue` inside `finally` discards the in-flight exception and replaces the return value.",
+      "fix": "Keep `finally` to cleanup only. Never return or break from it."
+    },
+    {
+      "error": "`TypeError: catching classes that do not inherit from BaseException is not allowed`.",
+      "cause": "`except (ValueError, \"oops\")` or catching an instance instead of a class — often a stray comma.",
+      "fix": "Catch a class or a tuple of classes. `except (ValueError, TypeError) as exc:`."
+    },
+    {
+      "error": "An `except` clause runs but `exc` is undefined on the next line.",
+      "cause": "`as exc` is deleted at the end of the clause, deliberately, to avoid a reference cycle holding the whole frame.",
+      "fix": "Copy what you need out of the clause: `message = str(exc)` before leaving it."
+    }
+  ],
+  "best_practices": [
+    "Catch the narrowest exception that lets you take a specific action, and let everything else propagate.",
+    "Give your project one base exception and derive domain errors from it, so callers can catch your failures without catching library bugs.",
+    "Always `raise ... from exc` when translating at a boundary; the cause is the most valuable part of the report.",
+    "Write messages that identify the instance — the key, the value, the id — not just the category.",
+    "Use `else` to keep the `try` block down to the statements that can actually fail.",
+    "Put every resource release in a context manager or `finally`, and never a `return` in `finally`.",
+    "Document raised exceptions in the docstring; treat an undocumented raise as an interface change."
+  ],
+  "production_considerations": [
+    "Exception messages reach logs, error trackers and sometimes clients. Sanitise DSNs, tokens and PII at the raise site, not at the logging layer.",
+    "Map exceptions to HTTP status codes in one central handler. Duplicated per-route mapping drifts and produces inconsistent APIs.",
+    "Retries must key on exception type: a timeout is retryable, a validation error never is. This is the main reason a coarse error contract costs money.",
+    "`ExceptionGroup` from `asyncio.TaskGroup` means a single `except SomeError` may not fire even though `SomeError` occurred; concurrent code needs `except*`.",
+    "Exceptions in `__del__` and in generator finalisation are printed but not raised — cleanup logic that relies on them being caught will not work.",
+    "Raising in a hot loop is meaningfully slower than a conditional. Exceptions for control flow are idiomatic (`StopIteration`) but not free."
+  ],
+  "anti_patterns": [
+    "`except Exception: pass`, and its cousin `except Exception: return None`.",
+    "Bare `except:` anywhere.",
+    "`raise Exception(\"failed\")` — untyped, uncatchable-by-meaning, and indistinguishable from a bug.",
+    "Using exceptions for expected outcomes a caller must handle every time (a lookup miss is better as `Optional`).",
+    "`assert` for validating untrusted input: assertions are removed under `python -O`.",
+    "Logging and re-raising at every level, which multiplies one failure into ten log entries."
+  ],
+  "examples": [
+    {
+      "title": "A boundary that translates and preserves",
+      "language": "python",
+      "code": "class RepositoryError(Exception):\n    \"\"\"Base for every failure this layer is allowed to raise.\"\"\"\n\nclass AlreadyExists(RepositoryError):\n    pass\n\nasync def insert_user(conn, email):\n    try:\n        await conn.execute(\"insert into users(email) values($1)\", email)\n    except UniqueViolationError as exc:\n        # Callers catch AlreadyExists; the driver's type stays an implementation\n        # detail, and 'from exc' keeps the constraint name in the traceback.\n        raise AlreadyExists(f\"email {email!r} is taken\") from exc",
+      "md": "Two properties: the caller's contract is stable across a driver change, and the person reading the incident still learns which constraint fired."
+    },
+    {
+      "title": "`else` and `finally` doing their actual jobs",
+      "language": "python",
+      "code": "def read_config(path):\n    handle = open(path)\n    try:\n        raw = handle.read()\n    except OSError as exc:\n        raise ConfigError(f\"cannot read {path}\") from exc\n    else:\n        # Not in the try: a KeyError here is a parse bug, not a read failure.\n        return parse(raw)\n    finally:\n        handle.close()",
+      "output": null
+    }
+  ],
+  "skills": ["python.skill.define-error-contracts", "python.skill.debug-a-traceback"],
+  "practice": [
+    "python.practice.exceptions.quiz.contracts",
+    "python.practice.exceptions.debug.swallowed-error",
+    "python.practice.traceback.debug.read-the-chain"
+  ],
+  "keywords": ["exception", "traceback", "raise from", "chaining", "finally", "error contract", "ExceptionGroup"],
+  "estimated_minutes": 22,
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "8.4. The try statement"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/exceptions.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Built-in Exceptions — hierarchy"
+    },
+    {
+      "source_id": "python.docs.tutorial",
+      "url": "https://docs.python.org/3/tutorial/errors.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "8. Errors and Exceptions"
+    },
+    {
+      "source_id": "python.pep3134",
+      "url": "https://peps.python.org/pep-3134/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 3134 — Exception Chaining"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

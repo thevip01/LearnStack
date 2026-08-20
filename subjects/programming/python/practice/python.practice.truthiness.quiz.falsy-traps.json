@@ -1,0 +1,178 @@
+{
+  "id": "python.practice.truthiness.quiz.falsy-traps",
+  "kind": "quiz",
+  "title": "Falsy traps",
+  "subject_id": "programming.python",
+  "concept_id": "python.control-flow-truthiness",
+  "skills": ["python.skill.write-truthiness-safe-conditionals"],
+  "difficulty": 3,
+  "estimated_minutes": 6,
+  "prompt_md": "Truthiness is convenient until a legitimate value happens to be falsy. Work through these, paying attention to which values are falsy and what `and`/`or` actually return.",
+  "tags": ["truthiness", "falsy", "or-default", "sentinel"],
+  "questions": [
+    {
+      "id": "truthiness.or-default-swallows-zero",
+      "type": "mcq",
+      "stem_md": "A handler contains `limit = limit or 100`. A caller passes `limit=0`, meaning \"return nothing\". What happens?",
+      "difficulty": 3,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`limit` becomes `100`, silently ignoring the caller." },
+        { "id": "b", "md": "`limit` stays `0`, because `0` was explicitly passed." },
+        { "id": "c", "md": "`TypeError`, because `or` needs booleans." },
+        { "id": "d", "md": "`limit` becomes `None`." }
+      ],
+      "answer": "a",
+      "explanation_md": "`0` is falsy, so `or` moves on and evaluates its right operand. The pattern means \"if the value is falsy, replace it\" — not \"if the value is missing, replace it\". Use `limit = 100 if limit is None else limit`.",
+      "skills": ["python.skill.write-truthiness-safe-conditionals"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/expressions.html#boolean-operations",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Boolean operations — x or y"
+        }
+      ]
+    },
+    {
+      "id": "truthiness.which-values-are-falsy",
+      "type": "multi_select",
+      "stem_md": "Which of these are **falsy** in Python?",
+      "difficulty": 3,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`0.0`" },
+        { "id": "b", "md": "`[]`" },
+        { "id": "c", "md": "`\"0\"`" },
+        { "id": "d", "md": "`decimal.Decimal(\"0\")`" },
+        { "id": "e", "md": "`datetime.time(0, 0)`" },
+        { "id": "f", "md": "`{}`" },
+        { "id": "g", "md": "`\" \"` (a single space)" }
+      ],
+      "answer": ["a", "b", "d", "f"],
+      "explanation_md": "Zero of any numeric type and every empty built-in container are falsy. A non-empty string is truthy regardless of what it contains — `\"0\"` and `\" \"` are both truthy, which is why validating user input with `if value:` accepts `\"0\"` and rejects `\"\"`. Midnight was falsy in Python 2 but is truthy from 3.5 onwards.",
+      "skills": ["python.skill.write-truthiness-safe-conditionals"],
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html#truth-value-testing",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Truth Value Testing"
+        }
+      ]
+    },
+    {
+      "id": "truthiness.write-the-safe-default",
+      "type": "fill_blank",
+      "stem_md": "Complete both defaults so that `0`, `[]` and `\"\"` survive as real arguments.",
+      "template": "```python\ndef paginate(rows, limit=None):\n    if limit {{1}} None:\n        limit = 100\n    return rows[:limit]\n\n\n_MISSING = {{2}}()\n\ndef put(key, value=_MISSING):\n    if value is _MISSING:\n        raise TypeError(\"value is required\")\n```",
+      "answer": [["is"], ["object"]],
+      "case_sensitive": false,
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "explanation_md": "`is None` is an identity test, so it is true only for `None` itself — `0`, `[]` and `\"\"` all pass through untouched. When `None` is a legitimate value, a module-level `object()` instance works as a unique sentinel: nothing a caller can construct is identical to it.",
+      "skills": ["python.skill.write-truthiness-safe-conditionals"],
+      "sources": [
+        {
+          "source_id": "python.pep8",
+          "url": "https://peps.python.org/pep-0008/#programming-recommendations",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Comparisons to singletons like None should use is or is not"
+        }
+      ]
+    },
+    {
+      "id": "truthiness.or-returns-an-operand",
+      "type": "short_answer",
+      "stem_md": "What does the expression `[] or \"fallback\"` evaluate to? Give the exact value.",
+      "difficulty": 3,
+      "dimension": "concept",
+      "weight": 1.0,
+      "answer": ["fallback", "\"fallback\"", "'fallback'", "the string fallback"],
+      "must_include": ["fallback"],
+      "explanation_md": "`or` returns one of its operands, not a boolean. Since `[]` is falsy it returns the right operand, the string `\"fallback\"`. Symmetrically, `\"a\" and 0` returns `0`, and `[] and boom()` never calls `boom` at all — short-circuiting is why `if user and user.is_active` is safe.",
+      "skills": ["python.skill.write-truthiness-safe-conditionals"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/expressions.html#boolean-operations",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Boolean operations — the value returned"
+        }
+      ]
+    },
+    {
+      "id": "truthiness.bool-before-len",
+      "type": "mcq",
+      "stem_md": "A class defines both `__bool__` returning `False` and `__len__` returning `5`. What is `bool(instance)`?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`False` — `__bool__` is consulted first and `__len__` is never called." },
+        { "id": "b", "md": "`True` — a non-zero `__len__` always wins." },
+        { "id": "c", "md": "`TypeError`, because the two disagree." },
+        { "id": "d", "md": "Undefined; it depends on the interpreter." }
+      ],
+      "answer": "a",
+      "explanation_md": "The protocol is: try `__bool__`, fall back to `__len__() != 0`, and default to true if neither exists. That fallback is why every empty container is falsy without defining `__bool__`, and why a custom class with no `__len__` is always truthy — including one that wraps an empty result set.",
+      "skills": ["python.skill.write-truthiness-safe-conditionals"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html#object.__bool__",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "object.__bool__ — fallback to __len__"
+        }
+      ]
+    }
+  ],
+  "shuffle": true,
+  "hints": [
+    {
+      "level": 1,
+      "md": "Two facts unlock most of this: zero-of-any-type and every empty container are falsy, and `and`/`or` return one of their **operands** rather than `True`/`False`.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "For the default-argument questions, ask what the caller could legitimately pass that happens to be falsy. `0`, `[]`, `\"\"` and `False` are all real values someone may mean. Identity (`is`) tests for one specific object; truthiness tests for a whole class of values.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "Answers: (1) `limit` becomes `100` — the caller's `0` is swallowed. (2) Falsy: `0.0`, `[]`, `Decimal(\"0\")`, `{}`; truthy: `\"0\"`, `\" \"`, `time(0, 0)`. (3) `is`, then `object`. (4) `\"fallback\"`. (5) `False` — `__bool__` wins and `__len__` is never consulted.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "exact",
+    "pass_threshold": 0.8,
+    "partial_credit": true,
+    "dimension": "concept"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/stdtypes.html#truth-value-testing",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Truth Value Testing"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/expressions.html#boolean-operations",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Boolean operations"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

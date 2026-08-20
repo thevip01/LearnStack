@@ -1,0 +1,184 @@
+{
+  "id": "python.practice.closures.check.late-binding",
+  "kind": "quiz",
+  "title": "What a closure captures",
+  "subject_id": "programming.python",
+  "concept_id": "python.closures-and-late-binding",
+  "skills": ["python.skill.reason-about-closures"],
+  "difficulty": 4,
+  "estimated_minutes": 6,
+  "prompt_md": "A closure captures the *variable*, not the value it held when the closure was created. That one sentence explains every result below — work through them before revealing the answers.",
+  "tags": ["closures", "late-binding", "nonlocal", "free-variable", "scope"],
+  "questions": [
+    {
+      "id": "closures.the-classic-loop",
+      "type": "mcq",
+      "stem_md": "```python\nfuncs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])\n```\nWhat is printed?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`[2, 2, 2]`" },
+        { "id": "b", "md": "`[0, 1, 2]`" },
+        { "id": "c", "md": "`[0, 0, 0]`" },
+        { "id": "d", "md": "`[3, 3, 3]`" }
+      ],
+      "answer": "a",
+      "explanation_md": "Each lambda captures the variable `i`, not its value at creation time. The lambdas do not run until the second line, by which point the loop has finished and `i` is `2`. So all three read `2`. The functions were never different from one another.",
+      "skills": ["python.skill.reason-about-closures"],
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Why do lambdas defined in a loop return the same result?"
+        }
+      ]
+    },
+    {
+      "id": "closures.default-arg-capture",
+      "type": "mcq",
+      "stem_md": "```python\nfuncs = [lambda i=i: i for i in range(3)]\nprint([f() for f in funcs])\n```\nWhat is printed, and why is this different from the previous one?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`[0, 1, 2]` — `i=i` binds the *current value* as a default at each iteration." },
+        { "id": "b", "md": "`[2, 2, 2]` — the default does not change anything." },
+        { "id": "c", "md": "`SyntaxError` — you cannot name a default after the free variable." },
+        { "id": "d", "md": "`[0, 0, 0]`" }
+      ],
+      "answer": "a",
+      "explanation_md": "Default arguments are evaluated when the `lambda` is created, so `i=i` snapshots the loop value into a per-lambda parameter. Here the mutable-default trap (evaluate-once) is exactly what you want: it converts a late-bound free variable into an early-bound default. It is a common fix, though a factory function reads more clearly.",
+      "skills": ["python.skill.reason-about-closures"],
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "The default-argument workaround"
+        }
+      ]
+    },
+    {
+      "id": "closures.nonlocal-required",
+      "type": "mcq",
+      "stem_md": "```python\ndef make_counter():\n    n = 0\n    def tick():\n        n += 1\n        return n\n    return tick\n\nmake_counter()()\n```\nWhat happens?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`UnboundLocalError` — `n += 1` makes `n` local to `tick`, so the read has no value yet." },
+        { "id": "b", "md": "Returns `1`; the closure updates `n` in the enclosing scope." },
+        { "id": "c", "md": "Returns `0`." },
+        { "id": "d", "md": "`NameError: n is not defined`." }
+      ],
+      "answer": "a",
+      "explanation_md": "Assigning to `n` anywhere in `tick` makes `n` a local of `tick` for the whole function, so `n += 1` reads a local that has not been assigned yet. Reading a closed-over variable is fine; *rebinding* it needs `nonlocal n`. (Mutating a captured mutable object, e.g. `counts[0] += 1`, needs no declaration because it rebinds nothing.)",
+      "skills": ["python.skill.reason-about-closures"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/simple_stmts.html#the-nonlocal-statement",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "The nonlocal statement"
+        }
+      ]
+    },
+    {
+      "id": "closures.what-is-captured",
+      "type": "multi_select",
+      "stem_md": "```python\ndef outer(a):\n    b = a * 2\n    def inner(c):\n        return a + b + c\n    return inner\n```\nWhich names are free variables of `inner` (captured from the enclosing scope)?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`a`" },
+        { "id": "b", "md": "`b`" },
+        { "id": "c", "md": "`c`" },
+        { "id": "d", "md": "`inner`" }
+      ],
+      "answer": ["a", "b"],
+      "explanation_md": "A free variable is one used in `inner` but bound in an enclosing function. `a` and `b` qualify; `c` is `inner`'s own parameter (local), and `inner` is a local of `outer`. You can see the captured set at runtime via `inner.__code__.co_freevars` and the live cells via `inner.__closure__`.",
+      "skills": ["python.skill.reason-about-closures"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/executionmodel.html#binding-of-names",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Execution model — binding of names, free variables"
+        }
+      ]
+    },
+    {
+      "id": "closures.shared-cell",
+      "type": "mcq",
+      "stem_md": "```python\ndef make_pair():\n    x = 0\n    def get(): return x\n    def inc(): nonlocal x; x += 1\n    return get, inc\n\nget, inc = make_pair()\ninc(); inc()\nprint(get())\n```\nWhat is printed?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`2` — both closures share the same cell for `x`." },
+        { "id": "b", "md": "`0` — each closure has its own copy of `x`." },
+        { "id": "c", "md": "`1`." },
+        { "id": "d", "md": "`UnboundLocalError`." }
+      ],
+      "answer": "a",
+      "explanation_md": "`get` and `inc` close over the *same* variable `x` from the one `make_pair` call, so they share state through a single cell. This is the basis of the closure-as-object pattern: several functions sharing private state without a class. Call `make_pair` again and you get a fresh, independent `x`.",
+      "skills": ["python.skill.reason-about-closures"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Data model — cell objects hold closure variables"
+        }
+      ]
+    }
+  ],
+  "shuffle": true,
+  "hints": [
+    {
+      "level": 1,
+      "md": "The governing rule: a closure captures the variable, and reads it when the closure is *called*, not when it is created. So a loop variable read after the loop is its final value.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "Two consequences. To freeze a value at creation time, use a per-function default (`i=i`) or a factory that takes the value as an argument. And to *rebind* a captured variable inside the inner function you need `nonlocal`; merely reading it, or mutating an object it points to, does not.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "Answers: (1) `[2, 2, 2]`. (2) `[0, 1, 2]` — `i=i` snapshots each value. (3) `UnboundLocalError` — needs `nonlocal n`. (4) free variables are `a` and `b`. (5) `2` — the two closures share one cell.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "exact",
+    "pass_threshold": 0.8,
+    "partial_credit": true,
+    "dimension": "concept"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Programming FAQ — lambdas in a loop"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html#the-nonlocal-statement",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "The nonlocal statement"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

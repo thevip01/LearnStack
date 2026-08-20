@@ -1,0 +1,58 @@
+[project]
+name = "learnos-ingestion"
+version = "0.1.0"
+description = "LearnOS ingestion pipeline: internet sources -> reviewed candidates -> subject package."
+requires-python = ">=3.12"
+
+# This service is the only thing in the repo with outbound network access and
+# extractor credentials. It runs as a job, never in the request path, which is why
+# it can afford a heavier dependency set than the API without widening the API's
+# attack surface.
+dependencies = [
+  "learnos-schema>=0.1",
+  "pydantic>=2.8,<3",
+  "pydantic-settings>=2.4,<3",
+  "httpx>=0.27,<0.29",
+  "beautifulsoup4>=4.12,<5",
+  "lxml>=5.2,<6",
+  "sqlalchemy[asyncio]>=2.0.31,<2.1",
+  "asyncpg>=0.29,<0.31",
+  "structlog>=24.4,<25",
+  # For the SQLAlchemy table declarations only — see storage/repository.py for why
+  # the models are shared rather than duplicated. The Dockerfile installs this with
+  # --no-deps precisely so FastAPI, uvicorn and the Docker SDK do not end up in the
+  # one container that has outbound network access.
+  "learnos-api>=0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "aiosqlite>=0.20",
+  "respx>=0.21",
+]
+# Deliberately not a default dependency. No LLM client ships wired: the extractor
+# is a Protocol with a deterministic stub behind it, and an operator who wants a
+# real one installs this extra and sets EXTRACTOR=llm. See extractors/README.
+llm = [
+  "anthropic>=0.34",
+]
+
+[project.scripts]
+learnos-ingest = "learnos_ingestion.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["learnos_ingestion*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

@@ -1,0 +1,276 @@
+{
+  "subject_id": "programming.python",
+  "default_track": "python.core",
+  "tracks": [
+    {
+      "id": "python.core",
+      "title": "Core Python",
+      "summary": "The object model, the built-in containers, functions and scope, your own types, and the cost of the code you just wrote.",
+      "goal": "Read an unfamiliar Python traceback and name the cause; choose the container that makes an operation O(1) instead of O(n); write functions, closures, decorators and classes whose failure modes you can predict before running them.",
+      "modules": [
+        {
+          "id": "python.module.foundations",
+          "title": "Foundations",
+          "summary": "Names are bindings, not boxes. Everything downstream — aliasing bugs, mutable defaults, dict keys — falls out of that one fact.",
+          "concepts": [
+            "python.objects-and-names",
+            "python.control-flow-truthiness",
+            "python.sequences-and-mappings"
+          ],
+          "estimated_minutes": 75,
+          "icon": "box"
+        },
+        {
+          "id": "python.module.functions-and-scope",
+          "title": "Functions and Scope",
+          "summary": "Signatures are an API contract. Closures are how Python remembers, and late binding is how it surprises you.",
+          "concepts": [
+            "python.functions-and-signatures",
+            "python.closures-and-late-binding",
+            "python.decorators"
+          ],
+          "estimated_minutes": 85,
+          "icon": "function"
+        },
+        {
+          "id": "python.module.data-modelling",
+          "title": "Data Modelling",
+          "summary": "Build collections declaratively, then build your own types that behave like the built-in ones.",
+          "concepts": [
+            "python.comprehensions",
+            "python.classes-and-dunders"
+          ],
+          "estimated_minutes": 65,
+          "icon": "layers"
+        },
+        {
+          "id": "python.module.correctness",
+          "title": "Correctness and Performance",
+          "summary": "Errors are part of your API, and so is the complexity of the loop you just wrote. This is where the project lives.",
+          "concepts": [
+            "python.exceptions",
+            "python.complexity"
+          ],
+          "projects": [
+            "python.project.lru-cache"
+          ],
+          "assessment_id": "python.assessment.core",
+          "estimated_minutes": 95,
+          "icon": "gauge"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "python.skill.reason-about-references",
+      "title": "Predict the effect of a mutation through an alias",
+      "description": "Given two names bound to the same object, say what a mutation through one does to the other, and distinguish rebinding from mutating.",
+      "concepts": [
+        "python.objects-and-names"
+      ],
+      "prerequisites": [],
+      "difficulty": 3,
+      "dimension_weights": {
+        "concept": 0.55,
+        "lab": 0.25,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.write-truthiness-safe-conditionals",
+      "title": "Write conditionals that do not confuse empty with missing",
+      "description": "Use `is None` where absence is meant, truth testing where emptiness is meant, and know which one a caller will trip over.",
+      "concepts": [
+        "python.control-flow-truthiness"
+      ],
+      "prerequisites": [],
+      "difficulty": 3,
+      "dimension_weights": {
+        "concept": 0.8,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.choose-a-container",
+      "title": "Choose the container the workload actually needs",
+      "description": "Pick list, tuple, dict, set or deque from the operations the code performs, not from habit, and justify it in complexity terms.",
+      "concepts": [
+        "python.sequences-and-mappings",
+        "python.complexity"
+      ],
+      "prerequisites": [
+        "python.skill.reason-about-references"
+      ],
+      "difficulty": 4,
+      "dimension_weights": {
+        "concept": 0.2,
+        "practice": 0.3,
+        "debugging": 0.15,
+        "production": 0.15,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.analyse-complexity",
+      "title": "State the time and space cost of a piece of Python",
+      "description": "Read a function and name its asymptotic cost, including the costs hidden inside built-in operations, then fix the term that dominates.",
+      "concepts": [
+        "python.complexity",
+        "python.sequences-and-mappings"
+      ],
+      "prerequisites": [
+        "python.skill.choose-a-container"
+      ],
+      "difficulty": 6,
+      "dimension_weights": {
+        "concept": 0.3,
+        "production": 0.5,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.write-comprehensions",
+      "title": "Express a transformation as a comprehension",
+      "description": "Convert an accumulator loop into a list, dict, set or generator expression, and know when not to.",
+      "concepts": [
+        "python.comprehensions"
+      ],
+      "prerequisites": [
+        "python.skill.choose-a-container"
+      ],
+      "difficulty": 4,
+      "dimension_weights": {
+        "concept": 0.25,
+        "practice": 0.55,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.design-function-signatures",
+      "title": "Design a function signature a caller cannot misuse",
+      "description": "Order positional, keyword-only and variadic parameters so the common call is short and the wrong call is impossible.",
+      "concepts": [
+        "python.functions-and-signatures"
+      ],
+      "prerequisites": [
+        "python.skill.reason-about-references"
+      ],
+      "difficulty": 5,
+      "dimension_weights": {
+        "concept": 0.2,
+        "practice": 0.4,
+        "debugging": 0.2,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.avoid-shared-mutable-defaults",
+      "title": "Keep per-call state out of default arguments",
+      "description": "Recognise a default evaluated once at definition time, and rewrite it so each call gets its own object.",
+      "concepts": [
+        "python.functions-and-signatures",
+        "python.objects-and-names"
+      ],
+      "prerequisites": [
+        "python.skill.design-function-signatures",
+        "python.skill.reason-about-references"
+      ],
+      "difficulty": 5,
+      "dimension_weights": {
+        "concept": 0.15,
+        "practice": 0.35,
+        "debugging": 0.3,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.reason-about-closures",
+      "title": "Say what a closure captured and when it was read",
+      "description": "Distinguish capturing a variable from capturing its value, and predict what a closure created in a loop will see.",
+      "concepts": [
+        "python.closures-and-late-binding",
+        "python.decorators"
+      ],
+      "prerequisites": [
+        "python.skill.design-function-signatures"
+      ],
+      "difficulty": 6,
+      "dimension_weights": {
+        "concept": 0.2,
+        "practice": 0.35,
+        "debugging": 0.25,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.write-decorators",
+      "title": "Write a decorator that preserves its wrapped function",
+      "description": "Build a parameterised decorator that keeps the name, docstring and signature metadata of what it wraps and does not swallow exceptions.",
+      "concepts": [
+        "python.decorators"
+      ],
+      "prerequisites": [
+        "python.skill.reason-about-closures"
+      ],
+      "difficulty": 7,
+      "dimension_weights": {
+        "practice": 0.55,
+        "debugging": 0.25,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.implement-dunder-protocols",
+      "title": "Implement the dunder protocols a type claims to support",
+      "description": "Give a type equality, hashing, ordering, iteration and a useful repr that agree with each other and with the language's own rules.",
+      "concepts": [
+        "python.classes-and-dunders"
+      ],
+      "prerequisites": [
+        "python.skill.choose-a-container",
+        "python.skill.reason-about-references"
+      ],
+      "difficulty": 7,
+      "dimension_weights": {
+        "concept": 0.25,
+        "lab": 0.55,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.define-error-contracts",
+      "title": "Define what a function raises and why",
+      "description": "Choose or define the exception type, decide between EAFP and LBYL, and chain causes so the original failure is not lost.",
+      "concepts": [
+        "python.exceptions"
+      ],
+      "prerequisites": [
+        "python.skill.write-truthiness-safe-conditionals"
+      ],
+      "difficulty": 6,
+      "dimension_weights": {
+        "concept": 0.35,
+        "debugging": 0.45,
+        "retention": 0.2
+      }
+    },
+    {
+      "id": "python.skill.debug-a-traceback",
+      "title": "Go from a traceback to the line that is actually wrong",
+      "description": "Read a traceback bottom-up, separate the raising frame from the offending frame, and use the exception type to narrow the cause before touching the code.",
+      "concepts": [
+        "python.exceptions"
+      ],
+      "prerequisites": [
+        "python.skill.define-error-contracts"
+      ],
+      "difficulty": 6,
+      "dimension_weights": {
+        "concept": 0.15,
+        "debugging": 0.65,
+        "retention": 0.2
+      }
+    }
+  ]
+}

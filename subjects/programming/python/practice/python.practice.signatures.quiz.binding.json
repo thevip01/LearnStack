@@ -1,0 +1,185 @@
+{
+  "id": "python.practice.signatures.quiz.binding",
+  "kind": "quiz",
+  "title": "How arguments bind",
+  "subject_id": "programming.python",
+  "concept_id": "python.functions-and-signatures",
+  "skills": ["python.skill.design-function-signatures"],
+  "difficulty": 4,
+  "estimated_minutes": 7,
+  "prompt_md": "Python's binding rules are precise and almost never memorised. Work out what each signature permits, then what the call does.",
+  "tags": ["signatures", "positional-only", "keyword-only", "args", "kwargs", "binding"],
+  "questions": [
+    {
+      "id": "binding.star-makes-keyword-only",
+      "type": "mcq",
+      "stem_md": "```python\ndef fetch(url, *, timeout=5, retries=0):\n    ...\n```\nWhich call is valid?",
+      "difficulty": 3,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`fetch(\"/x\", timeout=2)`" },
+        { "id": "b", "md": "`fetch(\"/x\", 2)`" },
+        { "id": "c", "md": "`fetch(\"/x\", 2, 3)`" },
+        { "id": "d", "md": "`fetch(url=\"/x\", 2)`" }
+      ],
+      "answer": "a",
+      "explanation_md": "A bare `*` ends the positional section: everything after it must be passed by keyword. That is the point — `fetch(\"/x\", 2, 3)` at a call site tells the reader nothing, and once the parameters are keyword-only you are also free to reorder or insert them without breaking callers. Option (d) is a syntax error regardless: a positional argument cannot follow a keyword argument.",
+      "skills": ["python.skill.design-function-signatures"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Function definitions — keyword-only parameters"
+        }
+      ]
+    },
+    {
+      "id": "binding.slash-makes-positional-only",
+      "type": "mcq",
+      "stem_md": "```python\ndef distance(x, y, /, unit=\"km\"):\n    ...\n```\nWhich statement is true?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`distance(1, 2, unit=\"mi\")` is valid, and `distance(x=1, y=2)` raises `TypeError`." },
+        { "id": "b", "md": "`distance(x=1, y=2)` is valid; `/` only documents intent." },
+        { "id": "c", "md": "`/` makes `unit` positional-only as well." },
+        { "id": "d", "md": "`/` is a syntax error outside built-in functions." }
+      ],
+      "answer": "a",
+      "explanation_md": "Parameters *before* `/` cannot be passed by keyword. This frees the names `x` and `y` to be renamed later without breaking callers, and lets `**kwargs` carry a key called `x` without colliding. It is why `len(obj)` has never accepted `len(obj=...)`.",
+      "skills": ["python.skill.design-function-signatures"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Function definitions — positional-only parameters"
+        }
+      ]
+    },
+    {
+      "id": "binding.duplicate-argument",
+      "type": "mcq",
+      "stem_md": "```python\ndef tag(name, value=1, **extra):\n    return name, value, extra\n\ntag(\"a\", 2, value=3)\n```\nWhat happens?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`TypeError: tag() got multiple values for argument 'value'`" },
+        { "id": "b", "md": "`(\"a\", 3, {})` — the keyword wins." },
+        { "id": "c", "md": "`(\"a\", 2, {\"value\": 3})` — the extra goes into `**extra`." },
+        { "id": "d", "md": "`(\"a\", 2, {})` — the duplicate is ignored." }
+      ],
+      "answer": "a",
+      "explanation_md": "Binding happens before `**extra` is populated: `2` fills `value` positionally, then `value=3` tries to fill the same slot and fails. A name is only swept into `**extra` if it does not match a declared parameter. Making `value` keyword-only (`def tag(name, *, value=1, **extra)`) removes the ambiguity entirely.",
+      "skills": ["python.skill.design-function-signatures"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/expressions.html#calls",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Calls — argument binding"
+        }
+      ]
+    },
+    {
+      "id": "binding.unpacking-order",
+      "type": "mcq",
+      "stem_md": "```python\ndef f(a, b=2, *rest, c, d=4, **kw):\n    return a, b, rest, c, d, kw\n\nprint(f(1, 9, 8, 7, c=6, e=5))\n```\nWhat is printed?",
+      "difficulty": 6,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`(1, 9, (8, 7), 6, 4, {'e': 5})`" },
+        { "id": "b", "md": "`(1, 9, (8, 7), 6, 5, {})`" },
+        { "id": "c", "md": "`(1, 2, (9, 8, 7), 6, 4, {'e': 5})`" },
+        { "id": "d", "md": "`TypeError`, because `c` has no default and follows `*rest`." }
+      ],
+      "answer": "a",
+      "explanation_md": "Positionals fill `a` then `b`, and the surplus `8, 7` goes to `rest`. `c` sits after `*rest`, so it is keyword-only — and having no default makes it *required*, which is a useful way to force an explicit choice at every call site. `d` keeps its default, and unmatched `e=5` lands in `kw`.",
+      "skills": ["python.skill.design-function-signatures"],
+      "sources": [
+        {
+          "source_id": "python.docs.tutorial",
+          "url": "https://docs.python.org/3/tutorial/controlflow.html#more-on-defining-functions",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "More on Defining Functions — arbitrary argument lists"
+        }
+      ]
+    },
+    {
+      "id": "binding.design-choice",
+      "type": "multi_select",
+      "stem_md": "You are designing `create_user`. Which of these are good reasons to make a parameter **keyword-only**?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "It is a boolean flag, and `create_user(\"a\", True)` would be unreadable at the call site." },
+        { "id": "b", "md": "There are already three parameters of the same type and callers could transpose them." },
+        { "id": "c", "md": "You expect to add more options later and want to insert them without breaking callers." },
+        { "id": "d", "md": "It makes the function faster to call." },
+        { "id": "e", "md": "It is the single obvious subject of the function, like the string passed to `len`." }
+      ],
+      "answer": ["a", "b", "c"],
+      "explanation_md": "Keyword-only parameters buy readability at the call site, resistance to transposition, and freedom to evolve the signature. They cost a fraction of a microsecond, so speed is never the argument. The last case is the opposite: the one obvious subject reads better positionally, and is a candidate for positional-only.",
+      "skills": ["python.skill.design-function-signatures"],
+      "sources": [
+        {
+          "source_id": "python.pep8",
+          "url": "https://peps.python.org/pep-0008/#function-and-method-arguments",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Function and Method Arguments"
+        }
+      ]
+    }
+  ],
+  "shuffle": true,
+  "hints": [
+    {
+      "level": 1,
+      "md": "Two markers control everything: a bare `*` starts the keyword-only section, and `/` ends the positional-only section. Read each signature by first splitting it at those markers.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "For the binding puzzles, apply the steps in order: fill named positional slots left to right, sweep surplus positionals into `*rest`, then match keywords to remaining named slots, then sweep leftovers into `**kw`. A parameter after `*` with no default is required-but-keyword-only. A slot filled twice is an error, not an override.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "Answers: (1) `fetch(\"/x\", timeout=2)`. (2) `distance(1, 2, unit=\"mi\")` is valid and `distance(x=1, y=2)` raises. (3) `TypeError: got multiple values for argument 'value'`. (4) `(1, 9, (8, 7), 6, 4, {'e': 5})`. (5) Readability of flags, transposition risk, and future signature evolution — not speed, and not the single obvious subject.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "exact",
+    "pass_threshold": 0.8,
+    "partial_credit": true,
+    "dimension": "concept"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Function definitions"
+    },
+    {
+      "source_id": "python.pep8",
+      "url": "https://peps.python.org/pep-0008/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 8 — Style Guide for Python Code"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "id": "python.practice.decorators.debug.lost-metadata",
+  "kind": "debug",
+  "title": "The decorator that erases every function it touches",
+  "subject_id": "programming.python",
+  "concept_id": "python.decorators",
+  "skills": ["python.skill.write-decorators"],
+  "difficulty": 5,
+  "estimated_minutes": 15,
+  "prompt_md": "A `timed` decorator wraps a function to measure how long it runs. It works — the wrapped function still returns the right answer — but it silently destroys the function's identity: the name, the docstring, and the ability to introspect the original signature are all gone. A downstream tool that builds API docs from `__name__` and `__doc__` now shows every decorated endpoint as `wrapper` with no description.\n\nFix the decorator so the wrapped function keeps its `__name__`, `__doc__`, and exposes the original via `__wrapped__`. Do not remove the timing behaviour, and do not change how the decorator is applied.",
+  "symptom_md": "```python\n@timed\ndef checkout(cart):\n    \"\"\"Charge the cart and return a receipt.\"\"\"\n    ...\n\n>>> checkout.__name__\n'wrapper'                      # expected 'checkout'\n>>> checkout.__doc__\nNone                           # expected 'Charge the cart and return a receipt.'\n>>> import inspect; inspect.signature(checkout)\n(*args, **kwargs)              # expected (cart)\n```\n\nEvery function decorated with `@timed` reports itself as `wrapper`, loses its docstring, and shows a generic `(*args, **kwargs)` signature instead of its real one.",
+  "tags": ["decorators", "functools.wraps", "metadata", "introspection"],
+  "requirements_md": [
+    "Decorated functions keep their original `__name__` and `__doc__`.",
+    "`inspect.signature` on a decorated function shows the original parameters (via `__wrapped__`).",
+    "The timing behaviour and the return value are unchanged.",
+    "`*args`/`**kwargs` still pass through.",
+    "Do not modify the test file."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "timing.py",
+  "broken_files": [
+    {
+      "path": "timing.py",
+      "content": "\"\"\"A decorator that times a function call.\"\"\"\nimport time\n\n# Records the duration of the most recent call, for the tests to inspect.\nlast_duration_s = 0.0\n\n\ndef timed(func):\n    def wrapper(*args, **kwargs):\n        global last_duration_s\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        last_duration_s = time.perf_counter() - start\n        return result\n    return wrapper\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "timing.py",
+      "content": "\"\"\"A decorator that times a function call.\"\"\"\nimport functools\nimport time\n\n# Records the duration of the most recent call, for the tests to inspect.\nlast_duration_s = 0.0\n\n\ndef timed(func):\n    @functools.wraps(func)   # copies __name__/__doc__/__module__ and sets __wrapped__\n    def wrapper(*args, **kwargs):\n        global last_duration_s\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        last_duration_s = time.perf_counter() - start\n        return result\n    return wrapper\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-timed-preserves-metadata",
+      "name": "name, docstring and signature survive decoration",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 3.0,
+      "file": "test_metadata.py",
+      "body": "import inspect\n\nfrom timing import timed\n\n\n@timed\ndef checkout(cart):\n    \"\"\"Charge the cart and return a receipt.\"\"\"\n    return f\"receipt:{cart}\"\n\n\ndef test_name_preserved():\n    assert checkout.__name__ == \"checkout\", \"use functools.wraps\"\n\n\ndef test_docstring_preserved():\n    assert checkout.__doc__ == \"Charge the cart and return a receipt.\"\n\n\ndef test_signature_preserved():\n    assert list(inspect.signature(checkout).parameters) == [\"cart\"]\n\n\ndef test_wrapped_present():\n    assert hasattr(checkout, \"__wrapped__\")\n"
+    },
+    {
+      "id": "test-timed-still-works",
+      "name": "the timing behaviour and return value are intact",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 1.0,
+      "file": "test_behaviour.py",
+      "body": "import timing\nfrom timing import timed\n\n\ndef test_return_value_unchanged():\n    @timed\n    def add(a, b):\n        return a + b\n\n    assert add(2, 3) == 5\n\n\ndef test_duration_is_recorded():\n    @timed\n    def work():\n        return sum(range(1000))\n\n    work()\n    assert timing.last_duration_s >= 0.0\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "The wrapper function you return is a brand-new function object called `wrapper`. It has its own `__name__` (`'wrapper'`) and no docstring, and it replaces the original — so all of the original's metadata is lost.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "`functools.wraps` exists exactly for this. Decorate the inner `wrapper` with `@functools.wraps(func)`; it copies `__name__`, `__doc__`, `__module__`, `__qualname__`, `__dict__`, and sets `__wrapped__ = func` so `inspect.signature` can recover the real parameters.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "```python\nimport functools, time\n\ndef timed(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        # ... record duration ...\n        return result\n    return wrapper\n```\nThe single added line `@functools.wraps(func)` fixes name, docstring, and signature at once.",
+      "reveals_solution": true
+    }
+  ],
+  "root_cause_md": "A decorator replaces the original function with the wrapper it returns. That wrapper is an ordinary function whose `__name__` is `'wrapper'` and whose `__doc__` is `None`, so after `checkout = timed(checkout)` the name `checkout` now points at an object that introspects as `wrapper`. Anything that reads `__name__`/`__doc__` (documentation generators, logging, `repr`) sees the wrapper's metadata, and `inspect.signature` reports `(*args, **kwargs)` because that is literally the wrapper's signature.\n\n`functools.wraps(func)` is a decorator-for-the-wrapper that copies the standard metadata attributes from `func` onto `wrapper` and, importantly, sets `wrapper.__wrapped__ = func`. `inspect.signature` follows `__wrapped__` by default, so it recovers the original parameter list. The fix is a single line — `@functools.wraps(func)` on `wrapper` — and it is the line decorators most commonly forget.",
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "debugging"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/functools.html#functools.wraps",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "functools.wraps"
+    },
+    {
+      "source_id": "python.pep318",
+      "url": "https://peps.python.org/pep-0318/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 318 — Decorators for Functions and Methods"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

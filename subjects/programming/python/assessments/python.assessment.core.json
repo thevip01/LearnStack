@@ -1,0 +1,58 @@
+{
+  "id": "python.assessment.core",
+  "title": "Correctness and Performance checkpoint",
+  "subject_id": "programming.python",
+  "scope": "module",
+  "scope_id": "python.module.correctness",
+  "skills": [
+    "python.skill.analyse-complexity",
+    "python.skill.choose-a-container",
+    "python.skill.define-error-contracts",
+    "python.skill.debug-a-traceback"
+  ],
+  "sections": [
+    {
+      "id": "python.assessment.core.concept",
+      "title": "Concept: contracts and container choice",
+      "dimension": "concept",
+      "practice_ids": [
+        "python.practice.exceptions.quiz.contracts",
+        "python.practice.containers.quiz.choose-a-container"
+      ],
+      "weight": 0.35,
+      "time_limit_s": 900
+    },
+    {
+      "id": "python.assessment.core.debugging",
+      "title": "Debugging: read the failure, fix the cause",
+      "dimension": "debugging",
+      "practice_ids": [
+        "python.practice.exceptions.debug.swallowed-error",
+        "python.practice.traceback.debug.read-the-chain"
+      ],
+      "weight": 0.4,
+      "time_limit_s": 1800
+    },
+    {
+      "id": "python.assessment.core.production",
+      "title": "Production: size the structure for the workload",
+      "dimension": "production",
+      "practice_ids": [
+        "python.practice.containers.quiz.production-sizing"
+      ],
+      "weight": 0.25,
+      "time_limit_s": 600
+    }
+  ],
+  "pass_threshold": 0.7,
+  "time_limit_s": 3600,
+  "max_attempts": null,
+  "cooldown_hours": 24,
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

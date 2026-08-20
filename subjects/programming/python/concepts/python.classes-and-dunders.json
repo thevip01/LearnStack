@@ -1,0 +1,606 @@
+{
+  "id": "python.classes-and-dunders",
+  "title": "Classes and the Dunder Protocols",
+  "subject_id": "programming.python",
+  "category": "types",
+  "summary": "A class is a namespace plus a set of opt-ins to language protocols: `__eq__` is what `==` means for your type, `__len__` is what `len()` means, `__iter__` is what `for` means. Get the contracts between them right and your type behaves like a built-in; get one half wrong and a dict silently loses a key.",
+  "definition": "A class statement executes a block in a fresh namespace and binds the result as a new type. Whichever dunder (double-underscore) names appear in that namespace become the type's implementations of the language's implicit protocols: the interpreter looks them up **on the type**, not on the instance, and calls them for you when it evaluates `==`, `<`, `len(obj)`, `for x in obj`, `repr(obj)`, `hash(obj)` and the rest. A protocol is therefore not declared and not inherited from an interface - it is opted into by defining the right name, and each name carries a contract the rest of the language assumes you have honoured.",
+  "purpose": "Built-in types are pleasant to use because `==`, `sorted`, `in`, `len` and `print` all mean something sensible for them. The dunder protocols are the only mechanism by which your own types get that, and the contracts between them - equal objects hash equal, a hash never changes, `__iter__` returns a fresh iterator - are what dicts, sets, `sorted` and `functools.lru_cache` rely on. Break one and nothing raises; a lookup just quietly returns nothing.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "A `class` statement does two separable things, and conflating them is where most confusion about Python objects begins.\n\nFirst, it **executes a block of code in a fresh namespace** and stores the result as the class's `__dict__`. A class body is ordinary code: it runs once, top to bottom, at import time. Whatever it binds - methods, constants, a stray `print` - ends up in the class namespace.\n\nSecond, whichever *dunder* names ended up there become the type's **opt-ins to language protocols**. `__eq__` is what `==` means for this type. `__len__` is what `len()` means. `__iter__` is what `for` means. You do not implement an interface by declaring that you implement it; you implement it by putting the right name in the class body, and you inherit its contract whether you have read it or not.\n\nAttribute lookup on an instance searches `instance.__dict__`, then the class and its MRO. *Reading* falls back to the class; **writing never does**. `self.items.append(x)` reads `items`, finds it on the class, and mutates the single object living there. `self.items = []` creates a per-instance entry that shadows the class one from then on. That asymmetry is the entire mutable-class-attribute bug, and it is the same aliasing story as any other shared object - it just has a nicer name.\n\nOne more rule that catches people: **implicit dunder invocations are looked up on the type.** `obj.__len__ = lambda: 3` does not change what `len(obj)` returns, and neither does patching an instance's `__eq__`. Protocols belong to types, not to objects.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3. Special method names"
+        },
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "magic method / special method"
+        }
+      ]
+    },
+    {
+      "type": "term",
+      "term": "special method (dunder)",
+      "definition_md": "A method whose name begins and ends with two underscores - `__init__`, `__repr__`, `__eq__`, `__len__`. \"Dunder\" is shorthand for *double underscore*. Three precisions that matter in practice:\n\n- **You define them; you do not call them.** Write `len(obj)`, not `obj.__len__()`. The builtin form goes through the type, applies the protocol's own checks (`__len__` must return a non-negative int) and picks up the correct fallbacks.\n- **The set is closed.** The interpreter calls the names the data model lists and no others. `__frobnicate__` will never be invoked for you, and inventing new dunder names is reserved by the language - so a name you made up may collide with a future version.\n- **Lookup skips the instance.** Implicit invocation goes to `type(obj)`, which is also why a protocol added to an instance at runtime is ignored, and why a `@dataclass` decorator - which writes these methods onto the class - works at all.",
+      "aliases": [
+        "dunder",
+        "dunder method",
+        "magic method"
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "class Cart:\n    currency = \"USD\"          # class attribute: one str, shared by every instance\n    items = []                # class attribute: one LIST, shared by every instance\n\n    def add(self, sku):\n        self.items.append(sku)        # reads the class attribute, mutates it\n\na = Cart()\nb = Cart()\na.add(\"widget-1\")\n\nprint(\"a.items          =\", a.items)\nprint(\"b.items          =\", b.items)          # b never called add\nprint(\"one shared list  =\", a.items is b.items is Cart.items)\n\na.currency = \"EUR\"            # assignment: creates an INSTANCE attribute on a\nprint(\"a.currency       =\", a.currency)\nprint(\"b.currency       =\", b.currency)\nprint(\"Cart.currency    =\", Cart.currency)\nprint(\"a.__dict__       =\", a.__dict__)\nprint(\"b.__dict__       =\", b.__dict__)",
+      "caption": "Two attributes declared identically behave completely differently, because one is only ever read and the other is mutated. `a.currency = \"EUR\"` shadows the class value for `a` alone; `self.items.append(...)` never creates an instance attribute, so it edits the one list the class holds. `b.items` is populated by a method `b` never called.",
+      "runnable": true,
+      "expected_output": "a.items          = ['widget-1']\nb.items          = ['widget-1']\none shared list  = True\na.currency       = EUR\nb.currency       = USD\nCart.currency    = USD\na.__dict__       = {'currency': 'EUR'}\nb.__dict__       = {}",
+      "highlight_lines": [
+        3,
+        6,
+        13,
+        16
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "A mutable class attribute is process-global state with a nice name",
+      "md": "`items = []` in a class body is evaluated once, at import, and there is exactly one list for the lifetime of the process. Every instance that mutates it is writing to shared state.\n\n```python\nclass Report:\n    filters = []                 # one list, forever\n\n    def add_filter(self, f):\n        self.filters.append(f)   # not \"my\" filters\n```\n\nThis passes every test that builds one `Report`, and it passes the test that builds two if they happen to assert on their own filters only. In production the object is constructed per request, the list grows monotonically for the life of the worker, and the symptom is a report that gradually acquires other tenants' filters - worse after a traffic spike, gone after a deploy, never reproducible locally.\n\nThe fix is to put per-instance state in `__init__` (`self.filters = []`) or to use `field(default_factory=list)` in a dataclass. Keep class attributes for values you will only read: constants, defaults that are immutable, and configuration a subclass is meant to override."
+    },
+    {
+      "type": "prose",
+      "md": "### Construction: `__new__` allocates, `__init__` initialises\n\n`Money(1250, \"USD\")` is two calls, not one. `type.__call__` invokes `Money.__new__(Money, 1250, \"USD\")` to *create and return* an object, and then - only if what came back is an instance of `Money` - invokes `obj.__init__(1250, \"USD\")` to *initialise it in place*. You override `__new__` in the handful of cases where the object must already exist in a particular form before any initialisation can run: subclassing an immutable built-in (`int`, `str`, `tuple`, `bytes`), interning/caching instances, or controlling what `copy` and `pickle` reconstruct. You override `__init__` the rest of the time, and it **must return `None`** - `return self` from `__init__` raises `TypeError: __init__() should return None, not 'Money'`, which is the interpreter telling you that a constructor is not a factory. When you want a factory, write a `@classmethod` that calls `cls(...)`.\n\n### Representation: `__repr__` is for you, `__str__` is for the user\n\nThe default `__repr__` is `<__main__.Money object at 0x7f9c1c0d3d90>`: a type name and an address that will be different on the next run. It tells you nothing about the value, which means every log line, every `pytest` assertion diff, every debugger watch window and every `print` you add while chasing a bug is useless for that type. **Every type whose bugs you expect to debug needs `__repr__`.** Aim for something unambiguous and ideally eval-able - `Money(minor=1250, currency='USD')` - so that a value pasted from a log into a REPL reconstructs the object.\n\n`__str__` is the user-facing form: `12.50 USD`. Define it only when it genuinely differs from the debug form. If you define just one, define `__repr__`: `str(obj)` falls back to `__repr__`, but `repr(obj)` never falls back to `__str__`, and containers, `%r` and `{!r}` always use `__repr__` no matter how pretty your `__str__` is.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. Basic customization - __new__, __init__, __repr__, __str__, __eq__, __hash__"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "import re\n\nclass Money:\n    def __init__(self, minor: int, currency: str) -> None:\n        self.minor = minor\n        self.currency = currency\n\n    def __repr__(self) -> str:                 # for you, at 02:00, in a log line\n        return f\"Money(minor={self.minor!r}, currency={self.currency!r})\"\n\n    def __str__(self) -> str:                  # for the user, on a receipt\n        return f\"{self.minor / 100:,.2f} {self.currency}\"\n\nclass Untouched:\n    pass\n\nm = Money(1250, \"USD\")\nprint(\"print(m)      ->\", m)                   # __str__\nprint(\"repr(m)       ->\", repr(m))\nprint(\"in a list     ->\", [m])                 # containers always use __repr__\nprint(\"f-string      ->\", f\"{m} | {m!r}\")\nprint(\"no __repr__   ->\", re.sub(r\"0x[0-9a-f]+\", \"0x...\", repr(Untouched())))",
+      "caption": "`print` and f-strings use `__str__`; `repr()`, `{!r}` and any container holding the object use `__repr__`. The last line shows what you get with neither - the address is masked here only because a real one changes every run, which is precisely the problem.",
+      "runnable": true,
+      "expected_output": "print(m)      -> 12.50 USD\nrepr(m)       -> Money(minor=1250, currency='USD')\nin a list     -> [Money(minor=1250, currency='USD')]\nf-string      -> 12.50 USD | Money(minor=1250, currency='USD')\nno __repr__   -> <__main__.Untouched object at 0x...>",
+      "highlight_lines": [
+        8,
+        11,
+        20,
+        22
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "A `__repr__` that can raise turns one bug into two, in the worst possible place",
+      "md": "`__repr__` runs during error handling. That is its whole point - and it means a `__repr__` that can raise will raise while you are already handling a failure.\n\n```python\nclass Row:\n    def __repr__(self):\n        return f\"Row(id={self.data['id']}, name={self.data['name']!r})\"\n\nrow = Row(name=\"ana\")             # a half-built record: no 'id' yet\nraise ValueError(f\"cannot upsert {row!r}\")\n```\n\nThe `ValueError` is never constructed. The f-string evaluates `repr(row)` first, that raises `KeyError: 'id'`, and your handler catches a `KeyError` from a line that contains no dict lookup. The message that would have told you *which* record failed is gone. Inside `logging`, the same repr fails during formatting, and `logging` swallows it: you get `--- Logging error ---` on stderr and the log record is dropped, so the incident timeline has a hole exactly where the failure was.\n\nThe ORM version of this is the one that bites hardest: a `__repr__` that formats a lazily-loaded relationship issues a query per log line, and after the session is closed it raises `DetachedInstanceError` - so your service works until you add a debug log to the teardown path.\n\nRules for `__repr__` in anything long-lived: read attributes only, never index or call, no I/O, no lazy loading, and format with `!r` on values you already hold. If a field might be absent, use `getattr(self, \"id\", None)` or repr the whole `__dict__`. A repr that is ugly but total beats one that is beautiful and conditional."
+    },
+    {
+      "type": "prose",
+      "md": "### Equality and hashing are one contract with two halves\n\n`__eq__` answers \"same value?\". `__hash__` answers \"which bucket?\". Dicts and sets use both: they find the bucket by hash and then confirm the match with `==`. Four rules follow, and every one of them is load-bearing.\n\n1. **If `a == b` then `hash(a) == hash(b)`.** The converse need not hold - two unequal objects may collide, and `__eq__` is what resolves it. Deriving both from the same tuple of fields (`hash((self.x, self.y))`) makes this automatic.\n2. **Defining `__eq__` sets `__hash__` to `None`.** Not \"leaves it alone\": Python assumes a type with custom equality is probably mutable, and would rather make it unhashable than let you silently corrupt a dict. `Point.__hash__` is literally `None`, and `{Point(1, 2)}` raises `TypeError: unhashable type: 'Point'`. If the type really is immutable, add `__hash__` yourself.\n3. **A hash must not change while the object is in a hash container.** Not \"should not\". The set placed it in a bucket computed from the old hash; after you mutate the hashed field it looks in a different bucket and finds nothing. The object is still in the set - iteration will show it - and `in` returns `False`.\n4. **Return `NotImplemented`, not `False`, for types you do not recognise.** `NotImplemented` tells Python to try the reflected operation (`other.__eq__(self)`) and only then fall back to identity. Returning `False` hard-codes \"not equal\" and breaks comparison against a subclass or a mock.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. Basic customization - __new__, __init__, __repr__, __str__, __eq__, __hash__"
+        },
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "hashable"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "class Point:\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n\n    def __eq__(self, other):\n        if not isinstance(other, Point):\n            return NotImplemented                     # let the other type try\n        return (self.x, self.y) == (other.x, other.y)\n\nprint(\"object.__hash__ ->\", object.__hash__ is not None)\nprint(\"Point.__hash__  ->\", Point.__hash__)\nprint(\"Point(1, 2) == Point(1, 2) ->\", Point(1, 2) == Point(1, 2))\ntry:\n    seen = {Point(1, 2)}\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)",
+      "caption": "`object` is hashable by identity, so every class starts out usable as a dict key. Defining `__eq__` takes that away: `Point.__hash__` is `None`, and the failure appears at the first `set`, `dict` key, `lru_cache` call or `functools.cache` - usually in code far away from the class you just edited.",
+      "runnable": true,
+      "expected_output": "object.__hash__ -> True\nPoint.__hash__  -> None\nPoint(1, 2) == Point(1, 2) -> True\nTypeError: unhashable type: 'Point'",
+      "highlight_lines": [
+        5,
+        11,
+        15
+      ]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.dunders.quiz.protocol-contracts"
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "class Tag:\n    def __init__(self, name):\n        self.name = name\n\n    def __eq__(self, other):\n        return isinstance(other, Tag) and self.name == other.name\n\n    def __hash__(self):\n        return hash(self.name)          # derived from a MUTABLE attribute\n\n    def __repr__(self):\n        return f\"Tag({self.name!r})\"\n\nseen = {Tag(\"prod\")}\nt = next(iter(seen))\nprint(\"before  t in seen  =\", t in seen)\n\nt.name = \"staging\"                      # the hash of a live set member just changed\n\nprint(\"len(seen)          =\", len(seen))\nprint(\"list(seen)         =\", list(seen))\nprint(\"t in seen          =\", t in seen)\nprint(\"Tag('staging') in  =\", Tag(\"staging\") in seen)\nprint(\"identity search    =\", any(x is t for x in seen))",
+      "caption": "The failure that has no exception. `len(seen)` is 1, iterating the set finds the object, `any(x is t for x in seen)` proves it is the very object you are holding - and `t in seen` is `False`. Membership is answered from the bucket for the *current* hash, and nothing rehashes a set for you.",
+      "runnable": true,
+      "expected_output": "before  t in seen  = True\nlen(seen)          = 1\nlist(seen)         = [Tag('staging')]\nt in seen          = False\nTag('staging') in  = False\nidentity search    = True",
+      "highlight_lines": [
+        8,
+        17,
+        21,
+        23
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "An object mutated after it became a key is not removed - it becomes unreachable",
+      "md": "This is the dunder bug that costs the most and shows the least. A `seen` set used for de-duplication, a `dict` keyed on a domain object, an `lru_cache` on a method taking that object: all of them store a bucket index computed once, at insert time.\n\nMutate a hashed field afterwards and the entry is orphaned. `obj in seen` is `False`, so the de-duplication stops de-duplicating and `seen.add(obj)` inserts it again, in the new bucket. Under load that is a set that grows monotonically - a worker whose RSS climbs for hours and then gets OOM-killed, with a heap dump full of objects that are all `==` to each other. `seen.discard(obj)` cannot clean up either: it looks in the new bucket too. Every test that inserts and reads without mutating in between is green.\n\nFixes, cheapest first: **make the hashed fields unwritable** (`@dataclass(frozen=True)`, or `__slots__` plus properties); **hash only the immutable identity subset** and document that the mutable fields are excluded (accepting that two objects differing only in those fields now collide and compare unequal - which is fine, hash collisions are legal); or **key the container on a value, not the object** - `seen: set[str]` of ids, `cache[(tenant, sku)]`. The last one is usually the right answer for caches, because it also stops the cache from holding your objects alive.\n\nThe reflex fix - `__hash__ = object.__hash__`, restoring identity hashing - is worse than the disease: two objects that are `==` now land in different buckets, so the dict holds duplicate logical keys and the de-duplication never worked at all."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Dunder",
+        "What calls it",
+        "The contract you are signing"
+      ],
+      "rows": [
+        [
+          "`__new__`",
+          "`Cls(...)`, before `__init__`; `copy` and `pickle` reconstruction",
+          "Create and return the instance. Must return an object; `__init__` runs only if it is an instance of `Cls`. Override for immutable subclasses, interning and singletons - not for validation."
+        ],
+        [
+          "`__init__`",
+          "`Cls(...)`, immediately after `__new__` returns an instance of `Cls`",
+          "Initialise in place and **return `None`**. Anything else raises `TypeError`. Do the minimum; a constructor that does I/O cannot be tested."
+        ],
+        [
+          "`__repr__`",
+          "`repr()`, the REPL, `f\"{obj!r}\"`, `%r`, any container's own repr, loggers, debuggers, pytest diffs",
+          "Unambiguous, side-effect free, and **must not raise**. Ideally eval-able. Falls back to `<Cls object at 0x...>` if you skip it."
+        ],
+        [
+          "`__str__`",
+          "`str()`, `print()`, `f\"{obj}\"`, `format()`, `\"\".join`-style coercion",
+          "The human-facing form. Falls back to `__repr__` when undefined, so define it only when the two differ."
+        ],
+        [
+          "`__eq__`",
+          "`==`, `!=`, `in`, `list.index`, `assertEqual`, and the confirm step of every dict/set lookup",
+          "Reflexive, symmetric, transitive. Return `NotImplemented` for unknown types. Keep it cheap: a dict lookup may call it on every collision."
+        ],
+        [
+          "`__hash__`",
+          "`hash()`, dict key, set member, `frozenset`, `functools.lru_cache` arguments",
+          "Equal objects must hash equal, and the value must be constant for the object's lifetime. Defining `__eq__` sets this to `None` unless you define it too."
+        ],
+        [
+          "`__lt__`",
+          "`<`, `sorted()`, `min()`, `max()`, `heapq`, `bisect`",
+          "A strict ordering consistent with `__eq__`. `sorted` uses only `<`. `functools.total_ordering` derives `>`, `<=`, `>=` from `__lt__` plus `__eq__`."
+        ],
+        [
+          "`__iter__`",
+          "`for`, `list()`, `tuple()`, unpacking, comprehensions, `in` when `__contains__` is absent",
+          "Return a **fresh** iterator, unless the object *is* an iterator - in which case return `self`. Never return a half-consumed iterator."
+        ],
+        [
+          "`__next__`",
+          "`next(it)`, and each turn of a `for` loop",
+          "Return the next item or raise `StopIteration`. Once exhausted it must keep raising `StopIteration`, not restart."
+        ],
+        [
+          "`__len__`",
+          "`len()`, and `bool()` when `__bool__` is absent",
+          "A non-negative `int`. Returning 0 makes the object falsy, so `if obj:` silently becomes a length test."
+        ],
+        [
+          "`__bool__`",
+          "`bool()`, `if obj:`, `while obj:`, `not obj`, `and`/`or`",
+          "Return an actual `bool`. Define it whenever truthiness must mean something other than \"non-empty\"."
+        ],
+        [
+          "`__getattr__`",
+          "Attribute access **only after** the normal lookup has failed",
+          "Raise `AttributeError` for names you do not handle. Touching `self.<anything unset>` inside it re-enters it - that is the `RecursionError`."
+        ]
+      ],
+      "caption": "Read the middle column as \"the syntax I am defining\". You are not adding a method for callers to call; you are changing what an operator, a builtin or a statement means for your type - which is why the contract in the third column is not advice."
+    },
+    {
+      "type": "diagram",
+      "format": "mermaid",
+      "source": "graph LR\n  C[\"your class\"] --> R[\"representation: __repr__, __str__, __format__\"]\n  C --> E[\"equality and hashing: __eq__, __hash__\"]\n  C --> O[\"ordering: __lt__ plus functools.total_ordering\"]\n  C --> I[\"iteration: __iter__, __next__\"]\n  C --> S[\"sizing and truthiness: __len__, __bool__\"]\n  R --> RU[\"logs, tracebacks, pytest diffs, the debugger\"]\n  E --> EU[\"dict keys, set members, in, lru_cache, dedupe\"]\n  O --> OU[\"sorted, min, max, heapq, bisect\"]\n  I --> IU[\"for, list, tuple, unpacking, comprehensions\"]\n  S --> SU[\"len, if obj, while obj, or-defaulting\"]",
+      "caption": "The five protocol groups and what each one buys you. Nothing here is inherited from an interface: each arrow exists only because you defined a name. The right-hand column is the code that breaks when the contract is half-implemented - and it is nearly always code you did not write."
+    },
+    {
+      "type": "prose",
+      "md": "### Ordering: `sorted` only needs `<`\n\nComparison operators are not derived from each other. With no `__lt__`, `sorted([Money(500), Money(100)])` raises `TypeError: '<' not supported between instances of 'Money' and 'Money'` - and note that the message names *the same type twice*, which is the tell that this is a missing protocol rather than a mixed-type comparison. Define `__lt__` and `sorted`, `min`, `max`, `heapq` and `bisect` all start working; `>` works too, because Python tries the reflected operation. `<=` and `>=` do not. `@functools.total_ordering` fills in the missing three from `__lt__` plus `__eq__`, at the cost of an extra Python-level call per comparison - so on a genuinely hot sort, either write all four or skip the protocol entirely and pass `key=lambda m: (m.currency, m.minor)`, which sorts tuples of builtins in C and never touches your class.\n\n### Iteration: two roles, one exhaustion signal\n\nPEP 234 defines two distinct roles. An **iterable** returns a *fresh* iterator from `__iter__`. An **iterator** implements `__next__` and returns `self` from `__iter__`. Exhaustion is signalled by raising `StopIteration`, and once raised the iterator must keep raising it rather than restarting. The classic design error is making a collection its own iterator: the first `for` loop consumes it and the second sees nothing, with no error anywhere - which in a pipeline means an empty result set that looks like an empty database.\n\nIf a class defines no `__iter__` at all, `iter()` falls back to the **legacy `__getitem__` protocol**, calling `obj[0]`, `obj[1]`, ... until `IndexError`:\n\n```python\nclass Legacy:\n    def __init__(self, items): self._items = list(items)\n    def __getitem__(self, index): return self._items[index]\n\nlist(Legacy([\"a\", \"b\"]))          # ['a', 'b']\nhasattr(Legacy, \"__iter__\")       # False\n```\n\nThat fallback is why a class with `__getitem__` and no `__iter__` is iterable at all. It is also a trap: if your `__getitem__` handles arbitrary keys - a config object that returns `None` for a missing key, say - then `for x in obj` never raises `IndexError` and loops forever.\n\n### Sizing and truthiness\n\n`bool(obj)` tries `__bool__`, then `__len__`, then answers `True`. So defining `__len__` and nothing else silently makes `if obj:` a length test. For a container that is exactly right. For anything else it is a landmine: a `Response` whose `__len__` is its body length is falsy for a `204 No Content`, and a `Money` whose `__len__` you never wrote is truthy at zero. If truthiness has any meaning other than \"non-empty\", define `__bool__` explicitly - and if it has no meaningful answer, define neither and force callers to be explicit.",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/functools.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "functools.total_ordering"
+        },
+        {
+          "source_id": "python.pep234",
+          "url": "https://peps.python.org/pep-0234/",
+          "source_type": "standard",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "The iterator protocol and the StopIteration contract"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.5. Emulating container types - __iter__, __len__"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "from functools import total_ordering\n\nclass Money:\n    def __init__(self, minor, currency=\"USD\"):\n        self.minor, self.currency = minor, currency\n\n    def __repr__(self):\n        return f\"Money({self.minor}, {self.currency!r})\"\n\ntry:\n    sorted([Money(500), Money(100)])\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)\n\n@total_ordering\nclass Ordered(Money):\n    def __eq__(self, other):\n        if not isinstance(other, Ordered):\n            return NotImplemented\n        return (self.currency, self.minor) == (other.currency, other.minor)\n\n    def __lt__(self, other):\n        if not isinstance(other, Ordered):\n            return NotImplemented\n        if self.currency != other.currency:\n            raise TypeError(f\"cannot order {self.currency} against {other.currency}\")\n        return self.minor < other.minor\n\n    __hash__ = None       # explicit: this type is mutable, keep it out of dicts\n\nprint(\"sorted     ->\", sorted([Ordered(500), Ordered(100), Ordered(250)]))\nprint(\"a >= b     ->\", Ordered(500) >= Ordered(100))\nprint(\"max        ->\", max(Ordered(500), Ordered(100)))\ntry:\n    Ordered(100, \"USD\") < Ordered(100, \"EUR\")\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)",
+      "caption": "`sorted` reaches for `<` and there is nothing to reach for. `@total_ordering` supplies the other three operators from `__lt__` and `__eq__`. The `raise TypeError` inside `__lt__` is deliberate: ordering two different currencies has no answer, and returning `NotImplemented` there would let Python fall back to a nonsense comparison message instead of your explanation.",
+      "runnable": true,
+      "expected_output": "TypeError: '<' not supported between instances of 'Money' and 'Money'\nsorted     -> [Money(100, 'USD'), Money(250, 'USD'), Money(500, 'USD')]\na >= b     -> True\nmax        -> Money(500, 'USD')\nTypeError: cannot order USD against EUR",
+      "highlight_lines": [
+        10,
+        15,
+        25,
+        29
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "class Countdown:\n    \"\"\"A self-iterator: __iter__ returns self, so it can be consumed exactly once.\"\"\"\n\n    def __init__(self, n):\n        self.n = n\n\n    def __iter__(self):\n        return self\n\n    def __next__(self):\n        if self.n <= 0:\n            raise StopIteration\n        self.n -= 1\n        return self.n + 1\n\nc = Countdown(3)\nprint(\"first pass  =\", list(c))\nprint(\"second pass =\", list(c))          # exhausted, and nothing tells you\n\nclass Countdown2:\n    \"\"\"__iter__ hands back a fresh iterator every time; __len__ drives truthiness.\"\"\"\n\n    def __init__(self, n):\n        self.n = n\n\n    def __iter__(self):\n        return iter(range(self.n, 0, -1))\n\n    def __len__(self):\n        return self.n\n\nc2 = Countdown2(3)\nprint(\"first pass  =\", list(c2))\nprint(\"second pass =\", list(c2))\nprint(\"len         =\", len(c2), \"| bool =\", bool(c2))\nempty = Countdown2(0)\nprint(\"empty len   =\", len(empty), \"| bool =\", bool(empty))\nprint(\"branch      =\", \"has items\" if empty else \"falsy because __len__ is 0\")",
+      "caption": "`Countdown` is its own iterator, so the second pass is empty and silent. `Countdown2` returns a fresh iterator each time and is therefore re-iterable, and its `__len__` is what makes `bool(empty)` false - one method, two protocols.",
+      "runnable": true,
+      "expected_output": "first pass  = [3, 2, 1]\nsecond pass = []\nfirst pass  = [3, 2, 1]\nsecond pass = [3, 2, 1]\nlen         = 3 | bool = True\nempty len   = 0 | bool = False\nbranch      = falsy because __len__ is 0",
+      "highlight_lines": [
+        7,
+        8,
+        20,
+        30,
+        33
+      ]
+    },
+    {
+      "type": "steps",
+      "title": "Auditing a type before you put it in a set, a dict, a cache or a sort",
+      "steps": [
+        "**Name the protocols the container will actually use.** A `set` or `dict` key needs `__hash__` and `__eq__`. `sorted` needs `__lt__` (or a `key=`). `functools.lru_cache` hashes *every* argument, including `self`. `in` on your object needs `__contains__`, or `__iter__`, or `__getitem__`, in that order.",
+        "**Decide what identity means for this type, in one sentence.** \"Two `Money` are the same if currency and minor units match.\" That sentence is the field tuple both `__eq__` and `__hash__` must be derived from. If you cannot write the sentence, the type is not ready to be a key.",
+        "**Print `YourType.__hash__`.** `None` means you defined `__eq__` and stopped, and the failure will surface far from here. A bound `slot wrapper` inherited from `object` means you have identity hashing, so two equal objects are two different keys - equally wrong, but silent.",
+        "**Make the hashed fields unwritable.** `@dataclass(frozen=True)` is the cheap version. Failing that, expose them as read-only `@property` over `__slots__`. Do not rely on \"nobody mutates it\" - the mutation will arrive in a `for row in rows: row.name = normalise(row.name)` loop written a year later by someone who has never seen your `__hash__`.",
+        "**Prove the round trip, do not eyeball it.** `assert obj in {obj}`; `assert len({a, b}) == 1` for two objects you consider equal; `assert hash(a) == hash(b)`; `assert d[copy_of_key] is value`. Four asserts, and they catch every version of this bug.",
+        "**Read the failure output you will get.** Put an instance in a failing assertion and look at the diff. If it says `<app.money.Money object at 0x10f2c3a90>`, stop and write `__repr__` before you debug anything else - you are about to spend an hour on a problem the repr would have shown you."
+      ]
+    },
+    {
+      "type": "prose",
+      "md": "### Dataclasses: the shortest correct path\n\n`@dataclass` writes `__init__`, `__repr__` and `__eq__` from the annotated fields, which removes the three places this concept's bugs live. The options that matter:\n\n- `order=True` generates all four comparisons by comparing the fields **as a tuple, in declaration order** - so field order is part of your API, and moving a field silently changes your sort.\n- `frozen=True` makes attribute assignment raise `FrozenInstanceError`, and together with the default `eq=True` it generates a `__hash__` from the fields. This is the combination you want for anything used as a key.\n- The `__hash__` rules are worth memorising because they are surprising: `eq=True, frozen=False` (the default) sets `__hash__ = None`; `eq=True, frozen=True` generates one; `eq=False` leaves `object.__hash__` in place, giving you identity hashing on a type that looks value-like.\n- Mutable defaults must be `field(default_factory=list)`. A bare `lines: list = []` raises `ValueError: mutable default <class 'list'> for field lines is not allowed: use default_factory` - the check covers `list`, `dict` and `set` only, so `field(default=SOME_DICT)` still shares one object across every instance.\n\n### `__slots__`: a memory-and-typo trade for flexibility\n\n`__slots__ = (\"x\", \"y\")` replaces the per-instance `__dict__` with a fixed array of descriptors. You gain a few hundred bytes per instance - decisive at 10^6 instances, invisible at 10^3 - slightly faster attribute access, and an immediate `AttributeError` on a typo'd assignment instead of a silent new attribute. You pay: no ad-hoc attributes, no `__dict__` (so anything that does `vars(obj)` or `obj.__dict__.update(...)` breaks), no `__weakref__` unless you list it, `functools.cached_property` stops working because it needs somewhere to cache, and a subclass that omits `__slots__` quietly regains a `__dict__` along with the memory you were saving. `@dataclass(slots=True)` (3.10+) applies it for you.",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/dataclasses.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "dataclasses - eq, order, frozen, field(default_factory=...)"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.2.4. __slots__"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "from dataclasses import dataclass, field, replace\n\n@dataclass(frozen=True, order=True)\nclass Money:\n    currency: str            # first field: the generated ordering compares it first\n    minor: int\n\n@dataclass\nclass Basket:\n    owner: str\n    lines: list = field(default_factory=list)      # per-instance, not shared\n\na, b = Money(\"USD\", 1250), Money(\"USD\", 990)\nprint(\"repr          ->\", a)\nprint(\"eq            ->\", a == Money(\"USD\", 1250), a == b)\nprint(\"hashable      ->\", len({a, Money(\"USD\", 1250), b}))\nprint(\"sorted        ->\", sorted([a, b]))\nprint(\"replace       ->\", replace(a, minor=1))\ntry:\n    a.minor = 1\nexcept Exception as exc:\n    print(f\"{type(exc).__name__}: {exc}\")\n\none, two = Basket(\"ana\"), Basket(\"ben\")\none.lines.append(\"widget\")\nprint(\"lines shared? ->\", one.lines, two.lines, one.lines is two.lines)",
+      "caption": "Nine lines of declaration buy `__init__`, `__repr__`, `__eq__`, four comparisons, a field-derived `__hash__` and assignment protection. `Basket` shows the other half of the rule: `default_factory` is how you get a per-instance list, and the `is` check proves the two baskets do not share one.",
+      "runnable": true,
+      "expected_output": "repr          -> Money(currency='USD', minor=1250)\neq            -> True False\nhashable      -> 2\nsorted        -> [Money(currency='USD', minor=990), Money(currency='USD', minor=1250)]\nreplace       -> Money(currency='USD', minor=1)\nFrozenInstanceError: cannot assign to field 'minor'\nlines shared? -> ['widget'] [] False",
+      "highlight_lines": [
+        3,
+        11,
+        17,
+        22
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "What `__slots__` takes away, it takes away everywhere",
+      "md": "```python\nclass Slotted:\n    __slots__ = (\"x\", \"y\")\n\np = Slotted(1, 2)\np.z = 3            # AttributeError: 'Slotted' object has no attribute 'z'\np.__dict__         # AttributeError: 'Slotted' object has no attribute '__dict__'\nweakref.ref(p)     # TypeError: cannot create weak reference to 'Slotted' object\n```\n\nEach of those is a feature until it is not. The `AttributeError` on `p.z` is the point of `__slots__` - it catches `self.timeout = ...` where the slot is called `timeout_s`. The missing `__dict__` breaks `vars(obj)`, some serialisers, and any library that stashes a private attribute on your objects (caching layers and test doubles both do). The missing `__weakref__` breaks `weakref.WeakSet`, observer registries and some ORM identity maps. Default `pickle` still works for a plain slotted class, but a class that defines `__slots__` *and* a custom `__getstate__`/`__reduce__` written for the `__dict__` era will unpickle with empty slots and fail later, somewhere else.\n\nReach for `__slots__` when instance count is the problem you actually have. Measure first: `sys.getsizeof` plus a `tracemalloc` snapshot over a representative load, not a microbenchmark of one object."
+    }
+  ],
+  "components": [
+    {
+      "name": "construction: __new__ and __init__",
+      "role": "Turns a call on the class into an object. `__new__` allocates and returns the instance and is the only hook that runs before the object exists in its final form - required for immutable subclasses, interning and pickle support. `__init__` initialises in place and must return `None`. Buys you: a type that can be constructed exactly one way, so every instance is valid from birth."
+    },
+    {
+      "name": "representation: __repr__, __str__, __format__",
+      "role": "Buys you debuggability. `__repr__` is what every log line, traceback, pytest diff, container repr and debugger pane shows; without it you get a type name and an address. `__str__` is the user-facing rendering and falls back to `__repr__`. `__format__` backs `format()` and f-string spec strings such as `f\"{money:>12}\"`."
+    },
+    {
+      "name": "equality and hashing: __eq__, __hash__",
+      "role": "Buys you membership in the hash containers: dict keys, set members, `in`, de-duplication, `functools.lru_cache`. The two must agree - equal implies equal hashes - and the hash must be stable for the object's lifetime. Defining `__eq__` alone removes hashability by design."
+    },
+    {
+      "name": "ordering: __lt__ (plus functools.total_ordering)",
+      "role": "Buys you `sorted`, `min`, `max`, `heapq`, `bisect` and the four comparison operators. `sorted` needs only `__lt__`; `total_ordering` derives the rest from `__lt__` and `__eq__`. Must be consistent with equality, or a sort becomes order-dependent and a `bisect` search silently misses.",
+      "required": false
+    },
+    {
+      "name": "iteration: __iter__, __next__",
+      "role": "Buys you `for`, unpacking, comprehensions, `list()`/`tuple()` and everything in `itertools`. `__iter__` on an iterable returns a fresh iterator; on an iterator it returns `self` and `__next__` raises `StopIteration` at exhaustion. A class with only `__getitem__` is still iterable through the legacy index fallback.",
+      "required": false
+    },
+    {
+      "name": "sizing and truthiness: __len__, __bool__",
+      "role": "Buys you `len()` and a sensible answer to `if obj:`. `bool()` consults `__bool__`, then `__len__`, then defaults to `True` - so `__len__` alone makes an empty container falsy, which is right for containers and dangerous for anything where zero is a legitimate value.",
+      "required": false
+    }
+  ],
+  "dependencies": [
+    "python.objects-and-names",
+    "python.functions-and-signatures"
+  ],
+  "prerequisites": [
+    "python.objects-and-names"
+  ],
+  "related": [
+    "python.sequences-and-mappings",
+    "python.decorators"
+  ],
+  "common_errors": [
+    {
+      "error": "TypeError: unhashable type: 'Point'",
+      "cause": "You defined `__eq__` and not `__hash__`. Python sets `__hash__ = None` on any class that defines `__eq__` without one, on the assumption that a type with custom equality is probably mutable and would corrupt a dict. The traceback points at the `set`/`dict`/`lru_cache` call site, which is often in library code far from the class you edited.",
+      "fix": "If the type is immutable, define `__hash__` from the same field tuple as `__eq__`: `def __hash__(self): return hash((self.x, self.y))`. If it is not immutable, either make it so (`@dataclass(frozen=True)`) or stop using it as a key and key on a value instead. Never write `__hash__ = object.__hash__` to silence it - that restores identity hashing, so two equal objects become two different keys.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. Basic customization - __new__, __init__, __repr__, __str__, __eq__, __hash__"
+        },
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "hashable"
+        }
+      ]
+    },
+    {
+      "error": "TypeError: '<' not supported between instances of 'Money' and 'Money'",
+      "cause": "`sorted`, `min`, `max`, `heapq` or `bisect` reached for `<` and your type has no `__lt__`. The message naming the same type on both sides is the giveaway: this is a missing protocol, not a mixed-type comparison. Defining `__eq__` does not help - comparisons are not derived from equality.",
+      "fix": "Define `__lt__` over a tuple of fields and add `@functools.total_ordering` if you also want `<=`, `>` and `>=`. On a hot path prefer `sorted(items, key=lambda m: (m.currency, m.minor))`, which compares tuples of builtins in C and never enters your class. If ordering is genuinely undefined between two instances (different currencies), raise `TypeError` with an explanation from inside `__lt__`.",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/functools.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "functools.total_ordering"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. Basic customization - __new__, __init__, __repr__, __str__, __eq__, __hash__"
+        }
+      ]
+    },
+    {
+      "error": "No exception at all: every instance shares one list. `Cart().items` already contains the item another cart added, `a.items is b.items` is `True`, and the list grows for the life of the process.",
+      "cause": "`items = []` in the class body is evaluated once, at class creation, and stored on the class. `self.items.append(x)` *reads* `items` - falling back to the class - and mutates the one object it finds. Attribute writes create instance entries; attribute reads do not, so a mutating method never gets its own copy.",
+      "fix": "Assign per-instance state in `__init__` (`self.items = []`), or use `field(default_factory=list)` in a dataclass. Reserve class attributes for values you only ever read - immutable constants and subclass-overridable defaults. A quick audit: `grep` the class body for `= []`, `= {}` and `= set()`.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3. Special method names"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.2. The standard type hierarchy - class instances and instance attribute lookup"
+        }
+      ]
+    },
+    {
+      "error": "RecursionError: maximum recursion depth exceeded",
+      "cause": "A dunder that reaches back into itself. `__getattr__` that reads `self._values` when `_values` was never set: the read fails normal lookup, so `__getattr__` is called again, for `_values` this time, forever. Same shape for `__eq__` written as `self == other.wrapped`, `__repr__` that reprs `self`, or `__getattribute__` that touches any attribute of `self`. It also fires during unpickling, when `__getattr__` is consulted before `__init__` has ever run.",
+      "fix": "In `__getattr__`, guard the internals and raise `AttributeError` for anything you do not handle: `if name.startswith(\"_\"): raise AttributeError(name)`, then `return object.__getattribute__(self, \"_values\")[name]`. In `__eq__`, compare *field tuples*, never `self` itself. Set the backing attribute with `object.__setattr__(self, \"_values\", data)` in `__init__` so it exists before any lookup can miss.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.2. Customizing attribute access - __getattr__, __getattribute__"
+        }
+      ]
+    },
+    {
+      "error": "TypeError: __init__() should return None, not 'Money'",
+      "cause": "`__init__` ended with `return self` (or `return cls(...)`, or the result of a helper that returns a value). `__init__` initialises an object that already exists; `type.__call__` checks its return value and refuses anything but `None`. On 3.11+ the same error reads `TypeError: Money.__init__() should return None, not 'Money'` - the qualified name was added to the message.",
+      "fix": "Delete the `return`. If you wanted an alternative constructor, write a `@classmethod`: `@classmethod def parse(cls, text): return cls(...)`. If you wanted to return a *different* object than the one being constructed - a cached or interned instance - that is `__new__`'s job, not `__init__`'s.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. Basic customization - __new__, __init__, __repr__, __str__, __eq__, __hash__"
+        }
+      ]
+    }
+  ],
+  "best_practices": [
+    "Write `__repr__` first, before the logic. It is the cheapest debugging tool you will ever add, it costs three lines, and you will read its output hundreds of times. Make it eval-able where you can and total always - no lookups that can raise.",
+    "Derive `__eq__` and `__hash__` from the same tuple of fields, in the same order, and name that tuple in a comment or a private property. Two implementations that drift apart are the hash bug waiting to happen.",
+    "Reach for `@dataclass(frozen=True)` before hand-writing `__init__`/`__repr__`/`__eq__`/`__hash__`. It is shorter, it is correct, and `frozen=True` makes the hash-stability rule structural rather than a matter of team discipline.",
+    "Return `NotImplemented` from `__eq__`, `__lt__` and the arithmetic dunders for types you do not recognise. Returning `False` or raising `TypeError` yourself breaks subclasses, mocks and any type that knows how to compare itself to yours.",
+    "Define `__bool__` explicitly whenever truthiness is not \"non-empty\". Otherwise `__len__` decides for you, and `if response:` starts meaning \"the body is not empty\".",
+    "Keep `__iter__` and the object it iterates separate: return a generator or `iter(...)` over your storage, so a second `for` loop works. Only return `self` when the class genuinely is a one-shot cursor, and say so in the docstring.",
+    "Use `functools.total_ordering` for correctness and a `key=` function for speed. They solve the same problem at opposite ends of the hot/cold spectrum."
+  ],
+  "production_considerations": [
+    "Mutating an object after it has been used as a dict key or a set member does not remove it - it strands it. `obj in seen` returns `False` while iteration still shows the object and `x is obj` is `True`, so a de-duplication set stops de-duplicating and grows until the worker is OOM-killed. `discard` cannot clean it up either, because it looks in the bucket for the new hash. Every test that inserts and reads without mutating in between passes.",
+    "A `__repr__` that can raise converts one incident into two. It runs inside `except` blocks, so a `KeyError` from `f\"{row!r}\"` replaces the exception you were about to report; inside `logging` it is swallowed as `--- Logging error ---` and the record is dropped, leaving a hole in the timeline exactly where the failure was. An ORM repr that touches a lazy relationship also issues one query per log line and raises after the session closes.",
+    "`__eq__` that compares floats exactly is a coin flip in production. `Price(0.1 + 0.2) == Price(0.3)` is `False`, and because `__hash__` is derived from the same float the object is also unfindable in the set you just put it in. Store money and quantities as integer minor units or `Decimal`; if you must compare floats, compare with an explicit tolerance in a named method and keep the tolerant comparison out of `__hash__`, which cannot be made tolerant at all.",
+    "`__slots__` is not a local optimisation. It removes `__dict__`, so `vars(obj)`, `obj.__dict__.update(...)`, `functools.cached_property` and any library that stashes a private attribute on your objects (test doubles, caching layers, some tracing agents) break - usually at the far end of the system from your class. It removes `__weakref__` unless you list it, which breaks `WeakSet` registries and ORM identity maps, and a custom `__getstate__`/`__reduce__` written for the `__dict__` era will unpickle with empty slots and fail later, somewhere else. Measure the instance count first; below ~10^5 live objects the saving is noise.",
+    "`__eq__` is called on every hash collision and on every `list.index`, `in` over a list, and `assertEqual`. An `__eq__` that normalises strings, walks a nested structure or (worst) hits the database turns an O(1) dict lookup into something with a p99 you cannot explain. Keep it to comparing a tuple of already-computed fields, and precompute anything expensive at construction.",
+    "Defining `__eq__` on a type that is already used as a dict key is a silently breaking change. The class keeps working; the *callers* start raising `TypeError: unhashable type` from library frames, and any code that relied on identity keys now collapses distinct objects into one entry. Grep for the type in `set(`, `dict[`, `lru_cache` and `@cache` before you add equality to an existing class."
+  ],
+  "anti_patterns": [
+    "`__hash__ = object.__hash__` (or `__hash__ = id`) added to silence `TypeError: unhashable type`. It restores identity hashing on a type with value equality, so two objects that are `==` land in different buckets: the dict now holds duplicate logical keys and the de-duplication you wrote never runs. The exception was the correct answer.",
+    "Making a collection its own iterator - `def __iter__(self): return self` on a class that holds data. It works for the first `for` loop and returns nothing for the second, with no error, so a two-pass pipeline silently produces an empty result that looks exactly like an empty upstream.",
+    "A `__repr__` that returns the user-facing string (`return f\"{self.amount} {self.currency}\"`). Now a log line cannot distinguish `Money(1250, 'USD')` from the string `\"12.50 USD\"`, and a failing assertion shows two identical-looking values that are not equal.",
+    "Mutable class attributes used as instance defaults - `items = []`, `cache = {}`, `filters = set()`. One object for the whole process, mutated by every instance, corrupted by the first request and cleaned up only by a restart.",
+    "`__del__` for cleanup. It runs at an unspecified time, may never run at all, is skipped for objects alive at interpreter shutdown, silently swallows its own exceptions, and can resurrect the object. Use a context manager or `contextlib.closing` and close things where you opened them.",
+    "Type-blind equality: `def __eq__(self, other): return self.id == other.id`. It raises `AttributeError` when compared with a string, returns nonsense when compared with a different model that also has `id`, and breaks `NotImplemented`-based dispatch. Always `isinstance`-check and return `NotImplemented`.",
+    "Hashing the whole mutable object graph - `hash(tuple(self.lines))` on a list you keep appending to. Legal at insert time, wrong one line later, and it makes the hash cost proportional to the object's size on every lookup."
+  ],
+  "examples": [
+    {
+      "title": "One class attribute, shared by every request in the worker",
+      "md": "`active = {}` is created once at import. Every `Session` writes into the same dict, so a session registry that looks per-instance is really process-global: memory grows for the life of the worker and one tenant's sessions are visible from another's request.",
+      "code": "class Session:\n    active = {}                      # ONE dict, created once, owned by the class\n\n    def __init__(self, user):\n        self.user = user\n        self.active[user] = self      # every instance writes into the same dict\n\n    def __repr__(self):\n        return f\"Session({self.user!r})\"\n\ndef handle_request(user):\n    return Session(user)\n\nhandle_request(\"ana\")\nhandle_request(\"ben\")\nprint(\"Session.active     =\", Session.active)\nprint(\"a fresh instance   =\", Session(\"cleo\").active)      # sees the other two\nprint(\"leaks per process  =\", len(Session.active))",
+      "language": "python",
+      "output": "Session.active     = {'ana': Session('ana'), 'ben': Session('ben')}\na fresh instance   = {'ana': Session('ana'), 'ben': Session('ben'), 'cleo': Session('cleo')}\nleaks per process  = 3"
+    },
+    {
+      "title": "The whole protocol set, correct, in a dozen lines",
+      "md": "`frozen=True` makes the hash stable by construction, `order=True` gives sorting from the field tuple, integer minor units keep float equality out of `__eq__` and `__hash__` entirely, and `parse` is a `@classmethod` rather than a `return` from `__init__`. `__str__` is the only method worth hand-writing, because the receipt format is the one thing the generated code cannot guess.",
+      "code": "from dataclasses import dataclass\n\n@dataclass(frozen=True, order=True)\nclass Money:\n    currency: str            # ordered by currency first, then amount\n    minor: int               # integer minor units: no float equality anywhere\n\n    @classmethod\n    def parse(cls, text):\n        amount, currency = text.split()\n        return cls(currency, round(float(amount) * 100))\n\n    def __str__(self):\n        return f\"{self.minor / 100:,.2f} {self.currency}\"\n\nprices = [Money.parse(\"12.50 USD\"), Money.parse(\"9.99 USD\"), Money.parse(\"9.99 EUR\")]\nprint(\"repr      ->\", repr(prices[0]))\nprint(\"str       ->\", str(prices[0]))\nprint(\"sorted    ->\", [str(p) for p in sorted(prices)])\nprint(\"dedupe    ->\", len({*prices, Money.parse(\"12.50 USD\")}))\nprint(\"dict key  ->\", {prices[0]: \"line-1\"}[Money(\"USD\", 1250)])\nprint(\"eq/hash   ->\", Money(\"USD\", 1250) == prices[0], hash(Money(\"USD\", 1250)) == hash(prices[0]))",
+      "language": "python",
+      "output": "repr      -> Money(currency='USD', minor=1250)\nstr       -> 12.50 USD\nsorted    -> ['9.99 EUR', '9.99 USD', '12.50 USD']\ndedupe    -> 3\ndict key  -> line-1\neq/hash   -> True True"
+    }
+  ],
+  "skills": [
+    "python.skill.implement-dunder-protocols"
+  ],
+  "practice": [
+    "python.practice.dunders.quiz.protocol-contracts",
+    "python.practice.dunders.lab.money-type"
+  ],
+  "keywords": [
+    "TypeError: unhashable type: 'Point'",
+    "TypeError: '<' not supported between instances of 'Money' and 'Money'",
+    "TypeError: __init__() should return None, not 'Money'",
+    "RecursionError: maximum recursion depth exceeded",
+    "AttributeError: 'Slotted' object has no attribute 'z'",
+    "TypeError: cannot create weak reference to 'Slotted' object",
+    "ValueError: mutable default <class 'list'> for field lines is not allowed: use default_factory",
+    "FrozenInstanceError: cannot assign to field 'minor'",
+    "dunder",
+    "special method",
+    "magic method",
+    "__repr__",
+    "__str__",
+    "__eq__",
+    "__hash__",
+    "__lt__",
+    "__iter__",
+    "__next__",
+    "__len__",
+    "__bool__",
+    "__new__",
+    "__init__",
+    "__slots__",
+    "__getattr__",
+    "eq hash contract",
+    "hashable",
+    "unhashable",
+    "StopIteration",
+    "iterator protocol",
+    "total_ordering",
+    "functools.total_ordering",
+    "dataclass",
+    "frozen dataclass",
+    "default_factory",
+    "class attribute vs instance attribute",
+    "mutable class attribute",
+    "NotImplemented"
+  ],
+  "estimated_minutes": 28,
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/datamodel.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "3.3. Special method names"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/datamodel.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "3.3.1. Basic customization - __new__, __init__, __repr__, __str__, __eq__, __hash__"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/datamodel.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "3.3.5. Emulating container types - __iter__, __len__"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/datamodel.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "3.3.2.4. __slots__"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/functools.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "functools.total_ordering"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/dataclasses.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "dataclasses - eq, order, frozen, field(default_factory=...)"
+    },
+    {
+      "source_id": "python.pep234",
+      "url": "https://peps.python.org/pep-0234/",
+      "source_type": "standard",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "The iterator protocol and the StopIteration contract"
+    },
+    {
+      "source_id": "python.docs.glossary",
+      "url": "https://docs.python.org/3/glossary.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "hashable"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-18T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-18T00:00:00Z",
+    "status": "published"
+  }
+}

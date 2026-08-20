@@ -1,0 +1,128 @@
+{
+  "id": "python.practice.decorators.code.retry",
+  "kind": "code",
+  "title": "A retry decorator that preserves identity",
+  "subject_id": "programming.python",
+  "concept_id": "python.decorators",
+  "skills": ["python.skill.write-decorators"],
+  "difficulty": 7,
+  "estimated_minutes": 30,
+  "prompt_md": "Write `retry`, a parameterised decorator that retries a function when it raises a configured exception.\n\n```python\n@retry(attempts=3, exceptions=(ConnectionError,))\ndef fetch(url):\n    ...\n```\n\nRequirements the tests enforce:\n\n- `retry(attempts=3, exceptions=(ConnectionError,))` returns a decorator; applying it returns a wrapper callable.\n- The wrapper calls the function, and on a listed exception retries up to `attempts` times total (so `attempts=3` means at most 3 calls).\n- If every attempt fails, the **last** exception propagates unchanged.\n- An exception *not* in `exceptions` propagates immediately, with no retry.\n- On success it returns the function's return value and stops calling.\n- `*args` and `**kwargs` pass through untouched.\n- The wrapper preserves the wrapped function's `__name__`, `__doc__` and `__wrapped__` — i.e. it uses `functools.wraps`. This is the identity requirement decorators most often break.\n\nDefaults: `attempts=3`, `exceptions=(Exception,)`. You do not need real sleeping — an optional `on_retry` callback is invoked between attempts so the tests can observe retries deterministically.",
+  "tags": ["decorators", "functools.wraps", "parameterised-decorator", "retry", "args-kwargs"],
+  "requirements_md": [
+    "`retry(attempts=3, exceptions=(Exception,), on_retry=None)` is a decorator factory (three layers).",
+    "At most `attempts` calls; the last exception propagates if all fail.",
+    "Exceptions not listed in `exceptions` are not retried.",
+    "Return value and `*args`/`**kwargs` pass through unchanged.",
+    "`on_retry(exc, attempt_number)` is called between attempts when provided.",
+    "The wrapper carries the original `__name__`, `__doc__`, and `__wrapped__` (use `functools.wraps`)."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "retry.py",
+  "starter_files": [
+    {
+      "path": "retry.py",
+      "content": "\"\"\"A parameterised retry decorator.\n\nThree layers: retry(...) -> decorator -> wrapper. Remember functools.wraps on\nthe wrapper, or the decorated function loses its name, docstring and signature.\n\"\"\"\nimport functools\n\n\ndef retry(attempts=3, exceptions=(Exception,), on_retry=None):\n    raise NotImplementedError\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "retry.py",
+      "content": "\"\"\"A parameterised retry decorator.\"\"\"\nimport functools\n\n\ndef retry(attempts=3, exceptions=(Exception,), on_retry=None):\n    def decorator(func):\n        @functools.wraps(func)   # copies __name__/__doc__ and sets __wrapped__\n        def wrapper(*args, **kwargs):\n            last_exc = None\n            for attempt in range(1, attempts + 1):\n                try:\n                    return func(*args, **kwargs)\n                except exceptions as exc:\n                    last_exc = exc\n                    if attempt < attempts and on_retry is not None:\n                        on_retry(exc, attempt)\n            raise last_exc\n        return wrapper\n    return decorator\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-retry-behaviour",
+      "name": "retries listed exceptions, returns on success, gives up after attempts",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_behaviour.py",
+      "body": "import pytest\n\nfrom retry import retry\n\n\ndef test_succeeds_after_transient_failures():\n    calls = {\"n\": 0}\n\n    @retry(attempts=3, exceptions=(ConnectionError,))\n    def flaky():\n        calls[\"n\"] += 1\n        if calls[\"n\"] < 3:\n            raise ConnectionError(\"transient\")\n        return \"ok\"\n\n    assert flaky() == \"ok\"\n    assert calls[\"n\"] == 3\n\n\ndef test_gives_up_and_raises_last_exception():\n    @retry(attempts=2, exceptions=(ValueError,))\n    def always():\n        raise ValueError(\"nope\")\n\n    with pytest.raises(ValueError, match=\"nope\"):\n        always()\n\n\ndef test_no_retry_on_success():\n    calls = {\"n\": 0}\n\n    @retry(attempts=5)\n    def good():\n        calls[\"n\"] += 1\n        return 42\n\n    assert good() == 42\n    assert calls[\"n\"] == 1\n"
+    },
+    {
+      "id": "test-retry-selectivity-and-passthrough",
+      "name": "only listed exceptions retry; args and kwargs pass through",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 1.0,
+      "file": "test_selectivity.py",
+      "body": "import pytest\n\nfrom retry import retry\n\n\ndef test_unlisted_exception_is_not_retried():\n    calls = {\"n\": 0}\n\n    @retry(attempts=3, exceptions=(ConnectionError,))\n    def boom():\n        calls[\"n\"] += 1\n        raise KeyError(\"unlisted\")\n\n    with pytest.raises(KeyError):\n        boom()\n    assert calls[\"n\"] == 1, \"unlisted exceptions must not be retried\"\n\n\ndef test_args_and_kwargs_pass_through():\n    @retry(attempts=2)\n    def add(a, b, *, c=0):\n        return a + b + c\n\n    assert add(1, 2, c=3) == 6\n"
+    },
+    {
+      "id": "test-retry-callback",
+      "name": "on_retry is called between attempts only",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 1.0,
+      "file": "test_callback.py",
+      "body": "from retry import retry\n\n\ndef test_on_retry_called_between_attempts():\n    seen = []\n\n    @retry(attempts=3, exceptions=(RuntimeError,), on_retry=lambda exc, n: seen.append(n))\n    def always():\n        raise RuntimeError(\"x\")\n\n    try:\n        always()\n    except RuntimeError:\n        pass\n    # 3 attempts -> callback fires after attempt 1 and 2, not after the last\n    assert seen == [1, 2]\n\n\ndef test_on_retry_not_called_on_success():\n    seen = []\n\n    @retry(attempts=3, on_retry=lambda exc, n: seen.append(n))\n    def good():\n        return 1\n\n    good()\n    assert seen == []\n"
+    },
+    {
+      "id": "test-retry-preserves-identity",
+      "name": "wrapper preserves name, doc and __wrapped__ (functools.wraps)",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_identity.py",
+      "body": "from retry import retry\n\n\n@retry(attempts=2)\ndef documented(x):\n    \"\"\"Return x unchanged.\"\"\"\n    return x\n\n\ndef test_name_preserved():\n    assert documented.__name__ == \"documented\", \"use functools.wraps\"\n\n\ndef test_docstring_preserved():\n    assert documented.__doc__ == \"Return x unchanged.\"\n\n\ndef test_wrapped_attribute_present():\n    assert hasattr(documented, \"__wrapped__\"), \"functools.wraps sets __wrapped__\"\n    assert documented.__wrapped__(5) == 5\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "A decorator that takes arguments has three layers: `retry(...)` returns `decorator`, `decorator(func)` returns `wrapper`, and `wrapper(*args, **kwargs)` does the work. The parameters (`attempts`, `exceptions`, `on_retry`) are captured by closure at the outer layer.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "In `wrapper`, loop `attempts` times: `try: return func(...)`, `except exceptions as exc:` remember it and continue. After the loop, `raise` the last one. `except exceptions` naturally lets unlisted exceptions propagate. And put `@functools.wraps(func)` on `wrapper` — that single line is what the identity tests check.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "```python\nimport functools\n\ndef retry(attempts=3, exceptions=(Exception,), on_retry=None):\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            last_exc = None\n            for attempt in range(1, attempts + 1):\n                try:\n                    return func(*args, **kwargs)\n                except exceptions as exc:\n                    last_exc = exc\n                    if attempt < attempts and on_retry is not None:\n                        on_retry(exc, attempt)\n            raise last_exc\n        return wrapper\n    return decorator\n```",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "practice"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/functools.html#functools.wraps",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "functools.wraps"
+    },
+    {
+      "source_id": "python.pep318",
+      "url": "https://peps.python.org/pep-0318/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 318 — Decorators for Functions and Methods"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

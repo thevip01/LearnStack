@@ -1,0 +1,120 @@
+{
+  "id": "python.practice.signatures.code.normalise-config",
+  "kind": "code",
+  "title": "Normalise a config with a safe signature",
+  "subject_id": "programming.python",
+  "concept_id": "python.functions-and-signatures",
+  "skills": ["python.skill.design-function-signatures", "python.skill.avoid-shared-mutable-defaults"],
+  "difficulty": 6,
+  "estimated_minutes": 25,
+  "prompt_md": "Write `normalise`, the function every service has and every service gets subtly wrong. It takes raw settings and returns a cleaned config, and its signature has to be safe against the two classic traps at once: a shared mutable default, and positional arguments that callers transpose.\n\n```python\ndef normalise(name, *, tags=None, limits=None, region=\"us-east-1\"):\n    ...\n```\n\nRules the tests enforce:\n\n- `name` is required and positional; everything else is keyword-only.\n- `tags` defaults to an empty list **per call** — two calls that each append must not see each other's tags.\n- `limits` defaults to `{\"cpu\": 1, \"mem\": 512}`, again fresh per call, and any keys the caller passes are merged over those defaults (not replaced wholesale).\n- The returned dict has exactly the keys `name`, `tags`, `limits`, `region`; `tags` is sorted and de-duplicated; `region` is lower-cased.\n- Calling `normalise(\"svc\", \"prod\")` must raise `TypeError` — a stray positional is a bug, not a tag.\n\nGetting the signature right is most of the exercise; the body is a few lines.",
+  "tags": ["signatures", "keyword-only", "mutable-default", "sentinel", "merge"],
+  "requirements_md": [
+    "`name` is positional; `tags`, `limits`, `region` are keyword-only (a bare `*` in the signature).",
+    "`tags` and `limits` default to fresh objects per call — use `None` sentinels, never a mutable literal default.",
+    "`limits` merges caller keys over the defaults `{\"cpu\": 1, \"mem\": 512}`.",
+    "Result keys are exactly `name`, `tags`, `limits`, `region`.",
+    "`tags` in the result is sorted and de-duplicated; `region` is lower-cased.",
+    "A second positional argument raises `TypeError` (the `*` enforces this for free).",
+    "Two independent calls never share `tags` or `limits` state."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "normalise.py",
+  "starter_files": [
+    {
+      "path": "normalise.py",
+      "content": "\"\"\"Normalise raw settings into a clean config.\n\nFill in the body. The signature is the point: keep name positional and make the\nrest keyword-only, and do not use a mutable default.\n\"\"\"\nfrom typing import Any\n\n\ndef normalise(name, *, tags=None, limits=None, region=\"us-east-1\"):\n    raise NotImplementedError\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "normalise.py",
+      "content": "\"\"\"Normalise raw settings into a clean config.\"\"\"\nfrom typing import Any\n\nDEFAULT_LIMITS = {\"cpu\": 1, \"mem\": 512}\n\n\ndef normalise(name, *, tags=None, limits=None, region=\"us-east-1\"):\n    # None-sentinel: build fresh mutable values inside the body, never in the\n    # signature, so no state is shared between calls.\n    tags = list(tags) if tags is not None else []\n    merged_limits = {**DEFAULT_LIMITS, **(limits or {})}\n    return {\n        \"name\": name,\n        \"tags\": sorted(set(tags)),\n        \"limits\": merged_limits,\n        \"region\": region.lower(),\n    }\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-normalise-shape",
+      "name": "returns the right keys, sorted tags, merged limits, lower-cased region",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_shape.py",
+      "body": "from normalise import normalise\n\n\ndef test_defaults():\n    cfg = normalise(\"svc\")\n    assert cfg == {\n        \"name\": \"svc\",\n        \"tags\": [],\n        \"limits\": {\"cpu\": 1, \"mem\": 512},\n        \"region\": \"us-east-1\",\n    }\n\n\ndef test_tags_sorted_and_deduped():\n    cfg = normalise(\"svc\", tags=[\"b\", \"a\", \"b\"])\n    assert cfg[\"tags\"] == [\"a\", \"b\"]\n\n\ndef test_limits_merge_over_defaults():\n    cfg = normalise(\"svc\", limits={\"cpu\": 4})\n    assert cfg[\"limits\"] == {\"cpu\": 4, \"mem\": 512}\n\n\ndef test_region_lowercased():\n    assert normalise(\"svc\", region=\"EU-WEST-1\")[\"region\"] == \"eu-west-1\"\n"
+    },
+    {
+      "id": "test-normalise-keyword-only",
+      "name": "extra arguments must be passed by keyword",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 1.0,
+      "file": "test_keyword_only.py",
+      "body": "import pytest\n\nfrom normalise import normalise\n\n\ndef test_stray_positional_raises():\n    with pytest.raises(TypeError):\n        normalise(\"svc\", \"prod\")  # would silently be tags if not keyword-only\n\n\ndef test_name_is_accepted_positionally():\n    assert normalise(\"svc\")[\"name\"] == \"svc\"\n\n\ndef test_keyword_form_works():\n    cfg = normalise(\"svc\", tags=[\"x\"], region=\"eu\")\n    assert cfg[\"tags\"] == [\"x\"] and cfg[\"region\"] == \"eu\"\n"
+    },
+    {
+      "id": "test-normalise-no-shared-state",
+      "name": "defaults are fresh per call (no mutable-default leak)",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_no_shared_state.py",
+      "body": "from normalise import normalise\n\n\ndef test_tags_not_shared_between_calls():\n    a = normalise(\"a\")\n    a[\"tags\"].append(\"leaked\")\n    b = normalise(\"b\")\n    assert b[\"tags\"] == [], \"tags default is shared across calls\"\n\n\ndef test_limits_not_shared_between_calls():\n    a = normalise(\"a\")\n    a[\"limits\"][\"cpu\"] = 999\n    b = normalise(\"b\")\n    assert b[\"limits\"][\"cpu\"] == 1, \"limits default is shared across calls\"\n\n\ndef test_caller_tags_not_mutated():\n    original = [\"b\", \"a\"]\n    normalise(\"svc\", tags=original)\n    assert original == [\"b\", \"a\"], \"the caller's list was mutated\"\n\n\ndef test_caller_limits_not_mutated():\n    original = {\"cpu\": 2}\n    normalise(\"svc\", limits=original)\n    assert original == {\"cpu\": 2}, \"the caller's dict was mutated\"\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "Two independent problems. The `*` after `name` already makes everything else keyword-only, which is what makes `normalise(\"svc\", \"prod\")` raise — so the signature as given is most of the safety. The rest is the body.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "Never write `tags=[]` or `limits={...}` as a default — those are created once and shared. Default them to `None` and build fresh values in the body: `tags = list(tags) if tags is not None else []`. For `limits`, merge with `{**DEFAULT_LIMITS, **(limits or {})}`, which also avoids mutating the caller's dict.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "```python\nDEFAULT_LIMITS = {\"cpu\": 1, \"mem\": 512}\n\ndef normalise(name, *, tags=None, limits=None, region=\"us-east-1\"):\n    tags = list(tags) if tags is not None else []\n    merged_limits = {**DEFAULT_LIMITS, **(limits or {})}\n    return {\n        \"name\": name,\n        \"tags\": sorted(set(tags)),\n        \"limits\": merged_limits,\n        \"region\": region.lower(),\n    }\n```\n`list(tags)` and the `{**...}` merge both copy, so the caller's objects are never touched and nothing is shared between calls.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "practice"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Function definitions — keyword-only parameters"
+    },
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Why are default values shared between objects?"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

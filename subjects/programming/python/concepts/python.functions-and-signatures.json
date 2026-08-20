@@ -1,0 +1,307 @@
+{
+  "id": "python.functions-and-signatures",
+  "title": "Functions and Signatures",
+  "subject_id": "programming.python",
+  "category": "functions",
+  "summary": "A signature is the contract callers program against. Parameter kinds let you make the common call short and the wrong call impossible. Defaults are evaluated once, at definition time, which is the single fact behind Python's most famous bug.",
+  "definition": "A function's signature is the ordered set of parameters it binds arguments to, together with each parameter's kind: positional-only (before `/`), positional-or-keyword, var-positional (`*args`), keyword-only (after `*` or `*args`), and var-keyword (`**kwargs`). Default values are expressions evaluated once when the `def` statement executes, and the resulting objects are stored on the function in `__defaults__` and `__kwdefaults__` and reused by every call that omits the argument.",
+  "purpose": "Parameter kinds are the only enforcement mechanism Python gives you at the call boundary. Choosing them deliberately turns whole classes of misuse into a `TypeError` at the call site rather than a wrong answer three layers down, and it decides how much freedom you keep to change the function later without breaking every caller. Understanding that defaults are per-function and not per-call is what stops a shared list from accumulating state across unrelated requests.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "A signature is not decoration on the way to the body. It is the part of the function other people program against, and the only part you cannot change freely once it ships.\n\nPython binds arguments to five *kinds* of parameter, and the kind decides how a caller is allowed to pass a value:\n\n```python\ndef f(pos_only, /, standard, *args, kw_only, **kwargs): ...\n```\n\nEverything before `/` can only be given by position. Everything after a bare `*` (or after `*args`) can only be given by keyword. That is the whole mechanism, and it is enough to make most misuse unrepresentable: `sync(True, False)` cannot be written if the flags live after a `*`.\n\nThe second half of the story is defaults. A default value is an ordinary expression, evaluated **once**, when the `def` statement runs — not on each call. The resulting object is stored on the function object and handed to every call that omits the argument. For `None`, `0` or `\"\"` you never notice. For a list, dict, set or a `datetime`, you notice loudly and late.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/compound_stmts.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "8.7. Function definitions"
+        },
+        {
+          "source_id": "python.docs.tutorial",
+          "url": "https://docs.python.org/3/tutorial/controlflow.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "4.9. More on Defining Functions - Special parameters"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "def render(template, /, rows, *extra, sep=\", \", strict=False, **options):\n    return f\"template={template!r} rows={rows!r} extra={extra!r} sep={sep!r} strict={strict!r} options={options!r}\"\n\n\n# The common call stays short; the dangerous switches must be named.\nprint(render(\"{name}\", [1, 2], \"a\", sep=\"|\", strict=True, retries=3))\nprint(render(\"{name}\", rows=[1]))\n\n# sep is keyword-only, so a fourth positional does not reach it -- it is\n# collected into *extra instead, and nothing complains.\nprint(render(\"{name}\", [1], \"a\", \"|\"))\n\n# template is positional-only, so `template=` is not a way to pass it. Here\n# **options quietly swallows the keyword and template goes missing.\ntry:\n    render(template=\"{name}\", rows=[1])\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)\n\n\ndef strict_render(template, /, rows):\n    \"\"\"No **kwargs, so the same mistake gets a much better message.\"\"\"\n    return \"ok\"\n\n\ntry:\n    strict_render(template=\"{name}\", rows=[1])\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)\n",
+      "caption": "All five parameter kinds in one signature, and which calls the kinds allow.",
+      "runnable": true,
+      "expected_output": "template='{name}' rows=[1, 2] extra=('a',) sep='|' strict=True options={'retries': 3}\ntemplate='{name}' rows=[1] extra=() sep=', ' strict=False options={}\ntemplate='{name}' rows=[1] extra=('a', '|') sep=', ' strict=False options={}\nTypeError: render() missing 1 required positional argument: 'template'\nTypeError: strict_render() got some positional-only arguments passed as keyword arguments: 'template'",
+      "highlight_lines": [
+        1,
+        16,
+        22
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Kind",
+        "Syntax",
+        "Caller may pass by",
+        "Reach for it when",
+        "What it forbids"
+      ],
+      "rows": [
+        [
+          "Positional-only",
+          "`def f(a, /)`",
+          "position only",
+          "the parameter's name is an implementation detail you want to keep renaming rights over, or the function also takes `**kwargs` whose keys are user data",
+          "callers writing `f(a=...)`, so the name is never part of your contract"
+        ],
+        [
+          "Positional-or-keyword",
+          "`def f(a)`",
+          "position or keyword",
+          "one to three arguments whose meaning is obvious from order at the call site",
+          "nothing. It is the most permissive kind and therefore the hardest to change later"
+        ],
+        [
+          "Var-positional",
+          "`def f(*args)`",
+          "position, any number",
+          "genuinely homogeneous, unbounded input (`max`, `print`) or forwarding a call you must not interpret",
+          "passing those values by keyword, and any per-argument validation by name"
+        ],
+        [
+          "Keyword-only",
+          "`def f(*, flag)`",
+          "keyword only",
+          "flags, booleans, tunables, and anything a reader cannot decode from its position",
+          "`f(True)`. The caller has to write `f(flag=True)`, which is readable in a diff"
+        ],
+        [
+          "Var-keyword",
+          "`def f(**kwargs)`",
+          "keyword, any name",
+          "forwarding wrappers, and mappings that really are open-ended (HTTP headers, tags)",
+          "nothing at all. It accepts every misspelling as happily as every real option"
+        ]
+      ],
+      "caption": "Parameter kinds, ordered as they must appear in a signature."
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "def add_item(item, basket=[]):          # [] is evaluated ONCE, at def time\n    basket.append(item)\n    return basket\n\n\nprint(\"call 1:\", add_item(\"a\"))\nprint(\"call 2:\", add_item(\"b\"))          # not ['b'] -- the same list is still there\nprint(\"the default IS that list:\", add_item.__defaults__)\nprint(\"same object:\", add_item.__defaults__[0] is add_item(\"c\"))\n\n\ndef add_item_fixed(item, basket=None):   # the default is an immutable sentinel\n    if basket is None:\n        basket = []                      # a fresh list per call\n    basket.append(item)\n    return basket\n\n\nprint(\"fixed call 1:\", add_item_fixed(\"a\"))\nprint(\"fixed call 2:\", add_item_fixed(\"b\"))\nprint(\"the default stays:\", add_item_fixed.__defaults__)\n",
+      "caption": "The mutable default argument bug end to end, the `None` sentinel fix, and `__defaults__` proving the object is shared.",
+      "runnable": true,
+      "expected_output": "call 1: ['a']\ncall 2: ['a', 'b']\nthe default IS that list: (['a', 'b'],)\nsame object: True\nfixed call 1: ['a']\nfixed call 2: ['b']\nthe default stays: (None,)",
+      "highlight_lines": [
+        1,
+        12,
+        13
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "danger",
+      "title": "A mutable default is shared state on a function object",
+      "md": "`def f(x, acc=[])` creates exactly one list, at import time, and every call that omits `acc` mutates that one list. It is not a fresh empty list per call, and no amount of reading the body will tell you otherwise — the evidence is in `f.__defaults__`.\n\nThe symptom is state leaking between calls that have nothing to do with each other: two HTTP requests appending to the same list, a cache that never empties, a test that passes alone and fails in a suite. Because the leak is per-function and lives for the life of the process, it usually shows up first as a slow memory climb in production rather than as a failing test.\n\nThe fix is always the same shape: default to an immutable sentinel, usually `None`, and build the real object in the body. Use `None` unless `None` is itself a meaningful argument, in which case make your own sentinel with `MISSING = object()`."
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "Keyword-only is what makes a signature survive contact with a codebase",
+      "md": "**Boolean positionals are unreviewable.** `sync(True, False)` tells a reviewer nothing, and swapping the two arguments is a silent behaviour change that no type checker will catch. Write `def sync(source, *, dry_run=False, force=False)` and the same call becomes `sync(source, dry_run=True)`. The cost is zero; the benefit is that the diff explains itself.\n\n**Keyword-only parameters are also how you add a parameter without breaking callers.** Appending a positional parameter is a breaking change the moment anyone passes arguments positionally, and appending one *before* an existing parameter silently rebinds every existing call. Adding a keyword-only parameter with a default cannot break an existing call, because no existing call can be passing that name. So the practical rule for anything published beyond your own module is: everything optional goes after the `*`, from the first version onward, before you have callers to worry about.\n\n**Removing or renaming a parameter is a major version.** Keep the old name accepted for one release, forward it to the new one, and emit a `DeprecationWarning` — the alternative is a wall of `TypeError: got an unexpected keyword argument` in someone else's service."
+    },
+    {
+      "type": "steps",
+      "title": "Designing a signature",
+      "steps": [
+        "**Write the call site first.** Type the line you want the common case to read as, before you write `def`. The signature exists to serve that line. If the ideal call needs a comment to be understood, the signature is wrong, not the comment.",
+        "**Make the required data positional-or-keyword, ordered by obviousness.** Stop at three. A fourth required positional argument is the function telling you those arguments belong together in a dataclass, a `NamedTuple`, or a request object.",
+        "**Put a bare `*` next and make every option keyword-only.** Booleans, tunables, retry counts, formatting switches. This is the step people skip and the one that pays for itself, because it buys back the right to reorder and extend the option list later.",
+        "**Give every optional parameter an immutable default.** `None`, a number, a string, a tuple, a frozenset. If the natural default is a list, dict, set, `datetime.now()`, or anything that reads configuration, default to `None` and build it in the body so it is computed per call.",
+        "**State the return contract in one sentence and make the body obey it.** One shape, always: return a `Config`, or raise. A function that returns `Config | None | False` has pushed its own error handling onto every caller. Only add `*args`/`**kwargs` if you are forwarding a call you must not interpret — on a public function, that is almost never true."
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "import functools\n\n\ndef connect(host, *, port=5432, timeout=5.0):\n    return f\"{host}:{port} timeout={timeout}\"\n\n\ndef timed(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):        # accept anything, forward it unchanged\n        result = func(*args, **kwargs)\n        return f\"[timed] {result}\"\n    return wrapper\n\n\nprint(timed(connect)(\"db\", timeout=0.5))\n\n# connect names its options, so a typo is a loud failure at the call site.\ntry:\n    connect(\"db\", timout=0.5)\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)\n\n\ndef connect_loose(host, **options):      # a public function with no named options\n    timeout = options.get(\"timeout\", 5.0)\n    return f\"{host} timeout={timeout}\"\n\n\n# Same typo, no error: the caller asked for 0.5s and silently got 5.0s.\nprint(connect_loose(\"db\", timout=0.5))\n",
+      "caption": "Correct `*args`/`**kwargs` forwarding in a wrapper, and why bare `**kwargs` on a public function hides typos.",
+      "runnable": true,
+      "expected_output": "[timed] db:5432 timeout=0.5\nTypeError: connect() got an unexpected keyword argument 'timout'\ndb timeout=5.0",
+      "highlight_lines": [
+        10,
+        11,
+        12,
+        27
+      ]
+    },
+    {
+      "type": "term",
+      "term": "keyword-only argument",
+      "definition_md": "A parameter that can only be filled by naming it at the call site, never by position. A parameter is keyword-only if it appears after a bare `*` or after a `*args` entry in the signature; its default, if any, is stored in the function's `__kwdefaults__` rather than `__defaults__`. Passing a value for it positionally raises `TypeError`, which is precisely why keyword-only parameters are the tool for flags and options: the caller is forced to write something a reader can understand, and you are free to add or reorder such parameters later without breaking any existing call.",
+      "aliases": [
+        "keyword-only parameter",
+        "kwonly"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "Parameter kind",
+      "role": "Positional-only, positional-or-keyword, var-positional, keyword-only or var-keyword. Determines how a caller is permitted to supply the value, and is the only call-boundary enforcement the language offers."
+    },
+    {
+      "name": "Default value",
+      "role": "An expression evaluated once when the `def` executes; the resulting object is stored on the function and reused by every call that omits the argument. Makes a parameter optional, and makes any mutable default shared."
+    },
+    {
+      "name": "Return contract",
+      "role": "The one shape the function promises to produce, plus the exceptions it promises to raise. Unwritten but every bit as much part of the signature as the parameters."
+    },
+    {
+      "name": "Pass-through (`*args`, `**kwargs`)",
+      "role": "Collects arbitrary positional and keyword arguments so a wrapper can forward a call it must not interpret. Essential in decorators; a liability on a public function, where it disables every arity and name check.",
+      "required": false
+    }
+  ],
+  "dependencies": [
+    "python.objects-and-names"
+  ],
+  "prerequisites": [
+    "python.objects-and-names",
+    "python.sequences-and-mappings"
+  ],
+  "related": [
+    "python.closures-and-late-binding"
+  ],
+  "common_errors": [
+    {
+      "error": "A default list accumulates across calls: `add_item('a')` returns `['a']`, then `add_item('b')` returns `['a', 'b']` instead of `['b']`.",
+      "cause": "`def add_item(item, basket=[])` evaluates `[]` once, when the `def` statement runs. That single list object is stored in `add_item.__defaults__` and handed to every call that omits `basket`, so `basket.append(item)` mutates shared, process-lifetime state.",
+      "fix": "Default to an immutable sentinel and build the object per call: `def add_item(item, basket=None):` then `if basket is None: basket = []`. Use `MISSING = object()` instead of `None` when `None` is itself a legal argument. In a dataclass the equivalent is `field(default_factory=list)`.",
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Why are default values shared between objects?"
+        }
+      ]
+    },
+    {
+      "error": "`TypeError: greet() takes 1 positional argument but 2 were given`",
+      "cause": "More positional arguments were supplied than the signature has positional slots. Usually an extra argument, a `self` that was passed explicitly, or a keyword-only parameter the caller tried to fill by position.",
+      "fix": "Count the positional slots in the signature. If the extra value was meant for an option, pass it by name. If the function is a method, call it on the instance rather than through the class. If you meant to accept a variable number of values, declare `*args`."
+    },
+    {
+      "error": "`TypeError: greet() missing 1 required positional argument: 'name'`",
+      "cause": "A parameter with no default was not supplied. A common non-obvious route: the parameter is positional-only (declared before `/`), the caller passed it as `name=...`, and a `**kwargs` in the signature silently absorbed the keyword — so the parameter really is missing.",
+      "fix": "Supply the argument, or give the parameter a default if it is genuinely optional. If the signature has a `/`, pass those parameters by position. If the message names something you are sure you passed, check for a `/` and for a `**kwargs` that could be swallowing it."
+    },
+    {
+      "error": "`TypeError: greet() got multiple values for argument 'name'`",
+      "cause": "The same parameter was filled twice — once positionally and once by keyword. Classic in wrappers that do `func(extra, *args, **kwargs)` where the caller also passed the first parameter by name, and in method calls where `self` was supplied explicitly.",
+      "fix": "Pick one channel per parameter. In forwarding wrappers, do not insert your own positional arguments ahead of `*args`; pass your additions as keyword arguments, or make the wrapped function's first parameter positional-only with `/` so a keyword can never collide with it."
+    },
+    {
+      "error": "`TypeError: connect() got an unexpected keyword argument 'timout'`",
+      "cause": "A keyword that matches no parameter name, and no `**kwargs` to catch it. Almost always a misspelling, or a caller written against a different version of the signature.",
+      "fix": "Fix the spelling. Treat this message as a feature: the same typo against a function declared `def connect(host, **options)` raises nothing at all, and the caller silently gets the default timeout. That is the argument against `**kwargs` on a public function."
+    }
+  ],
+  "best_practices": [
+    "Put a bare `*` before every optional parameter from the first version of the function, so options are keyword-only. It costs callers nothing, makes calls self-documenting, and is what lets you add options later without a breaking change.",
+    "Default only to immutable objects. `None`, numbers, strings, tuples and frozensets are safe; lists, dicts, sets and anything constructed at import time are not.",
+    "Use `None` as the sentinel for \"not supplied\", and `MISSING = object()` when `None` is itself a meaningful value the caller may pass.",
+    "Keep the required positional parameters down to three. Past that, group them into a dataclass or `NamedTuple` — the argument list has become an object with no name.",
+    "Return one shape. `-> Config` or raise; not `Config | None | False`. Every extra return shape is a branch you have added to every call site.",
+    "Annotate the signature and check it. Type annotations are the machine-readable half of the contract, and `mypy`/`pyright` catch the arity and name errors that would otherwise surface as a `TypeError` in production."
+  ],
+  "production_considerations": [
+    "A signature is a compatibility surface with a version number attached. Adding a keyword-only parameter with a default is safe; adding a positional one is breaking; inserting a positional one ahead of existing parameters silently rebinds every existing call and is worse than breaking. For anything imported by another team, treat parameter removal and renaming as a major version, keep the old name accepted for one release, forward it, and emit a `DeprecationWarning`.",
+    "`functools.partial(f, timeout=30)` is the right tool when *this call site* wants a different default; changing the default in the signature changes it for everyone, including callers you cannot see. Partials also compose with `__wrapped__`-aware introspection, whereas a fork of the function does not.",
+    "In dataclasses, a mutable default is not merely a bug but a `ValueError` at class creation time — use `field(default_factory=list)`, which is evaluated per instance. `dict`, `set`, and any nested dataclass need the same treatment.",
+    "Defaults evaluated at import time freeze whatever the process knew at import. `def log(when=datetime.now())` stamps every record with the process start time, and `def connect(url=os.environ['DB_URL'])` makes the module unimportable when the variable is unset and pins the value even after a config reload. Move both into the body: `when=None` then `when = when or datetime.now(timezone.utc)`.",
+    "`inspect.signature()` is what your framework reads. FastAPI, pydantic, Click, pytest fixtures and DI containers all bind arguments by introspecting parameter names and kinds, so a `**kwargs`-only signature is invisible to them, and renaming a parameter changes the wire contract of an HTTP endpoint even though the Python call still works."
+  ],
+  "anti_patterns": [
+    "Boolean positional flags: `def sync(source, dry_run, force)` invites `sync(path, True, False)`, which is unreviewable and silently wrong if the arguments are swapped. Put booleans after a `*`.",
+    "`**kwargs` on a public function as a substitute for naming the options. It disables arity checking and name checking at the boundary, turns `timout=0.5` into a silently ignored argument, and hides the real contract from `help()`, type checkers and every framework that reads `inspect.signature()`.",
+    "Mutating an argument the caller still owns: `def normalise(config): config['host'] = ...`. The caller passed a reference, not a copy, and now their dict has changed under them. Build and return a new object, or make it unmistakable in the name (`update_in_place`) and the return value (`None`).",
+    "Using a mutable object as the \"not supplied\" sentinel — `def get(key, default=[])` — which combines the missing-value question with the shared-state bug.",
+    "Growing an option list by appending positional parameters, so that every caller becomes a row of bare literals: `render(t, rows, True, False, None, 3)`. Nobody can read it and nobody dares reorder it."
+  ],
+  "skills": [
+    "python.skill.design-function-signatures",
+    "python.skill.avoid-shared-mutable-defaults"
+  ],
+  "practice": [
+    "python.practice.signatures.quiz.binding",
+    "python.practice.signatures.code.normalise-config",
+    "python.practice.signatures.debug.mutable-default",
+    "python.practice.defaults.quiz.evaluated-once"
+  ],
+  "keywords": [
+    "greet() takes 1 positional argument but 2 were given",
+    "greet() missing 1 required positional argument: 'name'",
+    "greet() got multiple values for argument 'name'",
+    "connect() got an unexpected keyword argument 'timout'",
+    "got some positional-only arguments passed as keyword arguments",
+    "mutable default argument",
+    "keyword-only",
+    "positional-only",
+    "*args",
+    "**kwargs",
+    "sentinel",
+    "__defaults__",
+    "signature",
+    "default_factory",
+    "functools.partial",
+    "inspect.signature"
+  ],
+  "estimated_minutes": 26,
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "8.7. Function definitions"
+    },
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Why are default values shared between objects?"
+    },
+    {
+      "source_id": "python.docs.tutorial",
+      "url": "https://docs.python.org/3/tutorial/controlflow.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "4.9. More on Defining Functions - Special parameters"
+    },
+    {
+      "source_id": "python.pep8",
+      "url": "https://peps.python.org/pep-0008/",
+      "source_type": "standard",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Programming Recommendations"
+    },
+    {
+      "source_id": "python.docs.glossary",
+      "url": "https://docs.python.org/3/glossary.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "parameter"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-18T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-18T00:00:00Z",
+    "status": "published"
+  }
+}

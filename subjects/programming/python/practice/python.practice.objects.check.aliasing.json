@@ -1,0 +1,176 @@
+{
+  "id": "python.practice.objects.check.aliasing",
+  "kind": "quiz",
+  "title": "Check: what changed, the name or the object?",
+  "subject_id": "programming.python",
+  "concept_id": "python.objects-and-names",
+  "skills": [
+    "python.skill.reason-about-references"
+  ],
+  "difficulty": 3,
+  "estimated_minutes": 3,
+  "prompt_md": "Two questions, no interpreter. Every Python statement either points a name at a different object or changes an object that other names can also see. Decide which one is happening, and then say what the other name observes.",
+  "tags": [
+    "object-model",
+    "aliasing",
+    "mutation",
+    "rebinding",
+    "check"
+  ],
+  "questions": [
+    {
+      "id": "aliasing.rebind-versus-mutate",
+      "type": "mcq",
+      "stem_md": "Two names, one dict, then a rebinding. Read it line by line before you answer.\n\n```python\na = {\"tags\": []}\nb = a                    # no new dict is created here\nb[\"tags\"].append(\"x\")\nb = {\"tags\": [\"y\"]}\n```\n\nWhat is `a` at the end?",
+      "options": [
+        {
+          "id": "a",
+          "md": "`{'tags': ['x']}`"
+        },
+        {
+          "id": "b",
+          "md": "`{'tags': []}`"
+        },
+        {
+          "id": "c",
+          "md": "`{'tags': ['y']}`"
+        },
+        {
+          "id": "d",
+          "md": "`{'tags': ['x', 'y']}`"
+        }
+      ],
+      "answer": "a",
+      "explanation_md": "`b[\"tags\"].append(\"x\")` mutates the list inside the one dict that both names refer to, so `a` sees it: there was never a second dict to hide the change in. `b = {\"tags\": [\"y\"]}` only rebinds `b` in the namespace to a brand-new dict, which leaves the object `a` is bound to exactly as the `append` left it.",
+      "difficulty": 3,
+      "skills": [
+        "python.skill.reason-about-references"
+      ],
+      "dimension": "concept",
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Why did changing list 'y' also change list 'x'?"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/simple_stmts.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "7.2. Assignment statements"
+        }
+      ],
+      "weight": 1.0
+    },
+    {
+      "id": "aliasing.which-operations-mutate",
+      "type": "multi_select",
+      "stem_md": "`rows` is a list the caller still holds a reference to, `other` is another list, and `x` is some value. Which of these leave the original list observably changed for the caller?",
+      "options": [
+        {
+          "id": "a",
+          "md": "`rows.sort()`"
+        },
+        {
+          "id": "b",
+          "md": "`sorted(rows)`"
+        },
+        {
+          "id": "c",
+          "md": "`rows += [x]`"
+        },
+        {
+          "id": "d",
+          "md": "`rows = rows + [x]`"
+        },
+        {
+          "id": "e",
+          "md": "`rows.append(x)`"
+        },
+        {
+          "id": "f",
+          "md": "`rows[:] = other`"
+        }
+      ],
+      "answer": [
+        "a",
+        "c",
+        "e",
+        "f"
+      ],
+      "explanation_md": "`rows.sort()`, `rows.append(x)` and `rows[:] = other` are mutations: they change the one list object, return `None` (or nothing useful), and every name bound to it sees the result. `rows += [x]` looks like an assignment but calls `list.__iadd__`, which is `extend`, so it mutates in place and then rebinds the name to the object it already had.\n\nThe two that do not touch the caller's list build a new one: `sorted(rows)` returns a new sorted list and leaves the original order alone, and `rows = rows + [x]` calls `list.__add__` for a new list and points only the local name at it. That is why `x += [3]` and `x = x + [3]` are not interchangeable on a list.\n\nNote also that `rows[:] = other` mutates `rows` without making it an alias of `other`: it copies `other`'s items into the existing object, so later changes to `other` are not reflected.",
+      "difficulty": 3,
+      "skills": [
+        "python.skill.reason-about-references"
+      ],
+      "dimension": "concept",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Mutable Sequence Types"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/simple_stmts.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "7.2. Assignment statements"
+        }
+      ],
+      "weight": 1.0
+    }
+  ],
+  "shuffle": true,
+  "hints": [
+    {
+      "level": 1,
+      "md": "Go line by line and ask one question of each: does this statement create a new object, or does it reach into an object that already exists? Then ask who else is holding a reference to that object.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "A bare `=` only edits the namespace: it rebinds a name and cannot change any object, so other names are untouched. A method call or a subscript/attribute store (`.append(...)`, `.sort()`, `obj[k] = v`) changes the object itself, and is therefore visible through every name bound to it.\n\nA quick tell: the in-place operations return `None`, while the copying ones hand you a new object to bind. `+=` is the exception that catches people, because on a list it mutates *and* assigns.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "First question: `a` is `{'tags': ['x']}`. The `append` went through `b` into the single shared dict's list, so `a` sees it; the later `b = {\"tags\": [\"y\"]}` built a second dict and moved only `b`, leaving `a`'s object alone.\n\nSecond question: `rows.sort()`, `rows += [x]`, `rows.append(x)` and `rows[:] = other` all change the caller's list. `sorted(rows)` and `rows = rows + [x]` both build a new list and leave the original as it was.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "exact",
+    "pass_threshold": 1.0,
+    "dimension": "concept",
+    "partial_credit": true
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Why did changing list 'y' also change list 'x'?"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "7.2. Assignment statements"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/stdtypes.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Mutable Sequence Types"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-18T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-18T00:00:00Z",
+    "status": "published"
+  }
+}

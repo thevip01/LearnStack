@@ -1,0 +1,236 @@
+{
+  "id": "python.complexity",
+  "title": "Complexity and measurement",
+  "subject_id": "programming.python",
+  "category": "Correctness",
+  "summary": "Big-O tells you how a function's cost grows; a profiler tells you where the time actually went. You need both, in that order — and in Python the constant factors are large enough that the interpreter's own overhead is frequently the answer.",
+  "definition": "Time complexity describes how the number of operations grows as input size grows, ignoring constant factors: O(1) constant, O(log n) logarithmic, O(n) linear, O(n log n) sorting, O(n²) nested-loop, O(2ⁿ) exponential. Space complexity describes the same growth for memory. Amortised complexity averages an occasional expensive operation across the cheap ones, which is why `list.append` is called O(1) despite periodically reallocating.",
+  "purpose": "Code that is fast on a hundred rows and unusable on a hundred thousand is the most common performance failure, and it is invisible in review because both versions look the same length. Complexity analysis is what lets you predict that from reading the code. Measurement is what stops you from acting on the prediction when it is wrong — and it often is, because a `for` loop in Python costs perhaps fifty times what the equivalent C loop inside a built-in costs, which can make an O(n log n) built-in beat a hand-written O(n).",
+  "body": [
+    {
+      "type": "prose",
+      "md": "The practical skill is not reciting growth classes. It is reading a function and answering three questions:\n\n1. **What is `n`?** Rows, characters, files, nodes? A function can be linear in one input and quadratic in another.\n2. **What repeats?** Count the loops — including the ones hidden inside `in`, `index()`, `remove()`, `sorted()`, `min()`, string concatenation in a loop, and any comprehension.\n3. **What does each repetition cost?** A loop containing a list membership test is not O(n); it is O(n·m). This is where nearly every real quadratic comes from.\n\nThe hidden loop is the crux. `if x in some_list` is one token and one full scan. `result += chunk` on a string builds a new string each iteration. `data.pop(0)` shifts every remaining element. None of these look like loops, and all of them are.",
+      "sources": [
+        {
+          "source_id": "python.wiki.time-complexity",
+          "url": "https://wiki.python.org/moin/TimeComplexity",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "TimeComplexity — list, dict, set, deque"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "columns": ["Class", "10× the input costs", "Typical source in Python"],
+      "rows": [
+        ["O(1)", "the same", "dict/set lookup, `len`, `append`, indexing"],
+        ["O(log n)", "+1 step", "`bisect`, balanced-tree operations, binary search"],
+        ["O(n)", "10×", "one pass: `sum`, `max`, a single loop, `in` on a list"],
+        ["O(n log n)", "~13×", "`sorted`, `list.sort`, most merge/heap-based work"],
+        ["O(n²)", "100×", "nested loops, `in` on a list inside a loop, `+=` on a string in a loop"],
+        ["O(n³)", "1000×", "triple nesting, naive matrix multiply"],
+        ["O(2ⁿ)", "unusable", "naive recursion over subsets, unmemoised recursive Fibonacci"]
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "The three quadratics that hide in idiomatic-looking code",
+      "md": "```python\n# 1. Membership against a list inside a loop  -> O(n*m)\n[r for r in rows if r.id not in blocked_list]\n\n# 2. String building by concatenation        -> O(n^2) in total length\nout = \"\"\nfor chunk in chunks:\n    out += chunk          # a new string every iteration\n\n# 3. Queue by list.pop(0)                    -> O(n) per pop\nwhile queue:\n    item = queue.pop(0)   # shifts every remaining element\n```\n\nThe fixes are one line each: `set(blocked_list)` hoisted out of the loop, `\"\".join(chunks)`, and `collections.deque` with `popleft()`. CPython special-cases some `+=` string patterns, which makes the second one behave *sometimes*, which is worse than never."
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "Measure before you optimise: `timeit` for a line, `cProfile` for a program",
+      "runnable": true,
+      "code": "import timeit\n\nsetup = \"data = list(range(5000)); lookup = set(data)\"\n\nlist_hit = timeit.timeit(\"4999 in data\", setup=setup, number=1000)\nset_hit = timeit.timeit(\"4999 in lookup\", setup=setup, number=1000)\nprint(f\"list {list_hit:.4f}s   set {set_hit:.5f}s   ratio {list_hit / set_hit:.0f}x\")\n\n# Same asymptotic class, very different constants: the built-in loop is in C.\njoined = timeit.timeit(\"''.join(str(i) for i in range(2000))\", number=200)\nmanual = timeit.timeit(\"\"\"\nout = ''\nfor i in range(2000):\n    out += str(i)\n\"\"\", number=200)\nprint(f\"join {joined:.4f}s   +=  {manual:.4f}s\")",
+      "expected_output": "list 0.0xxx s   set 0.000xx s   ratio ~xxx x\njoin 0.0xxx s   +=  0.0xxx s"
+    },
+    {
+      "type": "steps",
+      "title": "The measurement order that avoids wasted work",
+      "steps": [
+        "Reproduce the slowness with a realistic input size. A 100-row benchmark cannot distinguish O(n) from O(n²).",
+        "Read for hidden loops first. A quadratic found by reading is cheaper to fix than one found by profiling.",
+        "Profile the whole program with `cProfile` and sort by cumulative time to find *where*, not by total time.",
+        "Confirm the hypothesis with `timeit` on the isolated operation, at two input sizes, and check that the ratio matches the class you predicted.",
+        "Fix the container or the algorithm. Only then consider micro-optimisation — and re-measure, because it frequently makes no difference.",
+        "Add a test that pins the improvement (a bounded operation count, or a `tracemalloc` ceiling) so the next refactor cannot silently reintroduce it."
+      ]
+    },
+    {
+      "type": "prose",
+      "md": "Amortised analysis is worth understanding rather than accepting. `list.append` sometimes has to allocate a bigger buffer and copy everything, which is O(n) — but CPython over-allocates geometrically, so those copies happen rarely enough that the average cost per append is constant. That is what \"amortised O(1)\" means: not that every call is cheap, but that any sequence of n calls costs O(n) in total.\n\nThe same reasoning explains why dict and set lookups are described as O(1) *average*. A pathological set of colliding keys degrades to O(n), which is why Python randomises string hashes by default — it removes the possibility of an attacker choosing keys that collide.\n\nAnd the reason to care about constants in Python specifically: interpreter dispatch dominates small operations. Pushing a loop into a built-in (`sum`, `join`, `sorted`, `map` over a C function) replaces per-iteration bytecode with a C loop, which is routinely a 10-50× constant-factor win with no change in complexity class at all.",
+      "sources": [
+        {
+          "source_id": "cpython.source",
+          "url": "https://github.com/python/cpython/blob/main/Objects/listobject.c",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "list_resize — geometric over-allocation"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "columns": ["Tool", "Answers", "Cost to run"],
+      "rows": [
+        ["`timeit`", "how long does this one expression take?", "negligible; use for A/B of a line"],
+        ["`cProfile` + `pstats`", "which functions accumulate the time?", "2-5× slowdown; fine offline, not in production"],
+        ["`tracemalloc`", "which lines allocated the memory still held?", "meaningful overhead; snapshot-diff based"],
+        ["`sys.getsizeof`", "shallow size of one object", "free, but does not count contents"],
+        ["a sampling profiler (py-spy)", "where is a *running* process spending time?", "near-zero; the only safe option in production"],
+        ["`time.perf_counter`", "wall time around a block you already suspect", "free; the honest first step"]
+      ]
+    },
+    {
+      "type": "term",
+      "term": "amortised complexity",
+      "definition_md": "The average cost per operation across a long sequence, used when an occasional operation is expensive but rare. `list.append` is amortised O(1): individual appends may trigger an O(n) reallocation, but geometric growth means n appends cost O(n) total. Distinct from average-case, which averages over inputs rather than over a sequence of operations.",
+      "aliases": ["amortized cost"]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.containers.quiz.production-sizing"
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "Complexity is a capacity question, not a benchmark",
+      "md": "State the bound in terms the business has: \"linear in orders per day, so 10× growth is 10× the batch window\" is a sentence a capacity plan can use. \"It's O(n)\" is not.\n\nTwo failure modes to watch for. First, an O(n²) path whose `n` is attacker-controlled is a denial-of-service vector — a JSON endpoint that nests groups, or a regex with catastrophic backtracking, needs an input bound rather than a faster machine. Second, memory complexity ends a process abruptly: an O(n) list built from an unbounded stream is fine in staging and OOM-killed in production, and the fix is a generator, not a bigger instance.\n\nMeasure on production-shaped data. Sorted input, all-unique keys and small strings are the three ways a benchmark flatters code that will not hold up."
+    }
+  ],
+  "components": [
+    { "name": "n", "role": "The input dimension being scaled. Naming it precisely is most of the analysis.", "required": true },
+    { "name": "hidden loop", "role": "`in` on a sequence, `+=` on a string, `pop(0)`, `sorted` — cost that does not look like iteration.", "required": true },
+    { "name": "constant factor", "role": "Interpreter overhead per operation; why a C-implemented built-in beats an equivalent Python loop.", "required": false },
+    { "name": "profiler", "role": "The evidence. Complexity predicts; only measurement confirms.", "required": true }
+  ],
+  "prerequisites": ["python.sequences-and-mappings"],
+  "related": ["python.comprehensions", "python.exceptions"],
+  "common_errors": [
+    {
+      "error": "A job that took two minutes on last month's data takes four hours on this month's.",
+      "cause": "A quadratic path — usually a list membership test inside a loop — that was invisible at small n.",
+      "fix": "Hoist the inner container into a `set` or `dict` once, outside the loop. Verify by timing two input sizes and checking the ratio.",
+      "sources": [
+        {
+          "source_id": "python.wiki.time-complexity",
+          "url": "https://wiki.python.org/moin/TimeComplexity",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "list — x in s is O(n)"
+        }
+      ]
+    },
+    {
+      "error": "An optimisation that was clearly better in a micro-benchmark makes no difference in production.",
+      "cause": "The optimised code was not on the hot path; the time was elsewhere (often I/O or serialisation).",
+      "fix": "Profile the whole program by cumulative time before choosing what to optimise. Fix what the profile names."
+    },
+    {
+      "error": "The process is OOM-killed although every function looks linear.",
+      "cause": "Space complexity was never analysed: a list accumulating results from an unbounded input, or a cache with no ceiling.",
+      "fix": "Stream with a generator, or bound the accumulator. `tracemalloc` snapshots before and after will name the line."
+    },
+    {
+      "error": "A rewrite into 'clever' vectorised Python turns out slower.",
+      "cause": "Extra intermediate objects and per-element function calls; the constant factor grew more than the class improved.",
+      "fix": "Prefer one pass with clear code, and let built-ins do the looping. Measure both versions on realistic data."
+    },
+    {
+      "error": "Benchmarks are inconsistent run to run by 2-3×.",
+      "cause": "Warm-up effects, GC pauses, a shared machine, or `timeit(number=1)`.",
+      "fix": "Use `timeit` with enough repetitions to dominate the noise, take the minimum of several repeats, and pin the input."
+    },
+    {
+      "error": "An endpoint becomes unresponsive under a specific crafted payload.",
+      "cause": "Super-linear behaviour on attacker-controlled input: nested structures, regex backtracking, or an O(n²) merge.",
+      "fix": "Bound the input at the boundary (size, depth, count) and make the bound part of the API contract. A faster algorithm alone does not remove the class of attack."
+    }
+  ],
+  "best_practices": [
+    "Name `n` explicitly before analysing, and state complexity in terms of it in the docstring of any non-obvious function.",
+    "Scan for the three hidden loops — list membership, string `+=`, `pop(0)` — before reaching for a profiler.",
+    "Profile by cumulative time to find the region, then `timeit` the isolated operation to confirm the cause.",
+    "Push loops into built-ins (`sum`, `''.join`, `sorted`, `any`) where you can; the constant-factor win is large and free.",
+    "Analyse space alongside time. An unbounded accumulator is a crash, not a slowdown.",
+    "Benchmark on production-shaped data: real cardinality, real string lengths, real sortedness.",
+    "Once fixed, add a test that would fail if the quadratic returned — an operation count or a memory ceiling."
+  ],
+  "production_considerations": [
+    "Express complexity as a capacity statement tied to a business quantity; that is the form a capacity plan and an SLO can consume.",
+    "Super-linear behaviour on untrusted input is a security issue. Bound size, depth and item count at the API boundary.",
+    "Use a sampling profiler (py-spy) for live processes; `cProfile`'s 2-5× overhead changes the behaviour you are trying to observe.",
+    "Caches change complexity only if the hit rate holds. An unbounded cache trades a time problem for a memory problem, so always set `maxsize`.",
+    "In async services the relevant `n` is often concurrency, not data size: an O(n) operation holding the event loop blocks every other request.",
+    "GC pauses scale with the number of live container objects, so millions of small objects cost latency even when the algorithm is linear."
+  ],
+  "anti_patterns": [
+    "Optimising without a profile.",
+    "Quoting Big-O as a substitute for measurement, or measurement as a substitute for reading the code.",
+    "Micro-benchmarks on toy inputs used to justify a production change.",
+    "Caching to paper over a quadratic that a container change would remove outright.",
+    "Unbounded `functools.cache` in a long-running service.",
+    "Reaching for concurrency or a bigger instance before removing a nested loop."
+  ],
+  "examples": [
+    {
+      "title": "Reading complexity out of a function",
+      "language": "python",
+      "code": "def enrich(orders, customers, blocked):\n    # customers: list[Customer], blocked: list[str]\n    out = []\n    for order in orders:                              # n\n        customer = next(c for c in customers          # x m  -> O(n*m)\n                        if c.id == order.customer_id)\n        if order.email in blocked:                    # x b  -> O(n*b)\n            continue\n        out.append((order, customer))\n    return out\n\n# O(n*(m + b)). Two index builds make it O(n + m + b):\ndef enrich_fast(orders, customers, blocked):\n    by_id = {c.id: c for c in customers}\n    blocked_set = set(blocked)\n    return [(o, by_id[o.customer_id]) for o in orders\n            if o.email not in blocked_set]",
+      "md": "Both are readable; one is unusable at scale. The analysis is entirely mechanical: count the loops, including the ones spelled `next(... for ...)` and `in`."
+    },
+    {
+      "title": "Confirming the class rather than trusting it",
+      "language": "python",
+      "code": "import timeit\n\ndef cost(fn, n):\n    return timeit.timeit(lambda: fn(n), number=3)\n\nquadratic = lambda n: sum(1 for i in range(n) if i in list(range(n)))\nlinear = lambda n: sum(1 for i in range(n) if i in set(range(n)))\n\nfor fn, label in ((quadratic, \"quadratic\"), (linear, \"linear\")):\n    small, large = cost(fn, 1000), cost(fn, 4000)\n    # 4x the input: ~4x for linear, ~16x for quadratic.\n    print(f\"{label}: {large / small:.1f}x for 4x input\")",
+      "output": "quadratic: ~16.0x for 4x input\nlinear: ~4.0x for 4x input"
+    }
+  ],
+  "skills": ["python.skill.analyse-complexity", "python.skill.choose-a-container"],
+  "practice": [
+    "python.practice.containers.quiz.production-sizing",
+    "python.practice.containers.quiz.choose-a-container"
+  ],
+  "keywords": ["big-o", "complexity", "amortised", "profiling", "timeit", "cProfile", "tracemalloc", "quadratic"],
+  "estimated_minutes": 20,
+  "sources": [
+    {
+      "source_id": "python.wiki.time-complexity",
+      "url": "https://wiki.python.org/moin/TimeComplexity",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "TimeComplexity — operation costs by container"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/profile.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "The Python Profilers — cProfile, pstats"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/timeit.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "timeit — measure execution time of small code snippets"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/tracemalloc.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "tracemalloc — trace memory allocations"
+    },
+    {
+      "source_id": "cpython.source",
+      "url": "https://github.com/python/cpython/blob/main/Objects/listobject.c",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "list_resize — why append is amortised O(1)"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

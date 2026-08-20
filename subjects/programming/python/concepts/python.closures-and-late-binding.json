@@ -1,0 +1,278 @@
+{
+  "id": "python.closures-and-late-binding",
+  "title": "Closures and Late Binding",
+  "subject_id": "programming.python",
+  "category": "functions",
+  "summary": "A closure captures the variable, not its value. The body runs later and reads the variable then. That one rule, plus the rule that any assignment in a body makes a name local for the whole body, explains loops full of identical callbacks and every UnboundLocalError.",
+  "definition": "A closure is a function that references a free variable — a name used in its body that is neither local to it nor global, but belongs to an enclosing function's scope. CPython implements this by storing that variable in a *cell* object shared between the enclosing frame and the nested function, reachable as `func.__closure__` and named in `func.__code__.co_freevars`. The nested function reads the cell each time it executes, so it sees whatever the variable is bound to at call time, not at definition time. Whether a name is local, free or global is decided statically for the entire function body: any assignment to a name anywhere in the body makes it local throughout, unless declared `global` or `nonlocal`.",
+  "purpose": "Closures are how Python carries state into a callable without a class: decorators, callbacks, key functions, retry policies and dependency-injected handlers are all closures. The same mechanism produces two of the most common confusing bugs in real code — every handler registered in a loop behaving identically, and a function raising UnboundLocalError on a name that is plainly assigned two lines below. Knowing that a cell holds a variable rather than a snapshot lets you predict both before you run the code.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "Python resolves a name in a function body by looking in four scopes, in order — **L**ocal, **E**nclosing, **G**lobal, **B**uilt-in. What matters is *when* that lookup happens: at call time, on every execution, not once when the `def` is compiled.\n\nThe compiler does decide something statically, though: which of those four categories each name falls into. The rule is blunt. If a name is assigned anywhere in a function body — by `=`, `+=`, `for`, `with ... as`, `import`, `def`, `except ... as` — that name is local for the *whole* body, including lines above the assignment. If it is only read, and an enclosing function has it, it is a **free variable** and the function is a **closure** over it.\n\nA closure is not a copy of the enclosing scope. CPython puts each captured variable in a *cell*, and the enclosing frame and every nested function share that one cell. So:\n\n- Three functions created in one loop over `i` share **one** cell for `i`. They do not get one each.\n- The value they see is whatever the cell holds when they are *called*. This is called **late binding**.\n- `nonlocal x` tells the compiler that `x = ...` inside the nested function should rebind the enclosing variable — that is, write through the cell — rather than create a local.\n\nEverything surprising about closures follows from those three sentences.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/executionmodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "4.2. Naming and binding"
+        },
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "free variable"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "import functools\n\n# One `i`, one cell, three functions. Each body reads `i` when it is CALLED.\nlate = [lambda: i for i in range(3)]\nprint(\"late binding: \", [f() for f in late])\n\n# Fix 1 -- bind the value now, as a default argument evaluated at def time.\nby_default = [lambda i=i: i for i in range(3)]\nprint(\"default arg:  \", [f() for f in by_default])\n\n# Fix 2 -- bind the value now, as a pre-supplied argument.\nby_partial = [functools.partial(lambda i: i, i) for i in range(3)]\nprint(\"partial:      \", [f() for f in by_partial])\n\n# Fix 3 -- a factory call gives each closure its own cell.\ndef make(i):\n    return lambda: i\n\nby_factory = [make(i) for i in range(3)]\nprint(\"factory:      \", [f() for f in by_factory])\nprint(\"their cells:  \", [f.__closure__[0].cell_contents for f in by_factory])\n",
+      "caption": "The classic loop: three lambdas, one cell, three identical answers — and three ways to bind the value instead.",
+      "runnable": true,
+      "expected_output": "late binding:  [2, 2, 2]\ndefault arg:   [0, 1, 2]\npartial:       [0, 1, 2]\nfactory:       [0, 1, 2]\ntheir cells:   [0, 1, 2]",
+      "highlight_lines": [
+        4,
+        8,
+        12,
+        16
+      ]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.closures.check.late-binding"
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "Late binding: the closure reads the variable when it runs",
+      "md": "`[lambda: i for i in range(3)]` gives you three functions that all return `2`. Nothing is broken and nothing is a copy: each lambda holds a reference to the single cell for `i`, the loop leaves that cell holding `2`, and each body reads it at call time.\n\nThe general shape to recognise: **anything you defer — a lambda, a nested `def`, a callback, a `partial` over a closure — sees the loop variable's final value, because by the time it runs, the loop is over.** If you want the value at creation time you must bind it at creation time, either as a default argument (`lambda i=i: i`, evaluated when the `def`/`lambda` executes) or by passing it into a factory call or a `functools.partial`.\n\nThis is also why the `lambda i=i:` idiom looks like a hack and is not: it is exploiting the fact that default arguments are evaluated eagerly, at definition time, which is exactly the opposite of how closures read free variables."
+    },
+    {
+      "type": "diagram",
+      "format": "mermaid",
+      "source": "graph LR\n  L0[\"f0 = lambda: i\"] --> CELL\n  L1[\"f1 = lambda: i\"] --> CELL\n  L2[\"f2 = lambda: i\"] --> CELL\n  CELL[\"one cell for the variable i\"] --> VAL[\"whatever i is bound to NOW: 2\"]\n",
+      "caption": "Three function objects created in one loop, all pointing at the same cell for `i`. There is nothing per-function to make them differ."
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "def outer():\n    total = 100\n\n    def reads_only():\n        # No assignment to `total` here, so it is a FREE variable: the compiler\n        # resolves it in outer()'s scope and the function is a closure over it.\n        print(\"reads_only sees:\", total)\n\n    def broken():\n        print(\"broken is about to read total\")\n        print(total)        # reads the LOCAL total, which has no value yet\n        total = 0           # this assignment makes `total` local for the WHOLE body\n        return total\n\n    reads_only()\n    print(\"co_freevars -- reads_only:\", reads_only.__code__.co_freevars,\n          \"broken:\", broken.__code__.co_freevars)\n\n    try:\n        broken()\n    except UnboundLocalError as exc:\n        # The message wording changed in 3.11, so print the type instead.\n        print(\"raised:\", type(exc).__name__, \"for the name 'total'\")\n\n    print(\"outer's total is untouched:\", total)\n\n\nouter()\n",
+      "caption": "One name, two nested functions: a free variable in one, a local in the other. The assignment on the line below is what makes the read on the line above illegal.",
+      "runnable": true,
+      "expected_output": "reads_only sees: 100\nco_freevars -- reads_only: ('total',) broken: ()\nbroken is about to read total\nraised: UnboundLocalError for the name 'total'\nouter's total is untouched: 100",
+      "highlight_lines": [
+        7,
+        11,
+        12
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "code": "def make_accumulator():\n    total = 0\n\n    def add(n):\n        nonlocal total          # rebind the ENCLOSING total, do not create a local\n        total += n\n        return total\n\n    return add\n\n\nacc = make_accumulator()\nprint(acc(10), acc(5), acc(1))\n\n# Proof of what was captured: a name in co_freevars, and a cell holding it.\nprint(\"free variables:\", acc.__code__.co_freevars)\nprint(\"cell count:    \", len(acc.__closure__))\nprint(\"cell_contents: \", acc.__closure__[0].cell_contents)\n\n# A second call to the factory makes a second cell: state is per closure.\nother = make_accumulator()\nother(7)\nprint(\"acc:\", acc.__closure__[0].cell_contents, \" other:\", other.__closure__[0].cell_contents)\n",
+      "caption": "`nonlocal` writes through the cell, and `__closure__` / `cell_contents` prove exactly what was captured.",
+      "runnable": true,
+      "expected_output": "10 15 16\nfree variables: ('total',)\ncell count:     1\ncell_contents:  16\nacc: 16  other: 7",
+      "highlight_lines": [
+        5,
+        17,
+        19
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "Two ways closures bite in running systems",
+      "md": "**Handlers registered in a loop.** `for field in fields: form.on_change(lambda: validate(field))` registers N callbacks that all validate the last field. The bug is invisible in review, invisible in a unit test that registers a single handler, and only visible in production when every validation error names the same field. The same shape appears in `asyncio` task creation, signal handlers, Celery task registration, retry callbacks, and anywhere a request-scoped value (a `request_id`, a tenant, a user) is captured by a handler that outlives the loop. Bind explicitly: `functools.partial(validate, field)`, or a factory function that takes `field` as a parameter.\n\n**Closures keep their captured objects alive.** A cell is a strong reference. A closure that captures a DataFrame, an open response body, a database session or a whole `self` keeps that object reachable for as long as the closure is reachable — and callbacks stored in registries, caches and event buses are reachable for the life of the process. This is how a \"stateless\" handler ends up pinning a few hundred megabytes: the leak is not in the data structure, it is in the function that closed over it. Capture the small thing you need (`user_id`, not `request`), or hold a `weakref`.\n\n**Debug it with the object, not by reading.** `func.__code__.co_freevars` tells you which names were captured and `func.__closure__[i].cell_contents` tells you what is in them right now. On a live handler that is a two-line answer to \"what did this actually close over?\""
+    },
+    {
+      "type": "steps",
+      "title": "Diagnosing \"all my callbacks see the same value\"",
+      "steps": [
+        "**Confirm the symptom is uniformity, not corruption.** If every callback produces the *same* result and that result matches the *last* item of the sequence you looped over, you are looking at late binding, not a data bug. Stop reading the callback body.",
+        "**Find the deferral boundary.** Locate where the function object is created and where it is finally called. Late binding only bites when those are separated: a loop that both creates and calls immediately is fine. Anything stored in a list, registry, `on_*` hook, task set or scheduler is deferred.",
+        "**Ask the function what it captured.** `print(cb.__code__.co_freevars)` and `print([c.cell_contents for c in cb.__closure__ or ()])`. If the loop variable's name appears in `co_freevars`, it was captured as a variable; if two different callbacks report the same `cell_contents`, they are sharing one cell.",
+        "**Bind at creation time.** Either pass the value into a call — `functools.partial(handler, field)` or a `make_handler(field)` factory — or use the default-argument idiom `lambda field=field: ...`. Prefer the factory in library code: it is explicit, it survives someone adding a parameter, and it does not leave a fake default in the signature that a caller could override.",
+        "**Add the test that would have caught it.** Register two handlers in a loop and assert they produce *different* results. A single-handler test passes under both the broken and the fixed version, which is why this class of bug survives review."
+      ]
+    },
+    {
+      "type": "term",
+      "term": "free variable",
+      "definition_md": "A name used in a function body that is neither bound in that body nor declared global — so it must be resolved in an enclosing function's scope. A function with at least one free variable is a closure: CPython lists the names in `func.__code__.co_freevars` and stores one cell object per name in `func.__closure__`, sharing each cell with the scope the variable belongs to. Because the cell is read when the body executes rather than when it is defined, a free variable always yields its *current* binding, which is what late binding means.",
+      "aliases": [
+        "closed-over variable",
+        "captured variable"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "Free variable",
+      "role": "A name read in the nested function but owned by an enclosing scope. Its presence is what makes the function a closure; it is listed in `__code__.co_freevars`."
+    },
+    {
+      "name": "Cell",
+      "role": "The single mutable box CPython allocates per captured variable, shared by the enclosing frame and every nested function that closes over it. Reachable as `func.__closure__[i]`, with the current value in `.cell_contents`. Sharing is why closures created in one loop iteration are not independent."
+    },
+    {
+      "name": "`nonlocal` declaration",
+      "role": "Tells the compiler that assignments to a name inside the nested function should write through the enclosing scope's cell rather than create a new local. Without it, one assignment turns the name local for the entire body and reads above it raise `UnboundLocalError`.",
+      "required": false
+    }
+  ],
+  "dependencies": [
+    "python.objects-and-names",
+    "python.functions-and-signatures"
+  ],
+  "prerequisites": [
+    "python.functions-and-signatures"
+  ],
+  "related": [
+    "python.decorators"
+  ],
+  "common_errors": [
+    {
+      "error": "Every closure created in a loop sees the loop's final value — three handlers registered over `['name', 'age', 'email']` all log the field `\"email\"`.",
+      "cause": "The loop body creates functions that reference the loop variable as a free variable. All of them share one cell, and the loop leaves that cell holding the last item. Each handler reads the cell when it is invoked, which is after the loop has finished.",
+      "fix": "Bind the value at creation time instead of capturing the variable: `functools.partial(log, field)`, a factory (`def make(field): return lambda: log(field)`), or the default-argument idiom `lambda field=field: log(field)`. In a comprehension the same rule applies — the comprehension's own scope does not give each iteration a fresh cell.",
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Why do lambdas defined in a loop with different values all return the same result?"
+        }
+      ]
+    },
+    {
+      "error": "`UnboundLocalError: local variable 'total' referenced before assignment` (Python 3.11 and later word it `cannot access local variable 'total' where it is not associated with a value`)",
+      "cause": "The body assigns `total` somewhere — often `total += 1`, which is a read followed by an assignment — so the compiler made `total` local for the entire function. The read on the earlier line therefore looks up a local that has never been bound, and the enclosing or global `total` is not consulted at all.",
+      "fix": "Decide which variable you meant. To read the outer one, do not assign to that name in this function (accumulate into a differently named local, or mutate a list/dict instead of rebinding). To *rebind* the outer one, declare `nonlocal total` for an enclosing function's variable, or `global total` for a module-level one. Prefer restructuring so the function takes `total` as a parameter and returns the new value.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/executionmodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "4.2. Naming and binding"
+        }
+      ]
+    },
+    {
+      "error": "`SyntaxError: no binding for nonlocal 'x' found`",
+      "cause": "`nonlocal x` requires that some *enclosing function* already binds `x`. It is a compile-time error, not a runtime one, and it fires when there is no such enclosing binding — typically because the variable is actually at module level, or because it is only ever assigned inside the nested function.",
+      "fix": "Use `global x` if `x` lives at module level. If you meant to create the state, initialise it in the enclosing function first (`x = 0` before the nested `def`). `nonlocal` at module level is always an error: there is no enclosing function scope to reach.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/simple_stmts.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "7.13. The nonlocal statement"
+        }
+      ]
+    },
+    {
+      "error": "A closure that appends to a captured list keeps growing across calls, so results from one invocation appear in the next.",
+      "cause": "The closure captured a mutable object and mutates it rather than rebinding it. No `nonlocal` is needed — and none is present to warn you — because `seen.append(x)` is a method call, not an assignment. The cell holds the same list forever, so the state is per closure and lives as long as the closure does.",
+      "fix": "Decide whether the accumulation is intentional. If it is (a memo, a dedup set), say so in the name and give the caller a way to reset it. If it is not, create the container inside the nested function, or return a fresh closure per unit of work rather than reusing one. This is the same failure as a mutable default argument, one scope out."
+    },
+    {
+      "error": "`NameError: name 'n' is not defined` after a comprehension, from expecting `[n * n for n in range(3)]` to leave `n` behind.",
+      "cause": "In Python 3 a comprehension runs in its own implicit function scope, so its loop variable is local to the comprehension and is gone afterwards. Code ported from Python 2, where list comprehensions did leak, or written by analogy with a plain `for` loop, expects otherwise.",
+      "fix": "If you need the value afterwards, use an explicit `for` loop, or capture what you want inside the comprehension. Read the leak-free behaviour as a feature: it is also why a comprehension cannot accidentally clobber a variable in the enclosing scope, and why closures created inside a comprehension close over the comprehension's variable, not yours.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/executionmodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "4.2. Naming and binding"
+        }
+      ]
+    }
+  ],
+  "best_practices": [
+    "When you create functions in a loop, bind the varying value through a call — `functools.partial(f, value)` or a `make_handler(value)` factory — rather than closing over the loop variable.",
+    "Prefer a factory function to the `lambda x=x:` idiom in library code. The default-argument trick works, but it puts a parameter in the signature that a caller can override by accident, and it stops reading like intent the moment there are two captured values.",
+    "Reach for `nonlocal` only for small, local accumulators inside a single factory. Once the shared state has more than one field or more than one mutator, a class with attributes is easier to reason about and to test.",
+    "Capture the smallest thing that works. Close over `user_id`, not `request`; over a path, not an open file handle. The cell is a strong reference and it lives as long as the function does.",
+    "When a closure's behaviour surprises you, interrogate the object rather than re-reading the source: `f.__code__.co_freevars` and `f.__closure__[i].cell_contents` are authoritative and take two lines.",
+    "Never write `x += 1` on a name you intended to read from an enclosing scope. Either declare `nonlocal`/`global` deliberately, or pass the value in and return the new one."
+  ],
+  "production_considerations": [
+    "Request-scoped values captured by long-lived callbacks are a correctness bug and an information-leak risk at the same time. A handler registered once per request that closes over `request` or a `db_session` will, on a later invocation, act on data from the wrong request — and may keep a closed session or an authenticated user object alive well past its intended lifetime.",
+    "Closures pin memory. A cell is a strong reference, so a callback stored in a registry, an event bus, an `lru_cache`, or an `asyncio` task set keeps every captured object reachable — a captured DataFrame or response body will never be collected while the callback is. Heap growth that tracks the number of registered handlers rather than the number of live requests is the signature of this.",
+    "`nonlocal` state is not thread-safe. Two threads calling the same closure both write through the same cell, and `total += 1` is not atomic. Under threads or `asyncio`, use a lock, a queue, or `contextvars` instead of a closed-over counter.",
+    "Closures are not picklable, which matters more than it sounds: `multiprocessing` with the spawn start method, `concurrent.futures.ProcessPoolExecutor`, Celery arguments and most caching layers pickle what you hand them. A `lambda` or a nested `def` fails there, while a module-level function plus `functools.partial` succeeds.",
+    "A traceback through a closure names the inner function, not the loop that built it. When you cannot tell which of N identical handlers failed, give the factory a `functools.wraps`-style name or embed the captured value in an exception message — otherwise every frame in the log reads `wrapper` or `<lambda>`."
+  ],
+  "anti_patterns": [
+    "Creating callbacks in a loop that close over the loop variable — `for f in fields: register(lambda: handle(f))` — and then adding a comment that it \"should\" work.",
+    "Using `nonlocal` to build a mutable object graph across several nested functions. At that point you have written a class with worse encapsulation, no `__repr__`, and no way to inspect its state in a debugger.",
+    "Reaching for `global` to escape an `UnboundLocalError`. It silences the message by making the function mutate module state, which turns a scoping question into a shared-mutable-state question and makes the function untestable in isolation.",
+    "Closing over `self` inside a callback stored on a long-lived registry or cache, creating a reference cycle that keeps the whole instance — and everything it owns — alive.",
+    "Relying on a comprehension's loop variable, or on the closures created inside a comprehension, behaving like an ordinary `for` loop's. The comprehension has its own scope, and that scope is shared by every iteration."
+  ],
+  "skills": [
+    "python.skill.reason-about-closures"
+  ],
+  "practice": [
+    "python.practice.closures.check.late-binding",
+    "python.practice.closures.code.counter-factory",
+    "python.practice.closures.debug.late-binding-loop"
+  ],
+  "keywords": [
+    "UnboundLocalError: local variable 'total' referenced before assignment",
+    "cannot access local variable 'total' where it is not associated with a value",
+    "SyntaxError: no binding for nonlocal 'x' found",
+    "closure",
+    "late binding",
+    "free variable",
+    "nonlocal",
+    "cell",
+    "cell_contents",
+    "LEGB",
+    "__closure__",
+    "co_freevars",
+    "default argument capture",
+    "functools.partial"
+  ],
+  "estimated_minutes": 24,
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/executionmodel.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "4.2. Naming and binding"
+    },
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Why do lambdas defined in a loop with different values all return the same result?"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/simple_stmts.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "7.13. The nonlocal statement"
+    },
+    {
+      "source_id": "python.docs.glossary",
+      "url": "https://docs.python.org/3/glossary.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "free variable"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-18T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-18T00:00:00Z",
+    "status": "published"
+  }
+}

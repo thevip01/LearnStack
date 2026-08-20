@@ -1,0 +1,120 @@
+{
+  "id": "python.practice.signatures.debug.mutable-default",
+  "kind": "debug",
+  "title": "The cache that remembers other users",
+  "subject_id": "programming.python",
+  "concept_id": "python.functions-and-signatures",
+  "skills": ["python.skill.avoid-shared-mutable-defaults", "python.skill.design-function-signatures"],
+  "difficulty": 6,
+  "estimated_minutes": 20,
+  "prompt_md": "A `build_profile` helper attaches permissions to a user. In tests it is always called once, so it passed review. In production, where it is called for many users in the same process, users start seeing permissions that belong to someone else.\n\nFind the cause, fix it so each call starts from a clean slate, and keep the function's public behaviour identical for callers that *do* pass their own `permissions` list.\n\nDo not change the tests. Do not silence the symptom by clearing the list at the top of the body — fix the signature so the shared object is never there in the first place.",
+  "symptom_md": "The unit test passes:\n\n```python\nassert build_profile(\"ada\") == {\"user\": \"ada\", \"permissions\": [\"read\"]}\n```\n\nbut calling it repeatedly leaks state across users:\n\n```python\n>>> build_profile(\"ada\")\n{'user': 'ada', 'permissions': ['read']}\n>>> build_profile(\"bob\")\n{'user': 'bob', 'permissions': ['read', 'read']}   # bob inherited ada's 'read'\n>>> build_profile(\"cy\")\n{'user': 'cy', 'permissions': ['read', 'read', 'read']}\n```\n\nEvery call that omits `permissions` appends to the *same* list, so the default keeps growing and each user sees the accumulation of everyone before them.",
+  "tags": ["mutable-default", "shared-state", "sentinel", "signature"],
+  "requirements_md": [
+    "Each call that omits `permissions` gets a fresh list containing exactly the base permission.",
+    "Callers that pass their own `permissions` list keep working, and that list is not mutated.",
+    "The fix is in the signature/handling, not a `.clear()` band-aid in the body.",
+    "Public return shape is unchanged.",
+    "Do not modify the test files."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "profile.py",
+  "broken_files": [
+    {
+      "path": "profile.py",
+      "content": "\"\"\"Attach permissions to a user profile.\"\"\"\n\n\ndef build_profile(user, permissions=[\"read\"]):\n    \"\"\"Return a profile dict for `user`.\n\n    If the caller does not pass permissions, the user gets the base ['read'].\n    \"\"\"\n    if \"admin\" in user:\n        permissions.append(\"write\")\n    return {\"user\": user, \"permissions\": permissions}\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "profile.py",
+      "content": "\"\"\"Attach permissions to a user profile.\"\"\"\n\n\ndef build_profile(user, permissions=None):\n    \"\"\"Return a profile dict for `user`.\n\n    permissions defaults to None; the fresh base list is built inside the body,\n    so no state is shared between calls. When the caller supplies a list we copy\n    it before appending, so we never mutate the caller's object either.\n    \"\"\"\n    permissions = list(permissions) if permissions is not None else [\"read\"]\n    if \"admin\" in user:\n        permissions.append(\"write\")\n    return {\"user\": user, \"permissions\": permissions}\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-profile-single-call",
+      "name": "a single call still behaves as documented",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 1.0,
+      "file": "test_single.py",
+      "body": "from profile import build_profile\n\n\ndef test_default_permissions():\n    assert build_profile(\"ada\") == {\"user\": \"ada\", \"permissions\": [\"read\"]}\n\n\ndef test_admin_gets_write():\n    assert build_profile(\"admin-jo\") == {\"user\": \"admin-jo\", \"permissions\": [\"read\", \"write\"]}\n"
+    },
+    {
+      "id": "test-profile-no-leak",
+      "name": "calls do not leak permissions across users",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_no_leak.py",
+      "body": "from profile import build_profile\n\n\ndef test_repeated_calls_are_independent():\n    build_profile(\"ada\")\n    build_profile(\"admin-x\")\n    assert build_profile(\"bob\") == {\"user\": \"bob\", \"permissions\": [\"read\"]}\n\n\ndef test_many_calls_stay_constant():\n    results = [build_profile(f\"u{i}\") for i in range(50)]\n    assert all(r[\"permissions\"] == [\"read\"] for r in results)\n"
+    },
+    {
+      "id": "test-profile-caller-list-untouched",
+      "name": "a caller-supplied list is honoured and not mutated",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_caller_list.py",
+      "body": "from profile import build_profile\n\n\ndef test_caller_permissions_used():\n    assert build_profile(\"ada\", [\"read\", \"share\"]) == {\n        \"user\": \"ada\",\n        \"permissions\": [\"read\", \"share\"],\n    }\n\n\ndef test_caller_list_not_mutated():\n    caller = [\"read\"]\n    build_profile(\"admin-x\", caller)\n    assert caller == [\"read\"], \"the caller's list was mutated by append\"\n\n\ndef test_default_is_not_a_shared_object():\n    a = build_profile(\"a\")\n    a[\"permissions\"].append(\"leaked\")\n    b = build_profile(\"b\")\n    assert b[\"permissions\"] == [\"read\"]\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "The default `permissions=[\"read\"]` is created once, when `def` runs, and reused by every call that omits the argument. The `admin` branch and the caller both then mutate that one shared list.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "Default to `None` and build the real list inside the body. To also protect a caller's list from the `append`, copy it: `permissions = list(permissions) if permissions is not None else [\"read\"]`.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "```python\ndef build_profile(user, permissions=None):\n    permissions = list(permissions) if permissions is not None else [\"read\"]\n    if \"admin\" in user:\n        permissions.append(\"write\")\n    return {\"user\": user, \"permissions\": permissions}\n```\nThe `None` sentinel gives each call its own list, and `list(...)` means the `append` never touches the caller's object.",
+      "reveals_solution": true
+    }
+  ],
+  "root_cause_md": "A default argument is evaluated **once**, when the `def` statement runs, and the resulting object is stored on the function and reused for every call that omits that argument. So `permissions=[\"read\"]` is a single list shared across all default calls; the `append` in the `admin` branch, and any caller appending later, mutate that shared list permanently. The unit test missed it because it only ever made one call — the bug is invisible until the second invocation.\n\nThe correct fix is the `None`-sentinel idiom: default to `None`, and construct the fresh list in the body. Clearing the list at the top of the function would also mask the symptom, but it keeps a misleading mutable default in the signature and still mutates a caller-supplied list. Copying with `list(permissions)` additionally protects the caller's object, which is why the hidden test checks that the passed-in list is untouched.",
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "debugging"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Why are default values shared between objects?"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Default parameter values are evaluated when the def executes"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

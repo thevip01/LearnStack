@@ -1,0 +1,55 @@
+[project]
+name = "learnos-api"
+version = "0.1.0"
+description = "LearnOS API — a generic subject runtime served over HTTP."
+requires-python = ">=3.12"
+
+# Versions are pinned to compatible ranges rather than exact pins: the lockfile
+# lives in the image build, and a floating patch level is what lets a security
+# fix land without a content-package rebuild.
+dependencies = [
+  "fastapi>=0.115,<0.116",
+  "uvicorn[standard]>=0.30,<0.31",
+  "pydantic>=2.8,<3",
+  "pydantic-settings>=2.4,<3",
+  "sqlalchemy[asyncio]>=2.0.31,<2.1",
+  "asyncpg>=0.29,<0.31",
+  "alembic>=1.13,<2",
+  "redis>=5.0,<6",
+  "pyjwt[crypto]>=2.9,<3",
+  "passlib>=1.7.4,<2",
+  # passlib 1.7.4 reads bcrypt.__about__, which bcrypt removed in 4.1. Capping
+  # below 4.1 keeps the hash backend from emitting a spurious startup error.
+  "bcrypt>=4.0.1,<4.1",
+  "docker>=7.1,<8",
+  "structlog>=24.4,<25",
+  # Local path packages. Installed from the repo root in the Dockerfile before
+  # this project, so pip resolves them from the already-installed distributions.
+  "learnos-schema>=0.1",
+  "learnos-sandbox>=0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "httpx>=0.27",
+  "aiosqlite>=0.20",
+  "fakeredis>=2.23",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["learnos_api*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

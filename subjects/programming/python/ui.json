@@ -1,0 +1,493 @@
+{
+  "layout": "learning_lab",
+  "theme": {
+    "accent": "#3776ab",
+    "accent_soft": "#ffd43b",
+    "icon": "python",
+    "mono_font": "JetBrains Mono",
+    "density": "comfortable"
+  },
+  "default_mode": "learn",
+  "modes": {
+    "learn": {
+      "label": "Learn",
+      "primary_slot": "main",
+      "panels": [
+        {
+          "id": "curriculum",
+          "type": "curriculum",
+          "slot": "left",
+          "title": "Core Python",
+          "config": {
+            "show_progress": true,
+            "collapse_completed_modules": false
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 260,
+          "flex": 1.0
+        },
+        {
+          "id": "content",
+          "type": "content",
+          "slot": "main",
+          "title": null,
+          "config": {
+            "render_blocks": [
+              "prose",
+              "code",
+              "callout",
+              "diagram",
+              "table",
+              "steps",
+              "term",
+              "embed_practice"
+            ],
+            "runnable_blocks": true,
+            "show_estimated_minutes": true
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_width": 520,
+          "flex": 3.0
+        },
+        {
+          "id": "concept_meta",
+          "type": "concept_meta",
+          "slot": "right",
+          "title": "About this concept",
+          "config": {
+            "sections": [
+              "prerequisites",
+              "components",
+              "common_errors",
+              "production_considerations",
+              "anti_patterns",
+              "skills"
+            ]
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 300,
+          "flex": 1.4
+        },
+        {
+          "id": "sources",
+          "type": "sources",
+          "slot": "right",
+          "title": "Sources",
+          "config": {
+            "group_by": "source_id",
+            "show_locator": true,
+            "show_retrieved_at": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "flex": 0.8
+        }
+      ]
+    },
+    "practice": {
+      "label": "Practice",
+      "primary_slot": "main",
+      "panels": [
+        {
+          "id": "curriculum",
+          "type": "curriculum",
+          "slot": "left",
+          "title": "Jump to",
+          "config": {
+            "mode": "practice_index",
+            "group_by": "skill"
+          },
+          "collapsible": true,
+          "default_collapsed": true,
+          "min_width": 240,
+          "flex": 1.0
+        },
+        {
+          "id": "quiz",
+          "type": "quiz",
+          "slot": "main",
+          "title": null,
+          "config": {
+            "one_question_at_a_time": true,
+            "show_explanation_after_grading": true,
+            "allow_retry": true
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_width": 520,
+          "flex": 3.0
+        },
+        {
+          "id": "hints",
+          "type": "hints",
+          "slot": "right",
+          "title": "Hints",
+          "config": {
+            "ladder": true,
+            "warn_before_reveal": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 280,
+          "flex": 1.0
+        },
+        {
+          "id": "mastery",
+          "type": "mastery",
+          "slot": "right",
+          "title": "Mastery",
+          "config": {
+            "scope": "current_skills",
+            "show_unmeasured_as_dash": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "flex": 1.0
+        }
+      ]
+    },
+    "lab": {
+      "label": "Lab",
+      "primary_slot": "main",
+      "panels": [
+        {
+          "id": "instructions",
+          "type": "instructions",
+          "slot": "left",
+          "title": "Task",
+          "config": {
+            "show_requirements_checklist": true,
+            "sticky_prompt": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 320,
+          "flex": 1.2
+        },
+        {
+          "id": "files",
+          "type": "file_explorer",
+          "slot": "left",
+          "title": "Files",
+          "config": {
+            "hide_hidden_files": true,
+            "readonly_badge": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "flex": 0.6
+        },
+        {
+          "id": "editor",
+          "type": "code_editor",
+          "slot": "main",
+          "title": null,
+          "config": {
+            "language": "python",
+            "tab_size": 4,
+            "run_shortcut": "mod+enter",
+            "show_diff_against_starter": true
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_height": 320,
+          "flex": 2.0
+        },
+        {
+          "id": "tests",
+          "type": "test_results",
+          "slot": "bottom",
+          "title": "Tests",
+          "config": {
+            "group_hidden_tests": true,
+            "show_weights": true,
+            "expand_first_failure": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_height": 180,
+          "flex": 1.2
+        },
+        {
+          "id": "console",
+          "type": "console",
+          "slot": "bottom",
+          "title": "Output",
+          "config": {
+            "stream": true,
+            "max_lines": 2000
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "flex": 1.0
+        },
+        {
+          "id": "hints",
+          "type": "hints",
+          "slot": "right",
+          "title": "Hints",
+          "config": {
+            "ladder": true,
+            "warn_before_reveal": true
+          },
+          "collapsible": true,
+          "default_collapsed": true,
+          "min_width": 260,
+          "flex": 1.0
+        }
+      ]
+    },
+    "project": {
+      "label": "Project",
+      "primary_slot": "main",
+      "panels": [
+        {
+          "id": "brief",
+          "type": "project_brief",
+          "slot": "left",
+          "title": "Brief",
+          "config": {
+            "sections": [
+              "brief_md",
+              "requirements",
+              "constraints",
+              "non_goals",
+              "milestones",
+              "stretch_goals"
+            ],
+            "milestone_checklist": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 340,
+          "flex": 1.4
+        },
+        {
+          "id": "editor",
+          "type": "code_editor",
+          "slot": "main",
+          "title": null,
+          "config": {
+            "language": "python",
+            "multi_file": true,
+            "tab_size": 4
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_height": 320,
+          "flex": 2.0
+        },
+        {
+          "id": "tests",
+          "type": "test_results",
+          "slot": "bottom",
+          "title": "Milestone tests",
+          "config": {
+            "group_by": "milestone",
+            "show_weights": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_height": 200,
+          "flex": 1.2
+        },
+        {
+          "id": "terminal",
+          "type": "terminal",
+          "slot": "bottom",
+          "title": "Shell",
+          "config": {
+            "cwd": "/workspace",
+            "read_only_prompt": false
+          },
+          "collapsible": true,
+          "default_collapsed": true,
+          "flex": 1.0
+        },
+        {
+          "id": "mastery",
+          "type": "mastery",
+          "slot": "right",
+          "title": "Skills this project posts to",
+          "config": {
+            "scope": "project_skills",
+            "show_unmeasured_as_dash": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 280,
+          "flex": 1.0
+        }
+      ]
+    },
+    "exam": {
+      "label": "Exam",
+      "primary_slot": "main",
+      "panels": [
+        {
+          "id": "quiz",
+          "type": "quiz",
+          "slot": "main",
+          "title": null,
+          "config": {
+            "one_question_at_a_time": true,
+            "show_explanation_after_grading": false,
+            "allow_retry": false,
+            "show_timer": true,
+            "lock_navigation_after_answer": true
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_width": 560,
+          "flex": 4.0
+        },
+        {
+          "id": "editor",
+          "type": "code_editor",
+          "slot": "main",
+          "title": "Code section",
+          "config": {
+            "language": "python",
+            "show_diff_against_starter": false,
+            "paste_guard": true
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "flex": 3.0
+        },
+        {
+          "id": "tests",
+          "type": "test_results",
+          "slot": "bottom",
+          "title": "Smoke tests only",
+          "config": {
+            "visible_tests_only": true,
+            "hide_weights": true,
+            "hide_hidden_test_names": false
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_height": 140,
+          "flex": 1.0
+        },
+        {
+          "id": "tutor",
+          "type": "instructions",
+          "slot": "right",
+          "title": "Exam conditions",
+          "config": {
+            "replaces_global_panel": "tutor",
+            "variant": "exam_rules",
+            "md": "Closed book. The tutor and the hint ladder are unavailable for the duration of this attempt. Only tests marked as smoke tests run before you submit; the weighted tests run once, at submission.\n\nAttempts are capped and spaced by a cooldown, so a retry measures learning rather than memory."
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_width": 260,
+          "flex": 1.0
+        }
+      ]
+    },
+    "review": {
+      "label": "Review",
+      "primary_slot": "main",
+      "panels": [
+        {
+          "id": "curriculum",
+          "type": "curriculum",
+          "slot": "left",
+          "title": "Scope",
+          "config": {
+            "mode": "review_scope",
+            "show_due_counts": true
+          },
+          "collapsible": true,
+          "default_collapsed": true,
+          "min_width": 240,
+          "flex": 1.0
+        },
+        {
+          "id": "flashcards",
+          "type": "flashcards",
+          "slot": "main",
+          "title": null,
+          "config": {
+            "derive_from": [
+              "term",
+              "definition",
+              "common_errors"
+            ],
+            "scheduler": "spaced",
+            "reveal_on": "click",
+            "grade_scale": [
+              "again",
+              "hard",
+              "good",
+              "easy"
+            ]
+          },
+          "collapsible": false,
+          "default_collapsed": false,
+          "min_width": 480,
+          "flex": 2.5
+        },
+        {
+          "id": "mastery",
+          "type": "mastery",
+          "slot": "right",
+          "title": "Retention",
+          "config": {
+            "scope": "subject",
+            "highlight_dimension": "retention",
+            "show_unmeasured_as_dash": true
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_width": 300,
+          "flex": 1.2
+        },
+        {
+          "id": "retention_chart",
+          "type": "chart",
+          "slot": "bottom",
+          "title": "Decay and recovery",
+          "config": {
+            "series": [
+              "overall",
+              "retention"
+            ],
+            "window_days": 90,
+            "annotate": "half_life"
+          },
+          "collapsible": true,
+          "default_collapsed": false,
+          "min_height": 160,
+          "flex": 1.0
+        }
+      ]
+    }
+  },
+  "global_panels": [
+    {
+      "id": "tutor",
+      "type": "tutor",
+      "slot": "right",
+      "title": "Tutor",
+      "config": {
+        "context": [
+          "current_concept",
+          "current_task",
+          "recent_failures"
+        ],
+        "cite_sources": true,
+        "refuse_to_answer_graded_questions": true
+      },
+      "collapsible": true,
+      "default_collapsed": false,
+      "min_width": 300,
+      "flex": 1.0
+    }
+  ]
+}

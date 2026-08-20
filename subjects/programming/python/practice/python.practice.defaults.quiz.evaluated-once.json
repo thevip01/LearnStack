@@ -1,0 +1,186 @@
+{
+  "id": "python.practice.defaults.quiz.evaluated-once",
+  "kind": "quiz",
+  "title": "Default arguments are evaluated once",
+  "subject_id": "programming.python",
+  "concept_id": "python.functions-and-signatures",
+  "skills": ["python.skill.avoid-shared-mutable-defaults"],
+  "difficulty": 4,
+  "estimated_minutes": 6,
+  "prompt_md": "The single most-reported Python surprise: a default value that is created once, at definition time, and then shared by every call that relies on it. Reason through each case.",
+  "tags": ["default-arguments", "mutable-default", "def-time", "sentinel"],
+  "questions": [
+    {
+      "id": "defaults.accumulating-list",
+      "type": "mcq",
+      "stem_md": "```python\ndef add(item, bucket=[]):\n    bucket.append(item)\n    return bucket\n\nprint(add(1))\nprint(add(2))\n```\nWhat is printed?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`[1]` then `[1, 2]`" },
+        { "id": "b", "md": "`[1]` then `[2]`" },
+        { "id": "c", "md": "`[1]` then `[1]`" },
+        { "id": "d", "md": "`[1, 2]` then `[1, 2]`" }
+      ],
+      "answer": "a",
+      "explanation_md": "The default list is created **once**, when `def` runs, and stored on the function object (`add.__defaults__`). Every call that omits `bucket` mutates that same list, so it accumulates across calls. This is why a function that \"remembers\" values between unrelated calls almost always has a mutable default.",
+      "skills": ["python.skill.avoid-shared-mutable-defaults"],
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Why are default values shared between objects?"
+        }
+      ]
+    },
+    {
+      "id": "defaults.when-is-it-evaluated",
+      "type": "mcq",
+      "stem_md": "```python\nimport time\n\ndef stamp(t=time.time()):\n    return t\n```\nA process starts, waits an hour, then calls `stamp()` twice a minute apart. What do the two calls return?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "The same value both times — the time the module was imported, over an hour ago." },
+        { "id": "b", "md": "Two values a minute apart, each the current time." },
+        { "id": "c", "md": "The time one hour after import, both times." },
+        { "id": "d", "md": "`None`, because the default was never re-evaluated." }
+      ],
+      "answer": "a",
+      "explanation_md": "`time.time()` runs once, while the `def` statement executes at import — not on each call. Both calls return that frozen timestamp. Any default whose value should reflect call time (a timestamp, a fresh id, today's date) must be computed inside the body, with the parameter defaulting to `None`.",
+      "skills": ["python.skill.avoid-shared-mutable-defaults"],
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Default parameter values are evaluated when the def executes"
+        }
+      ]
+    },
+    {
+      "id": "defaults.correct-fix",
+      "type": "multi_select",
+      "stem_md": "Which of these correctly give each call its own fresh list?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "```python\ndef add(item, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(item)\n    return bucket\n```" },
+        { "id": "b", "md": "```python\ndef add(item, bucket=[]):\n    bucket = bucket.copy()\n    bucket.append(item)\n    return bucket\n```" },
+        { "id": "c", "md": "```python\ndef add(item, *, bucket=None):\n    bucket = bucket if bucket is not None else []\n    bucket.append(item)\n    return bucket\n```" },
+        { "id": "d", "md": "```python\ndef add(item, bucket=[]):\n    return bucket + [item]\n```" }
+      ],
+      "answer": ["a", "b", "c", "d"],
+      "explanation_md": "All four avoid mutating the shared default. (a) and (c) are the idiomatic `None`-sentinel form. (b) copies the shared list before touching it. (d) never mutates at all — `bucket + [item]` builds a new list. (a) and (c) are preferred because they signal intent; (b) and (d) work but keep the misleading `[]` in the signature.",
+      "skills": ["python.skill.avoid-shared-mutable-defaults"],
+      "sources": [
+        {
+          "source_id": "python.docs.faq",
+          "url": "https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "The None-sentinel fix"
+        }
+      ]
+    },
+    {
+      "id": "defaults.which-signatures-are-risky",
+      "type": "multi_select",
+      "stem_md": "Which of these default values are a bug risk from sharing? (Select every one that is mutable or freshly computed.)",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`def f(x=[]):`" },
+        { "id": "b", "md": "`def f(x=()):`" },
+        { "id": "c", "md": "`def f(x={}):`" },
+        { "id": "d", "md": "`def f(x=0):`" },
+        { "id": "e", "md": "`def f(x=set()):`" },
+        { "id": "f", "md": "`def f(x=\"\"):`" }
+      ],
+      "answer": ["a", "c", "e"],
+      "explanation_md": "Only mutable objects are dangerous, because sharing is harmless if nothing can change the object. `[]`, `{}` and `set()` are mutable; a call that mutates them corrupts the default. Tuples, ints and strings are immutable, so the shared instance can never change — `x=()` is a perfectly safe empty-sequence default, which is exactly why it is idiomatic.",
+      "skills": ["python.skill.avoid-shared-mutable-defaults"],
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html#immutable-sequence-types",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Immutable sequence types"
+        }
+      ]
+    },
+    {
+      "id": "defaults.default-factory-analogue",
+      "type": "mcq",
+      "stem_md": "You see `field(default_factory=list)` in a dataclass. How does this relate to the mutable-default problem?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "It solves the same problem: a factory is called per instance, so each gets a fresh list rather than sharing one." },
+        { "id": "b", "md": "It is unrelated; dataclasses do not evaluate defaults at definition time." },
+        { "id": "c", "md": "It is slower but otherwise identical to `field(default=[])`." },
+        { "id": "d", "md": "It freezes the list so it cannot be mutated." }
+      ],
+      "answer": "a",
+      "explanation_md": "`dataclasses` refuses a mutable literal as a `default` precisely because it would be shared across instances — the same bug — and forces you to use `default_factory`, which it calls once per instance. It is the language building the `None`-sentinel discipline into the API so you cannot get it wrong.",
+      "skills": ["python.skill.avoid-shared-mutable-defaults"],
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/dataclasses.html#mutable-default-values",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "dataclasses — mutable default values"
+        }
+      ]
+    }
+  ],
+  "shuffle": true,
+  "hints": [
+    {
+      "level": 1,
+      "md": "Anchor on one fact: the expression after `=` in a parameter runs **once**, when the `def` statement executes, not on each call. The resulting object is stored and reused.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "So the danger is exactly when that reused object is mutable and the body mutates it. Immutable defaults (`()`, `0`, `\"\"`, `None`) are always safe because the shared instance cannot change. The fix is to default to `None` and build the real value in the body.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "Answers: (1) `[1]` then `[1, 2]` — the list is shared. (2) The same import-time value both times. (3) All four fixes are correct. (4) Risky: `[]`, `{}`, `set()`; safe: `()`, `0`, `\"\"`. (5) `default_factory` is the dataclass version of the same fix — one fresh object per instance.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "exact",
+    "pass_threshold": 0.8,
+    "partial_credit": true,
+    "dimension": "concept"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Why are default values shared between objects?"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Function definitions — default values"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

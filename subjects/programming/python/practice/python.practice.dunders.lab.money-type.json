@@ -1,0 +1,131 @@
+{
+  "id": "python.practice.dunders.lab.money-type",
+  "kind": "code",
+  "title": "Build a Money value type",
+  "subject_id": "programming.python",
+  "concept_id": "python.classes-and-dunders",
+  "skills": ["python.skill.implement-dunder-protocols"],
+  "difficulty": 7,
+  "estimated_minutes": 40,
+  "prompt_md": "Implement a `Money` value type — the exercise that forces every dunder contract to be consistent at once. Store the amount in integer **minor units** (cents) to avoid float rounding, plus a 3-letter `currency`.\n\n```python\nMoney(1099, \"USD\")   # $10.99\n```\n\nImplement, and keep mutually consistent:\n\n- `__init__(self, minor_units: int, currency: str)` — reject a non-int amount with `TypeError` and a non-3-letter currency with `ValueError`.\n- `__repr__` returning something like `Money(1099, 'USD')`, and `__str__` like `10.99 USD`.\n- `__eq__` comparing amount **and** currency; unequal currencies are simply not equal (never raise).\n- `__hash__` consistent with `__eq__`, so `Money` works as a dict key and in a set.\n- `__lt__` (and enough ordering to sort) — but comparing **different currencies raises `TypeError`**, because ordering across currencies is meaningless.\n- `__add__` / `__sub__` returning a new `Money`; adding different currencies raises `ValueError`.\n- `__mul__` by a plain `int` scalar (e.g. `price * 3`), returning `Money`; multiplying two `Money` values raises `TypeError`.\n- `__bool__` that is `False` for a zero amount.\n\n`Money` must be **immutable** in spirit: operations return new instances and never mutate `self`. This is a lab — the tests probe the contracts against each other (equal objects hashing equally, sortability, arithmetic identity), not just individual methods.",
+  "tags": ["dunder", "value-type", "eq-hash", "ordering", "operator-overloading", "immutable"],
+  "requirements_md": [
+    "`__init__` validates: `minor_units` is an `int` (reject `bool` too), `currency` is a 3-letter string (store upper-cased).",
+    "`__repr__` -> `Money(1099, 'USD')`; `__str__` -> `10.99 USD`.",
+    "`__eq__` compares amount and currency; different currencies are unequal, never an error; comparison with a non-Money returns `NotImplemented`/`False`.",
+    "`__hash__` is consistent with `__eq__`.",
+    "`__lt__`/ordering works within a currency; across currencies raises `TypeError`.",
+    "`__add__`/`__sub__` return `Money`; mixing currencies raises `ValueError`.",
+    "`__mul__` accepts an `int` scalar and returns `Money`; `Money * Money` raises `TypeError`.",
+    "`__bool__` is `False` when the amount is zero.",
+    "Operations never mutate `self`."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "money.py",
+  "starter_files": [
+    {
+      "path": "money.py",
+      "content": "\"\"\"An immutable Money value type stored in integer minor units.\n\nImplement the dunder methods so the contracts stay consistent with each other:\nequal objects must hash equally, ordering must be total within a currency, and\narithmetic must return new instances.\n\"\"\"\nfrom functools import total_ordering\n\n\nclass Money:\n    def __init__(self, minor_units, currency):\n        raise NotImplementedError\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "money.py",
+      "content": "\"\"\"An immutable Money value type stored in integer minor units.\"\"\"\nfrom functools import total_ordering\n\n\n@total_ordering\nclass Money:\n    __slots__ = (\"minor_units\", \"currency\")\n\n    def __init__(self, minor_units, currency):\n        # bool is a subclass of int; reject it explicitly.\n        if not isinstance(minor_units, int) or isinstance(minor_units, bool):\n            raise TypeError(\"minor_units must be an int\")\n        if not isinstance(currency, str) or len(currency) != 3:\n            raise ValueError(\"currency must be a 3-letter code\")\n        object.__setattr__(self, \"minor_units\", minor_units)\n        object.__setattr__(self, \"currency\", currency.upper())\n\n    def __repr__(self):\n        return f\"Money({self.minor_units}, {self.currency!r})\"\n\n    def __str__(self):\n        return f\"{self.minor_units / 100:.2f} {self.currency}\"\n\n    def __eq__(self, other):\n        if not isinstance(other, Money):\n            return NotImplemented\n        return (self.minor_units, self.currency) == (other.minor_units, other.currency)\n\n    def __hash__(self):\n        return hash((self.minor_units, self.currency))\n\n    def __lt__(self, other):\n        if not isinstance(other, Money):\n            return NotImplemented\n        if self.currency != other.currency:\n            raise TypeError(f\"cannot order {self.currency} against {other.currency}\")\n        return self.minor_units < other.minor_units\n\n    def _check_same_currency(self, other):\n        if not isinstance(other, Money):\n            raise TypeError(\"operand must be Money\")\n        if self.currency != other.currency:\n            raise ValueError(f\"currency mismatch: {self.currency} vs {other.currency}\")\n\n    def __add__(self, other):\n        self._check_same_currency(other)\n        return Money(self.minor_units + other.minor_units, self.currency)\n\n    def __sub__(self, other):\n        self._check_same_currency(other)\n        return Money(self.minor_units - other.minor_units, self.currency)\n\n    def __mul__(self, scalar):\n        if isinstance(scalar, bool) or not isinstance(scalar, int):\n            raise TypeError(\"can only multiply Money by an int scalar\")\n        return Money(self.minor_units * scalar, self.currency)\n\n    __rmul__ = __mul__\n\n    def __bool__(self):\n        return self.minor_units != 0\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-money-construction-and-display",
+      "name": "validates inputs and renders repr/str",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 1.0,
+      "file": "test_display.py",
+      "body": "import pytest\n\nfrom money import Money\n\n\ndef test_repr_and_str():\n    m = Money(1099, \"usd\")\n    assert repr(m) == \"Money(1099, 'USD')\"\n    assert str(m) == \"10.99 USD\"\n\n\ndef test_rejects_non_int_amount():\n    with pytest.raises(TypeError):\n        Money(10.5, \"USD\")\n    with pytest.raises(TypeError):\n        Money(True, \"USD\")\n\n\ndef test_rejects_bad_currency():\n    with pytest.raises(ValueError):\n        Money(100, \"US\")\n    with pytest.raises(ValueError):\n        Money(100, \"DOLLAR\")\n"
+    },
+    {
+      "id": "test-money-eq-hash",
+      "name": "eq and hash are consistent; usable as keys",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_eq_hash.py",
+      "body": "from money import Money\n\n\ndef test_equality_by_value():\n    assert Money(100, \"USD\") == Money(100, \"USD\")\n    assert Money(100, \"USD\") != Money(100, \"EUR\")\n    assert Money(100, \"USD\") != Money(200, \"USD\")\n\n\ndef test_equal_objects_hash_equal():\n    a, b = Money(100, \"USD\"), Money(100, \"USD\")\n    assert hash(a) == hash(b)\n    assert len({a, b}) == 1\n\n\ndef test_usable_as_dict_key():\n    prices = {Money(100, \"USD\"): \"cheap\", Money(100, \"EUR\"): \"also\"}\n    assert prices[Money(100, \"USD\")] == \"cheap\"\n\n\ndef test_eq_with_other_type_is_false_not_error():\n    assert (Money(100, \"USD\") == \"100 USD\") is False\n"
+    },
+    {
+      "id": "test-money-ordering",
+      "name": "orders within a currency, refuses across currencies",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_ordering.py",
+      "body": "import pytest\n\nfrom money import Money\n\n\ndef test_sort_within_currency():\n    xs = [Money(300, \"USD\"), Money(100, \"USD\"), Money(200, \"USD\")]\n    assert [m.minor_units for m in sorted(xs)] == [100, 200, 300]\n\n\ndef test_comparison_operators():\n    assert Money(100, \"USD\") < Money(200, \"USD\")\n    assert Money(200, \"USD\") >= Money(200, \"USD\")\n\n\ndef test_cross_currency_ordering_raises():\n    with pytest.raises(TypeError):\n        Money(100, \"USD\") < Money(100, \"EUR\")\n"
+    },
+    {
+      "id": "test-money-arithmetic",
+      "name": "arithmetic returns new Money and guards currency/scalar",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_arithmetic.py",
+      "body": "import pytest\n\nfrom money import Money\n\n\ndef test_add_and_sub_same_currency():\n    assert Money(100, \"USD\") + Money(50, \"USD\") == Money(150, \"USD\")\n    assert Money(100, \"USD\") - Money(30, \"USD\") == Money(70, \"USD\")\n\n\ndef test_add_different_currency_raises():\n    with pytest.raises(ValueError):\n        Money(100, \"USD\") + Money(100, \"EUR\")\n\n\ndef test_multiply_by_scalar():\n    assert Money(100, \"USD\") * 3 == Money(300, \"USD\")\n    assert 3 * Money(100, \"USD\") == Money(300, \"USD\")\n\n\ndef test_multiply_two_money_raises():\n    with pytest.raises(TypeError):\n        Money(100, \"USD\") * Money(2, \"USD\")\n\n\ndef test_operations_do_not_mutate():\n    a = Money(100, \"USD\")\n    _ = a + Money(1, \"USD\")\n    assert a.minor_units == 100\n\n\ndef test_bool_is_false_for_zero():\n    assert not Money(0, \"USD\")\n    assert Money(1, \"USD\")\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "Store `minor_units` (int) and an upper-cased `currency`. Validate in `__init__`: reject non-ints (and `bool`, which *is* an int) with `TypeError`, and a currency that is not a 3-letter string with `ValueError`. Everything else builds on those two fields.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "Make `__eq__` compare the `(minor_units, currency)` tuple and return `NotImplemented` for non-Money, then define `__hash__` over the *same* tuple so equal values hash equally. For ordering, use `@functools.total_ordering` and write only `__lt__`, raising `TypeError` when currencies differ. Arithmetic returns `Money(...)` — mixing currencies is a `ValueError`, and `__mul__` accepts only an `int` scalar. Add `__rmul__ = __mul__` so `3 * price` works.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "The key consistency points: `__hash__` and `__eq__` must use the same fields; `total_ordering` fills in `>`, `<=`, `>=` from `__lt__` and `__eq__`; `__eq__` never raises on a currency mismatch (returns unequal) but `__lt__` does (ordering is undefined); and arithmetic constructs new instances rather than touching `self`. See the reference solution for the exact bodies once you have attempted each method.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "lab"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/datamodel.html#basic-customization",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Basic customization — __eq__, __hash__, __lt__"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/functools.html#functools.total_ordering",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "functools.total_ordering"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

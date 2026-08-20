@@ -1,0 +1,195 @@
+{
+  "id": "python.practice.containers.quiz.choose-a-container",
+  "kind": "quiz",
+  "title": "Choose a container",
+  "subject_id": "programming.python",
+  "concept_id": "python.sequences-and-mappings",
+  "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
+  "difficulty": 4,
+  "estimated_minutes": 7,
+  "prompt_md": "Container choice is where most accidental quadratics are born. Match each requirement to the cheapest container that satisfies it, and be ready to say what the cost would have been otherwise.",
+  "tags": ["containers", "list", "dict", "set", "deque", "complexity"],
+  "questions": [
+    {
+      "id": "containers.match-requirement-to-container",
+      "type": "matching",
+      "stem_md": "Match each requirement to the container that satisfies it most cheaply.",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "left": [
+        { "id": "l1", "md": "Repeatedly ask \"have I already seen this id?\" over millions of ids" },
+        { "id": "l2", "md": "Append at one end and pop from the other, as a work queue" },
+        { "id": "l3", "md": "Look up a user record by its primary key" },
+        { "id": "l4", "md": "Keep insertion order, allow duplicates, iterate front to back" },
+        { "id": "l5", "md": "Count occurrences of each word in a document" }
+      ],
+      "right": [
+        { "id": "r1", "md": "`set`" },
+        { "id": "r2", "md": "`collections.deque`" },
+        { "id": "r3", "md": "`dict`" },
+        { "id": "r4", "md": "`list`" },
+        { "id": "r5", "md": "`collections.Counter`" }
+      ],
+      "answer": { "l1": "r1", "l2": "r2", "l3": "r3", "l4": "r4", "l5": "r5" },
+      "explanation_md": "Membership is the decisive question: `set`/`dict` are O(1) average, `list` is O(n). A `deque` gives O(1) at both ends where `list.pop(0)` is O(n). `Counter` is a `dict` subclass with `most_common` and additive merging, so hand-rolling it with `dict.get` is strictly more code for the same behaviour.",
+      "skills": ["python.skill.choose-a-container"],
+      "sources": [
+        {
+          "source_id": "python.wiki.time-complexity",
+          "url": "https://wiki.python.org/moin/TimeComplexity",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "TimeComplexity — list, deque, set, dict"
+        }
+      ]
+    },
+    {
+      "id": "containers.membership-in-a-loop",
+      "type": "mcq",
+      "stem_md": "```python\nfor row in rows:              # 100_000 rows\n    if row.id in seen_ids:    # seen_ids is a list of 50_000 ids\n        continue\n    process(row)\n```\nWhat is the complexity, and what single change fixes it?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "O(n·m) — hoist `seen = set(seen_ids)` above the loop and test against that." },
+        { "id": "b", "md": "O(n) — nothing needs fixing; `in` is a single operation." },
+        { "id": "c", "md": "O(n·m) — call `sorted(seen_ids)` first so `in` can binary-search." },
+        { "id": "d", "md": "O(n log n) — the interpreter indexes the list automatically." }
+      ],
+      "answer": "a",
+      "explanation_md": "`in` on a list is a linear scan, so this is 100 000 × 50 000 ≈ 5 × 10⁹ comparisons. Converting once to a `set` costs O(m) and makes every test O(1). Sorting does *not* help: `in` never binary-searches, even on a sorted list — you would need `bisect` explicitly.",
+      "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
+      "sources": [
+        {
+          "source_id": "python.wiki.time-complexity",
+          "url": "https://wiki.python.org/moin/TimeComplexity",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "list — x in s is O(n)"
+        }
+      ]
+    },
+    {
+      "id": "containers.what-can-be-a-key",
+      "type": "multi_select",
+      "stem_md": "Which of these can be used as a `dict` key or `set` member?",
+      "difficulty": 4,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`(\"eu-west-1\", 3)`" },
+        { "id": "b", "md": "`[\"eu-west-1\", 3]`" },
+        { "id": "c", "md": "`frozenset({1, 2})`" },
+        { "id": "d", "md": "`{\"region\": \"eu-west-1\"}`" },
+        { "id": "e", "md": "a plain `class Order:` instance with no `__eq__`" },
+        { "id": "f", "md": "`(\"eu-west-1\", [3])`" }
+      ],
+      "answer": ["a", "c", "e"],
+      "explanation_md": "Hashability requires `__hash__`, and mutable built-ins deliberately lack it. A tuple is hashable only if everything inside it is, so `(\"eu-west-1\", [3])` fails. A default object is hashable by identity — which is a trap in itself: two equal-looking `Order` instances are distinct keys until you define `__eq__` **and** `__hash__` together.",
+      "skills": ["python.skill.choose-a-container"],
+      "sources": [
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html#term-hashable",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "hashable"
+        }
+      ]
+    },
+    {
+      "id": "containers.dedupe-keeping-order",
+      "type": "mcq",
+      "stem_md": "You need to remove duplicates from a list of 200 000 strings **and keep first-seen order**. Which is both correct and linear?",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "options": [
+        { "id": "a", "md": "`list(dict.fromkeys(items))`" },
+        { "id": "b", "md": "`list(set(items))`" },
+        { "id": "c", "md": "`sorted(set(items), key=items.index)`" },
+        { "id": "d", "md": "`[x for i, x in enumerate(items) if x not in items[:i]]`" }
+      ],
+      "answer": "a",
+      "explanation_md": "`dict.fromkeys` exploits the language guarantee that dicts preserve insertion order, in one linear pass. `set` loses order entirely. Option (c) calls `list.index` per element — O(n²) — and (d) slices *and* scans per element, which is O(n²) in time and O(n²) in allocation.",
+      "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html#dict",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "dict — insertion order is preserved"
+        }
+      ]
+    },
+    {
+      "id": "containers.order-by-cost",
+      "type": "ordering",
+      "stem_md": "Order these operations from cheapest to most expensive for a container holding one million items.",
+      "difficulty": 5,
+      "dimension": "concept",
+      "weight": 1.0,
+      "items": [
+        { "id": "i1", "md": "`d[key]` on a `dict`" },
+        { "id": "i2", "md": "`dq.popleft()` on a `deque`" },
+        { "id": "i3", "md": "`lst.pop(0)` on a `list`" },
+        { "id": "i4", "md": "`sorted(lst)`" },
+        { "id": "i5", "md": "`for x in lst: if x in other_lst` (both one million)" }
+      ],
+      "answer": ["i1", "i2", "i3", "i4", "i5"],
+      "explanation_md": "O(1), O(1), O(n), O(n log n), O(n²). The first two are indistinguishable asymptotically, but the gap between `deque.popleft` and `list.pop(0)` is the point: same intent, and one of them shifts a million pointers on every call.",
+      "skills": ["python.skill.analyse-complexity"],
+      "sources": [
+        {
+          "source_id": "python.wiki.time-complexity",
+          "url": "https://wiki.python.org/moin/TimeComplexity",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "deque — popleft is O(1)"
+        }
+      ]
+    }
+  ],
+  "shuffle": true,
+  "hints": [
+    {
+      "level": 1,
+      "md": "Ask one question per requirement: what is the operation done *most often*? Membership and keyed lookup point at hash-based containers; order and position point at sequences; both-ends access points at `deque`.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "For the complexity items, count the loops including the ones hidden in `in`, `index()` and slicing. A single `in` against a list inside a loop is what turns linear code quadratic. And remember that `in` never binary-searches, sorted or not.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "Answers: (1) set / deque / dict / list / Counter, in the order listed. (2) O(n·m), fixed by hoisting `seen = set(seen_ids)` out of the loop. (3) Hashable: `(\"eu-west-1\", 3)`, `frozenset({1, 2})`, a plain instance. (4) `list(dict.fromkeys(items))`. (5) `d[key]`, `dq.popleft()`, `lst.pop(0)`, `sorted(lst)`, the nested membership loop.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "exact",
+    "pass_threshold": 0.8,
+    "partial_credit": true,
+    "dimension": "concept"
+  },
+  "sources": [
+    {
+      "source_id": "python.wiki.time-complexity",
+      "url": "https://wiki.python.org/moin/TimeComplexity",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "TimeComplexity"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/collections.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "collections — deque, Counter, defaultdict"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

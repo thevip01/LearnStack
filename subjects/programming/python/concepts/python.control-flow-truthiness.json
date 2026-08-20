@@ -1,0 +1,201 @@
+{
+  "id": "python.control-flow-truthiness",
+  "title": "Control flow and truthiness",
+  "subject_id": "programming.python",
+  "category": "Foundations",
+  "summary": "Every Python object is either truthy or falsy, and `if x:` asks the object that question rather than comparing it to anything. Knowing which values are falsy — and that `0`, `\"\"`, `[]` and `None` are all among them — is the difference between a guard that works and one that silently skips.",
+  "definition": "Truthiness is the boolean value Python derives from an object when it is used in a condition: it calls `__bool__` if the type defines one, falls back to `len(obj) != 0` if the type defines `__len__`, and otherwise treats the object as true. `if`, `while`, `and`, `or`, `not`, comprehension filters and ternaries all go through this single rule.",
+  "purpose": "Conditions are where correctness usually leaks. `if not value:` reads like \"if the caller gave me nothing\", but it also fires on `0`, `0.0`, `\"\"`, `[]` and `False` — all of which are things a caller may legitimately mean. You learn truthiness so that you can write a guard that tests the thing you actually care about, and so that you can read someone else's guard and see which cases it swallows.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "A condition in Python is not a comparison. `if x:` does not ask whether `x` equals `True`; it asks `x` to describe itself as true or false, using a rule that is fixed by the language and overridable by the type:\n\n1. If the type defines `__bool__`, that answer is used.\n2. Otherwise, if the type defines `__len__`, the object is false when its length is zero.\n3. Otherwise the object is true. Every user-defined class with neither method is therefore always truthy, including one whose every field is empty.\n\nThat third rule is why `if my_config:` on a plain object is not a check that the config was populated — it is a check that the object exists at all, and it will keep passing after you delete every field.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. Basic customization — object.__bool__"
+        },
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Truth Value Testing"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "columns": ["Value", "Truthy?", "Why"],
+      "rows": [
+        ["`None`", "false", "`type(None).__bool__` returns false; the only value of its type"],
+        ["`False`, `0`, `0.0`, `0j`, `Decimal(0)`", "false", "numeric zero of any type is false"],
+        ["`\"\"`, `b\"\"`, `()`, `[]`, `{}`, `set()`", "false", "empty container: `__len__` returns 0"],
+        ["`\"0\"`, `\" \"`, `\"False\"`", "**true**", "a non-empty string is true regardless of its text"],
+        ["`[0]`, `[[]]`, `{None: None}`", "**true**", "length is 1; the contents are never inspected"],
+        ["`datetime.time(0, 0)`", "true (3.5+)", "midnight was falsy before 3.5 — a historical trap in old code"],
+        ["`SomeClass()` with no `__bool__`/`__len__`", "true", "the fallback; always true, even when empty"]
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "`if not x:` and `if x is None:` are different questions",
+      "md": "Use `is None` when you mean \"the caller did not supply this\". Use `not x` when you mean \"this is empty or zero, and I want to treat that the same as absent\".\n\n```python\ndef page(limit=None):\n    limit = limit or 100          # bug: limit=0 becomes 100\n    limit = 100 if limit is None else limit   # correct\n```\n\nThe `or` idiom is common and usually fine for strings, but every time the sentinel and a legitimate falsy value differ, it is wrong. `0` for \"no limit\", `\"\"` for \"an intentionally blank label\" and `False` for an explicitly disabled flag are all values users send."
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "`and` and `or` return an operand, not a boolean",
+      "runnable": true,
+      "code": "print(0 or \"fallback\")     # 'fallback' — or returns the first truthy operand\nprint(\"a\" or \"b\")          # 'a' — and stops as soon as it can decide\nprint([] and crash())      # [] — the right side is never evaluated\nprint(bool([] and 1))      # False\n\n# Chained comparisons evaluate the middle operand once.\nx = 5\nprint(1 < x < 10)          # True, and equivalent to 1 < x and x < 10",
+      "expected_output": "fallback\na\n[]\nFalse\nTrue"
+    },
+    {
+      "type": "prose",
+      "md": "Short-circuiting is a control-flow feature, not an optimisation. `if rows and rows[0].ok:` is safe precisely because `rows[0]` is not evaluated when `rows` is empty; reordering those two operands turns a working guard into an `IndexError`. The same property makes `x is not None and x.startswith(\"/\")` the standard way to test an optional value without a nested `if`.\n\nBecause `and`/`or` return one of their operands rather than a bool, they compose into value expressions: `name = supplied or default` and `timeout = override and float(override)`. The cost is that the result's type is the union of both sides, which is worth remembering when the value flows into something that type-checks."
+    },
+    {
+      "type": "steps",
+      "title": "Choosing a condition",
+      "steps": [
+        "Name the question precisely: absent, empty, zero, or false? These are four different things.",
+        "If the question is \"absent\", write `is None`. Identity, not truthiness, and never `== None`.",
+        "If the question is \"empty\", `if not items:` is idiomatic and preferred over `len(items) == 0` — but only for real containers.",
+        "If the value could be `0` or `False` and that is meaningful, you must not use bare truthiness. Compare explicitly.",
+        "If the object is a custom class, check that it defines `__bool__` or `__len__` before relying on `if obj:` — otherwise you are testing nothing."
+      ]
+    },
+    {
+      "type": "term",
+      "term": "sentinel",
+      "definition_md": "A unique object used to mean \"no value supplied\", chosen because it can never collide with real data. `None` is the default sentinel, but when `None` is itself a legal argument you create your own: `_MISSING = object()`, then `if value is _MISSING:`. This is the standard escape from the falsy-default problem.",
+      "aliases": ["missing marker", "unique default"]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.truthiness.quiz.falsy-traps"
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "Where this bites in real systems",
+      "md": "Config loading and request validation, almost every time. A feature flag arrives as `False`, a `or` default flips it back to `True`, and the flag appears not to work — with no error and no log line. Retry counts of `0`, prices of `0.00`, empty-string names that the user deliberately cleared, and pagination cursors of `0` all fail the same way.\n\nThe defensive habit worth building: in any function that takes optional parameters, resolve defaults with `is None` unless you have consciously decided that empty and absent are the same thing."
+    }
+  ],
+  "components": [
+    { "name": "__bool__", "role": "The type's own answer; must return a real bool.", "required": false },
+    { "name": "__len__", "role": "Fallback when `__bool__` is absent: zero length means false.", "required": false },
+    { "name": "short-circuit evaluation", "role": "`and`/`or` stop as soon as the result is determined, which makes guards safe.", "required": true }
+  ],
+  "prerequisites": ["python.objects-and-names"],
+  "related": ["python.sequences-and-mappings", "python.exceptions"],
+  "common_errors": [
+    {
+      "error": "A falsy-but-valid argument is replaced by the default: `limit = limit or 100` turns `limit=0` into `100`.",
+      "cause": "`or` tests truthiness, and `0` is falsy. The code conflates \"not supplied\" with \"supplied as zero\".",
+      "fix": "`limit = 100 if limit is None else limit`. When `None` is also a legal value, use a private sentinel: `_MISSING = object()`.",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Truth Value Testing"
+        }
+      ]
+    },
+    {
+      "error": "`if value == None:` passes a linter's eye but can be defeated by a class that overrides `__eq__`.",
+      "cause": "`==` is a method call the object controls; `is` compares identity and cannot be intercepted.",
+      "fix": "Always `is None` / `is not None`. `None` is a singleton, so identity is exactly the right test."
+    },
+    {
+      "error": "`if config:` keeps returning true after every field is emptied, so a \"has anything been set\" guard never fires.",
+      "cause": "A user-defined class with neither `__bool__` nor `__len__` is unconditionally truthy.",
+      "fix": "Test the thing you mean — `if config.entries:` — or give the class a `__bool__`/`__len__` that says what emptiness means for it."
+    },
+    {
+      "error": "`if x is True:` fails for a value of `1`, and `if flag == True:` succeeds for `1` and `1.0`.",
+      "cause": "`bool` is a subclass of `int`, so `True == 1` while `True is not 1`.",
+      "fix": "Write `if flag:`. Comparing to `True` adds no safety and introduces two ways to be wrong."
+    },
+    {
+      "error": "A guard raises `IndexError` after someone tidied the condition into `if rows[0].ok and rows:`.",
+      "cause": "The reordering removed the short-circuit that made the subscript safe.",
+      "fix": "Keep the cheap existence test on the left. Order in `and`/`or` is semantic, not stylistic."
+    }
+  ],
+  "best_practices": [
+    "Use `is None` for absence and bare truthiness for emptiness, and never let the two blur together in a defaults line.",
+    "Prefer `if not items:` to `if len(items) == 0:` for containers — but only when you know the value is a container and not possibly `None`.",
+    "Let `and`/`or` short-circuit do your nil-guarding instead of nesting `if` statements; put the cheapest, most defensive test first.",
+    "Give any class whose emptiness is meaningful an explicit `__bool__` or `__len__`, so `if obj:` means something to a reader.",
+    "When a falsy value is legal input, say so in the signature (`limit: int | None = None`) so the `is None` check is obviously deliberate.",
+    "Reach for a private `object()` sentinel the moment `None` becomes a value the caller may legitimately pass."
+  ],
+  "production_considerations": [
+    "Optional booleans in request payloads are the single most common source of this bug: `enabled=False` and `enabled` absent must be distinguished at the parsing boundary, not deep inside a handler.",
+    "Falsy-default bugs do not raise, so they are invisible to error tracking. They surface as support tickets about a setting that 'does not save', which makes them expensive to diagnose.",
+    "`if response:` on an HTTP client object depends entirely on that library's `__bool__`; some make a 404 falsy. Test the status code you care about instead of trusting the object.",
+    "In hot loops, truthiness on a large container is O(1) because `__len__` is O(1) for built-in types — but on a generator there is no length, so `if gen:` is always true and consumes nothing."
+  ],
+  "anti_patterns": [
+    "`value = value or default` in any function that accepts numbers, booleans or strings that may legitimately be empty.",
+    "`if x == None`, `if x is True`, `if bool(x) == True` — three ways of writing `if x:` badly.",
+    "`if len(x) > 0:` where `x` may be `None`, which trades a silent skip for an `AttributeError` without fixing the ambiguity.",
+    "Relying on `if obj:` for a dataclass or plain class as a populated check, when no `__bool__` was ever defined."
+  ],
+  "examples": [
+    {
+      "title": "Resolving defaults without swallowing zero",
+      "language": "python",
+      "code": "_MISSING = object()\n\ndef fetch(limit=None, cursor=_MISSING):\n    # limit=0 must survive; None means 'not supplied'.\n    limit = 100 if limit is None else limit\n    # None is a legal cursor value here, so None cannot be the sentinel.\n    if cursor is _MISSING:\n        cursor = load_last_cursor()\n    return limit, cursor",
+      "md": "Two optional parameters with two different sentinels, because `None` is meaningful for one of them and not the other."
+    },
+    {
+      "title": "Making emptiness meaningful for your own type",
+      "language": "python",
+      "code": "class Batch:\n    def __init__(self, rows):\n        self.rows = list(rows)\n\n    def __len__(self):\n        return len(self.rows)\n\nif not Batch([]):\n    print(\"empty batch skipped\")   # without __len__ this branch never runs",
+      "output": "empty batch skipped"
+    }
+  ],
+  "skills": ["python.skill.write-truthiness-safe-conditionals"],
+  "practice": ["python.practice.truthiness.quiz.falsy-traps"],
+  "keywords": ["truthiness", "falsy", "__bool__", "short-circuit", "sentinel", "is None", "control flow"],
+  "estimated_minutes": 14,
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/stdtypes.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Truth Value Testing"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/expressions.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "6.11. Boolean operations"
+    },
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "8.1. The if statement"
+    },
+    {
+      "source_id": "python.pep8",
+      "url": "https://peps.python.org/pep-0008/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Programming Recommendations — comparisons to singletons"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

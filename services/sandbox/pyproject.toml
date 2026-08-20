@@ -1,0 +1,28 @@
+[project]
+name = "learnos-sandbox"
+version = "0.1.0"
+description = "LearnOS sandbox contract: runner protocol, workspace packing, in-container test harness."
+requires-python = ">=3.12"
+
+# Intentionally almost dependency-free. This package is imported by the API and
+# its harness module is read as text and shipped into a container that has only
+# pytest installed, so anything added here has to be justified against both.
+dependencies = [
+  "learnos-schema>=0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["learnos_sandbox*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

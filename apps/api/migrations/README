@@ -1,0 +1,33 @@
+# Alembic migrations for the LearnOS API.
+#
+# This directory is a scaffold. There is no initial revision committed, and that
+# is on purpose: a hand-written first migration for twelve tables will drift from
+# the models it claims to describe before anyone notices, and the drift only
+# surfaces on the first deployment that matters.
+#
+# Generate it from the models once the dependencies are installed:
+#
+#     make install
+#     docker compose up -d postgres
+#     cd apps/api
+#     AUTO_CREATE_SCHEMA=false \
+#     DATABASE_URL=postgresql+asyncpg://learnos:learnos@localhost:5432/learnos \
+#       alembic revision --autogenerate -m "initial schema"
+#
+# Then read what it produced before committing it. Autogenerate is a good
+# first draft and a bad final answer; in this schema it will need three edits:
+#
+#   1. The `pg_trgm` extension and the `search_tsv` / `error_tsv` generated
+#      columns are installed at runtime by `knowledge.search.install_full_text`
+#      and are filtered out of autogenerate by `include_object` in env.py. If you
+#      want them under migration control instead, move that DDL here and delete
+#      the filter — but do both, not one.
+#   2. `JSONVariant` renders as JSONB on Postgres and JSON on SQLite. Check the
+#      generated migration says JSONB.
+#   3. `uuid_pk` columns need `postgresql.UUID(as_uuid=True)`; if autogenerate
+#      emits a CHAR(32) the models were imported without the Postgres dialect
+#      loaded.
+#
+# Until then, development uses `AUTO_CREATE_SCHEMA=true` and `create_all`. The two
+# are mutually exclusive: once a real migration exists, turn the flag off, or
+# `create_all` will create tables Alembic then tries to create again.

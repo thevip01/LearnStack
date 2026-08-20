@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "id": "programming.python",
+  "domain": {
+    "id": "programming",
+    "title": "Software Engineering",
+    "icon": "code"
+  },
+  "subject": "python",
+  "provider": null,
+  "title": "Python",
+  "subtitle": "The object model, the standard containers, and the habits that survive production",
+  "description": "A working engineer's route through core Python. Every concept is anchored to the language reference or a PEP, every idea has practice attached, and the failure modes taught here are the ones that actually appear in tracebacks: mutable default arguments, late-binding closures, KeyError versus IndexError, and O(n) membership tests hidden inside an innocent-looking loop.",
+  "version": "2026.08.0",
+  "status": "published",
+  "supersedes": null,
+  "modes": [
+    "learn",
+    "practice",
+    "lab",
+    "project",
+    "exam",
+    "review"
+  ],
+  "runtimes": [
+    {
+      "id": "python312",
+      "kind": "python",
+      "version": "3.12",
+      "image": "learnos/runner-python:3.12",
+      "default_command": "python -m pytest -q --no-header",
+      "packages": [
+        "pytest",
+        "pytest-timeout"
+      ],
+      "supports_tests": true,
+      "supports_interactive": false
+    }
+  ],
+  "dimension_weights": {
+    "concept": 0.2,
+    "practice": 0.3,
+    "lab": 0.15,
+    "debugging": 0.2,
+    "production": 0.05,
+    "retention": 0.1
+  },
+  "ui_file": "ui.json",
+  "curriculum_file": "curriculum.json",
+  "concepts_dir": "concepts",
+  "practice_dir": "practice",
+  "projects_dir": "projects",
+  "assessments_dir": "assessments",
+  "labs_dir": "labs",
+  "sources_file": "sources.json",
+  "prerequisite_subjects": [],
+  "related_subjects": [],
+  "tags": [
+    "python",
+    "language",
+    "data-structures",
+    "debugging",
+    "complexity"
+  ],
+  "generated_at": "2026-08-18T00:00:00Z",
+  "published_at": "2026-08-18T00:00:00Z",
+  "content_hash": "sha256:2ae98961183bac1f0efd554c0bd3b6268d1ac8e80728dba4cd417223f327ba22",
+  "refresh_interval_days": 60
+}

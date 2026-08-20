@@ -1,0 +1,231 @@
+{
+  "id": "python.sequences-and-mappings",
+  "title": "Sequences, mappings and sets",
+  "subject_id": "programming.python",
+  "category": "Foundations",
+  "summary": "Lists, tuples, dicts and sets are not four interchangeable containers. Each one makes a different operation cheap, and choosing the wrong one is the most common reason correct Python is slow. The choice is driven by two questions: what do you look things up by, and does the collection change?",
+  "definition": "A sequence stores items in positional order and is indexed by integer position (`list`, `tuple`, `str`, `range`). A mapping stores key-to-value pairs and is indexed by hashable key (`dict`). A set stores unique hashable items with no positional order and answers membership. All three share the iteration protocol and the `in` operator, which is what makes them look more alike than they are.",
+  "purpose": "Once a collection holds more than a few hundred items, the container choice dominates everything else you do. `x in some_list` walks the whole list; `x in some_set` hashes once. Both are one line, both are correct, and one of them turns a nested loop from O(n²) into O(n). You learn the container model so that the fast version is the one you reach for by default, and so that `TypeError: unhashable type` reads as information rather than an obstacle.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "Start from what each container is *for*, not from its syntax:\n\n- **`list`** — an ordered, mutable, growable sequence. Reach for it when position matters or when you are accumulating results. Appending is amortised O(1); inserting at the front is O(n) because every element shifts.\n- **`tuple`** — an immutable sequence, and therefore hashable if its contents are. Reach for it for a fixed-shape record (`(lat, lon)`), for a dict key made of several parts, and for anything you want to be unable to modify.\n- **`dict`** — a mapping from hashable key to value with O(1) average lookup, insertion and deletion. Since 3.7 it preserves insertion order as a language guarantee, so it doubles as an ordered set of keys.\n- **`set`** / **`frozenset`** — unordered unique membership with O(1) average `in`, plus real set algebra (`|`, `&`, `-`, `^`). Reach for it the moment you find yourself asking \"have I seen this already?\"\n\nThe decision is rarely aesthetic. If your lookups are by identity or key, a list is the wrong container no matter how natural it feels to build one.",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/stdtypes.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Sequence Types — list, tuple, range"
+        },
+        {
+          "source_id": "python.docs.tutorial",
+          "url": "https://docs.python.org/3/tutorial/datastructures.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "5. Data Structures"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "columns": ["Operation", "list", "dict", "set", "deque"],
+      "rows": [
+        ["`x in c`", "O(n)", "O(1) avg (keys)", "O(1) avg", "O(n)"],
+        ["index / key lookup", "O(1)", "O(1) avg", "n/a", "O(n) middle"],
+        ["append / add", "O(1) amortised", "O(1) avg", "O(1) avg", "O(1) both ends"],
+        ["insert or pop at front", "O(n)", "n/a", "n/a", "O(1)"],
+        ["delete by value", "O(n)", "O(1) by key", "O(1)", "O(n)"],
+        ["ordered?", "yes, positional", "yes, insertion order (3.7+)", "no", "yes"],
+        ["hashable (usable as a key)?", "no", "no", "`frozenset` only", "no"]
+      ]
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "`in` on a list is the quiet quadratic",
+      "md": "```python\n# O(n * m): for every row, walk the whole blocklist\nkept = [r for r in rows if r.id not in blocked_ids]     # blocked_ids is a list\n\n# O(n + m): hash once per row\nblocked = set(blocked_ids)\nkept = [r for r in rows if r.id not in blocked]\n```\n\nThis is the single highest-yield performance fix in most Python codebases, and it is invisible in review because both versions read identically. The tell is a membership test inside a loop against a container built elsewhere."
+    },
+    {
+      "type": "prose",
+      "md": "Hashability is the rule that decides what may be a dict key or a set member. An object is hashable if it has a `__hash__` that stays constant for its lifetime and an `__eq__` consistent with it. Immutable built-ins qualify; `list`, `dict` and `set` deliberately do not, because a key whose hash changed after insertion would be unfindable — it would sit in the wrong bucket forever.\n\nThat is why `d[[1, 2]]` raises `TypeError: unhashable type: 'list'` and `d[(1, 2)]` works. It is also why a mutable class you give a `__hash__` to must not let the hashed fields change; the standard resolution is to hash a tuple of the fields and freeze them.",
+      "sources": [
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "hashable"
+        },
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/datamodel.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "3.3.1. object.__hash__"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "Idioms worth having in your fingers",
+      "runnable": true,
+      "code": "from collections import Counter, defaultdict, deque\n\nrows = [(\"eu\", 3), (\"us\", 5), (\"eu\", 2)]\n\n# Group without pre-seeding keys.\nby_region = defaultdict(list)\nfor region, value in rows:\n    by_region[region].append(value)\nprint(dict(by_region))\n\n# Count without a manual +1 dance.\nprint(Counter(region for region, _ in rows).most_common(1))\n\n# Read with a default instead of a KeyError.\nprint({\"a\": 1}.get(\"b\", 0))\n\n# Dedupe while preserving first-seen order: dict keys are ordered.\nprint(list(dict.fromkeys([3, 1, 3, 2, 1])))\n\n# A FIFO queue. list.pop(0) is O(n); deque.popleft is O(1).\nq = deque([1, 2, 3])\nq.appendleft(0)\nprint(q.popleft(), list(q))",
+      "expected_output": "{'eu': [3, 2], 'us': [5]}\n[('eu', 2)]\n0\n[3, 1, 2]\n0 [1, 2, 3]"
+    },
+    {
+      "type": "steps",
+      "title": "Picking a container in four questions",
+      "steps": [
+        "What do I look items up by? Position → list/tuple. A key → dict. Presence only → set.",
+        "Does it change after construction? No → tuple or frozenset, which are also hashable and safe to share.",
+        "Do I need uniqueness? Yes → set, or `dict.fromkeys` when you also need to keep order.",
+        "Am I adding or removing at the front? Yes → `collections.deque`, never a list."
+      ]
+    },
+    {
+      "type": "term",
+      "term": "view object",
+      "definition_md": "`d.keys()`, `d.values()` and `d.items()` return dynamic views, not copies: they reflect later changes to the dict and support set operations (`d1.keys() & d2.keys()`). Because they are live, mutating a dict while iterating a view raises `RuntimeError: dictionary changed size during iteration` — iterate `list(d)` when you intend to delete.",
+      "aliases": ["dict view", "keys view"]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.containers.quiz.choose-a-container"
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "Memory is part of the choice",
+      "md": "A dict costs roughly two to three times a list of the same number of items, because it stores hashes and keys alongside values. At a few thousand entries that is irrelevant; at ten million it decides whether the process fits in its container limit.\n\nWhen you are holding many small fixed-shape records, a list of tuples or `__slots__` objects is dramatically cheaper than a list of dicts — the per-record key strings are interned but the per-record table is not. Measure with `sys.getsizeof` plus the contents, or `tracemalloc`, before assuming."
+    }
+  ],
+  "components": [
+    { "name": "hashable key", "role": "Immutable, consistent `__hash__`/`__eq__`. The entry requirement for dict keys and set members.", "required": true },
+    { "name": "iteration protocol", "role": "`__iter__` is what makes all four containers interchangeable in a `for` loop and a comprehension.", "required": true },
+    { "name": "collections module", "role": "`defaultdict`, `Counter`, `deque`, `namedtuple` — the specialised containers that remove hand-rolled bookkeeping.", "required": false }
+  ],
+  "prerequisites": ["python.objects-and-names"],
+  "related": ["python.complexity", "python.comprehensions", "python.control-flow-truthiness"],
+  "common_errors": [
+    {
+      "error": "`TypeError: unhashable type: 'list'` when using a list as a dict key or putting it in a set.",
+      "cause": "Lists are mutable, so their hash could change after insertion and the entry would become unreachable. Python refuses rather than corrupt the table.",
+      "fix": "Convert to a `tuple` (or `frozenset` when order does not matter): `seen.add(tuple(row))`.",
+      "sources": [
+        {
+          "source_id": "python.docs.glossary",
+          "url": "https://docs.python.org/3/glossary.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "hashable"
+        }
+      ]
+    },
+    {
+      "error": "`RuntimeError: dictionary changed size during iteration`.",
+      "cause": "`for k in d:` iterates a live view; deleting during the loop invalidates it.",
+      "fix": "Iterate a snapshot — `for k in list(d):` — or build the survivors with a comprehension and rebind."
+    },
+    {
+      "error": "A nested loop that was fast in testing takes minutes in production.",
+      "cause": "An `in` against a list inside a loop: O(n·m) growth that only shows up once both collections are real.",
+      "fix": "Hoist the inner container into a `set` (or dict) once, outside the loop."
+    },
+    {
+      "error": "`d[key]` raises `KeyError` on data that is legitimately optional.",
+      "cause": "Subscripting asserts the key exists; that is the right behaviour for a required field and the wrong one for an optional field.",
+      "fix": "`d.get(key)`, `d.get(key, default)`, or `d.setdefault(key, [])` when you are about to append. Use `defaultdict` when every access should auto-create."
+    },
+    {
+      "error": "Two lists of the same items compare unequal, or a `set` comparison surprises you.",
+      "cause": "Sequence equality is order-sensitive; set equality is not.",
+      "fix": "Compare `set(a) == set(b)` for 'same members', `sorted(a) == sorted(b)` for 'same multiset', and `a == b` only when order is part of the contract."
+    },
+    {
+      "error": "`d = dict.fromkeys(keys, [])` produces one list shared by every key.",
+      "cause": "The default value is evaluated once and the same object is stored under every key — the mutable-default problem in a different costume.",
+      "fix": "`defaultdict(list)`, or `{k: [] for k in keys}` which evaluates the literal per key."
+    }
+  ],
+  "best_practices": [
+    "Convert to a `set` before any membership test that runs inside a loop; do it once, outside the loop.",
+    "Use `tuple` for fixed-shape records and composite dict keys — immutability is what makes them hashable and safe to share.",
+    "Prefer `defaultdict` and `Counter` over hand-written 'if key not in d' bookkeeping; they are faster and remove a class of bug.",
+    "Use `dict.fromkeys(items)` to dedupe while keeping first-seen order, rather than a set plus a manual order list.",
+    "Reach for `collections.deque` for any queue; `list.pop(0)` is O(n) and silently degrades as the queue grows.",
+    "Iterate `list(d)` whenever the loop body may add or remove keys, and prefer rebuilding over in-place deletion."
+  ],
+  "production_considerations": [
+    "Container choice is usually a bigger performance lever than algorithmic cleverness: one list-to-set change routinely beats a rewrite.",
+    "Dicts cost 2-3x the memory of an equivalent list of tuples; at multi-million scale that is the difference between fitting in RAM and swapping.",
+    "Dict insertion order is guaranteed and is therefore safe to depend on for reproducible output — but relying on it in a public API silently forbids you from ever switching to a set.",
+    "Sets and dicts have O(n) worst-case lookup under adversarial hash collisions. Python's string hash randomisation (`PYTHONHASHSEED`) exists to make that unreachable from untrusted input; never disable it in a service.",
+    "`in` on a generator consumes it. Testing membership twice against the same generator silently returns false the second time — materialise it first."
+  ],
+  "anti_patterns": [
+    "Building a list purely to answer membership questions against it.",
+    "`list.pop(0)` in a queue loop, or `list.insert(0, x)` in an accumulation loop.",
+    "Using a dict keyed by integers `0..n-1` where a list was the container being described.",
+    "`sorted(d.items(), key=lambda kv: kv[0])` to restore an order the dict already preserved.",
+    "Mutating a dict or set inside a `for` loop over itself."
+  ],
+  "examples": [
+    {
+      "title": "The list-to-set fix, measured",
+      "language": "python",
+      "code": "import timeit\n\nblocked = list(range(20_000))\nrows = list(range(20_000))\n\nslow = timeit.timeit(lambda: [r for r in rows if r not in blocked], number=1)\nfast_set = set(blocked)\nfast = timeit.timeit(lambda: [r for r in rows if r not in fast_set], number=1)\nprint(f\"list: {slow:.3f}s  set: {fast:.4f}s\")",
+      "md": "Same output, same line count. The only change is the container the membership test runs against; the gap widens linearly with input size."
+    },
+    {
+      "title": "A composite key without a nested dict",
+      "language": "python",
+      "code": "totals = {}\nfor region, day, amount in [(\"eu\", \"mon\", 3), (\"eu\", \"mon\", 4), (\"us\", \"tue\", 1)]:\n    totals[(region, day)] = totals.get((region, day), 0) + amount\nprint(totals)",
+      "output": "{('eu', 'mon'): 7, ('us', 'tue'): 1}"
+    }
+  ],
+  "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
+  "practice": [
+    "python.practice.containers.quiz.choose-a-container",
+    "python.practice.containers.code.dedupe-preserving-order",
+    "python.practice.containers.debug.unhashable-key"
+  ],
+  "keywords": ["list", "dict", "set", "tuple", "hashable", "deque", "defaultdict", "Counter", "membership"],
+  "estimated_minutes": 18,
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/stdtypes.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Mapping Types — dict"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/collections.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "collections — deque, defaultdict, Counter"
+    },
+    {
+      "source_id": "python.docs.tutorial",
+      "url": "https://docs.python.org/3/tutorial/datastructures.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "5.1. More on Lists / 5.5. Dictionaries"
+    },
+    {
+      "source_id": "python.wiki.time-complexity",
+      "url": "https://wiki.python.org/moin/TimeComplexity",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "list / dict / set operation costs"
+    },
+    {
+      "source_id": "python.pep234",
+      "url": "https://peps.python.org/pep-0234/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Iterators — the protocol every container shares"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

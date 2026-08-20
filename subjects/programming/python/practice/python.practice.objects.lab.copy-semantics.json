@@ -1,0 +1,119 @@
+{
+  "id": "python.practice.objects.lab.copy-semantics",
+  "kind": "code",
+  "title": "Shallow vs deep copy: a safe config merge",
+  "subject_id": "programming.python",
+  "concept_id": "python.objects-and-names",
+  "skills": ["python.skill.reason-about-references"],
+  "difficulty": 6,
+  "estimated_minutes": 25,
+  "prompt_md": "You are given a `base` configuration (a nested dict) and a stream of per-request `overrides`. Requests must be able to tweak their own config without ever mutating `base` or each other — the classic place a shared reference leaks across requests.\n\nImplement `merged_config(base, overrides)`:\n\n- Return a **new** config that is `base` deep-updated by `overrides` (nested dicts merged key by key, not replaced wholesale).\n- `base` must be completely unchanged afterwards, including its nested lists and dicts.\n- Mutating the returned config's nested structures must not reach back into `base`.\n- Two calls with the same `base` must return independent results.\n\nThis is a lab: the tests probe object identity, not just equality, so a shallow copy that passes the value checks will still fail the aliasing checks. Reason about which copies need to be deep and which can be shallow.",
+  "tags": ["copy", "deepcopy", "aliasing", "identity", "nested-mutation"],
+  "requirements_md": [
+    "`merged_config(base, overrides)` returns a new dict; `base` is never mutated.",
+    "Nested dicts are merged recursively; a key present in both whose values are both dicts is merged, not overwritten.",
+    "Nested mutable values in the result must not be shared with `base` (mutating the result cannot change `base`).",
+    "A non-dict override value replaces the base value at that key.",
+    "Repeated calls return independent objects — no shared state between results.",
+    "Do not mutate `overrides` either."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "config.py",
+  "starter_files": [
+    {
+      "path": "config.py",
+      "content": "\"\"\"Merge per-request overrides onto a base config without aliasing.\"\"\"\nfrom copy import deepcopy\nfrom typing import Any\n\n\ndef merged_config(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:\n    \"\"\"Return base deep-updated by overrides.\n\n    base must be left completely unchanged, and the result must share no\n    mutable structure with base or with any other call's result.\n\n    >>> b = {\"limits\": {\"cpu\": 1}}\n    >>> merged_config(b, {\"limits\": {\"mem\": 2}})\n    {'limits': {'cpu': 1, 'mem': 2}}\n    >>> b\n    {'limits': {'cpu': 1}}\n    \"\"\"\n    raise NotImplementedError\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "config.py",
+      "content": "\"\"\"Merge per-request overrides onto a base config without aliasing.\"\"\"\nfrom copy import deepcopy\nfrom typing import Any\n\n\ndef merged_config(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:\n    \"\"\"Return base deep-updated by overrides.\n\n    Start from a deep copy of base so nothing in the result is shared with it.\n    Then recurse: where both sides hold a dict, merge; otherwise the override\n    value wins, deep-copied so the result also stays independent of overrides.\n    \"\"\"\n    result = deepcopy(base)\n    _deep_update(result, overrides)\n    return result\n\n\ndef _deep_update(target: dict[str, Any], src: dict[str, Any]) -> None:\n    for key, value in src.items():\n        if isinstance(value, dict) and isinstance(target.get(key), dict):\n            _deep_update(target[key], value)\n        else:\n            target[key] = deepcopy(value)\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-merge-values",
+      "name": "merges nested dicts by key rather than replacing",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 1.0,
+      "file": "test_values.py",
+      "body": "from config import merged_config\n\n\ndef test_recursive_merge():\n    base = {\"limits\": {\"cpu\": 1, \"mem\": 4}, \"name\": \"svc\"}\n    result = merged_config(base, {\"limits\": {\"mem\": 8}, \"region\": \"eu\"})\n    assert result == {\"limits\": {\"cpu\": 1, \"mem\": 8}, \"name\": \"svc\", \"region\": \"eu\"}\n\n\ndef test_non_dict_override_replaces():\n    base = {\"tags\": [\"a\", \"b\"]}\n    result = merged_config(base, {\"tags\": [\"c\"]})\n    assert result == {\"tags\": [\"c\"]}\n\n\ndef test_empty_overrides_returns_equal_config():\n    base = {\"a\": {\"b\": 1}}\n    assert merged_config(base, {}) == base\n"
+    },
+    {
+      "id": "test-base-untouched",
+      "name": "base is never mutated, including nested structures",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_base_untouched.py",
+      "body": "from copy import deepcopy\n\nfrom config import merged_config\n\n\ndef test_base_value_unchanged():\n    base = {\"limits\": {\"cpu\": 1}}\n    snapshot = deepcopy(base)\n    merged_config(base, {\"limits\": {\"cpu\": 99}})\n    assert base == snapshot, \"base was mutated by the merge\"\n\n\ndef test_nested_list_in_base_unchanged():\n    base = {\"tags\": [\"prod\"]}\n    result = merged_config(base, {})\n    result[\"tags\"].append(\"mutated\")\n    assert base[\"tags\"] == [\"prod\"], \"result shares the nested list with base\"\n\n\ndef test_result_independent_of_overrides():\n    overrides = {\"limits\": {\"cpu\": 2}}\n    result = merged_config({\"limits\": {}}, overrides)\n    result[\"limits\"][\"cpu\"] = 5\n    assert overrides[\"limits\"][\"cpu\"] == 2, \"result shares structure with overrides\"\n"
+    },
+    {
+      "id": "test-identity-not-shared",
+      "name": "no nested object identity is shared with base (the lab check)",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_identity.py",
+      "body": "\"\"\"Identity probes: equality is not enough, the nested objects must be distinct.\"\"\"\nfrom config import merged_config\n\n\ndef test_nested_dict_is_a_distinct_object():\n    base = {\"limits\": {\"cpu\": 1}}\n    result = merged_config(base, {\"other\": 1})\n    assert result[\"limits\"] == base[\"limits\"]\n    assert result[\"limits\"] is not base[\"limits\"], \"nested dict is shared by identity\"\n\n\ndef test_two_calls_are_independent():\n    base = {\"limits\": {\"cpu\": 1}}\n    a = merged_config(base, {})\n    b = merged_config(base, {})\n    a[\"limits\"][\"cpu\"] = 999\n    assert b[\"limits\"][\"cpu\"] == 1, \"two results share nested state\"\n\n\ndef test_deeply_nested_independence():\n    base = {\"a\": {\"b\": {\"c\": [1, 2]}}}\n    result = merged_config(base, {})\n    result[\"a\"][\"b\"][\"c\"].append(3)\n    assert base[\"a\"][\"b\"][\"c\"] == [1, 2]\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "The trap is that `dict(base)` and `base.copy()` are *shallow*: the new dict has its own top-level keys, but the nested dicts and lists are the very same objects. Mutating `result[\"limits\"]` then reaches into `base[\"limits\"]`. Equality tests won't catch this; identity tests will.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "Start the result as `copy.deepcopy(base)` so nothing nested is shared, then merge `overrides` in. For the merge, recurse only where *both* sides hold a dict; otherwise take the override value — and deep-copy that value too, or the result ends up sharing structure with `overrides` instead.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "```python\nfrom copy import deepcopy\n\ndef merged_config(base, overrides):\n    result = deepcopy(base)\n    _deep_update(result, overrides)\n    return result\n\ndef _deep_update(target, src):\n    for key, value in src.items():\n        if isinstance(value, dict) and isinstance(target.get(key), dict):\n            _deep_update(target[key], value)\n        else:\n            target[key] = deepcopy(value)\n```\nThe two `deepcopy` calls are what guarantee independence from `base` and from `overrides` respectively.",
+      "reveals_solution": true
+    }
+  ],
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "lab"
+  },
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/copy.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "copy — shallow and deep copy operations"
+    },
+    {
+      "source_id": "python.docs.faq",
+      "url": "https://docs.python.org/3/faq/programming.html#how-do-i-copy-an-object-in-python",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "How do I copy an object?"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

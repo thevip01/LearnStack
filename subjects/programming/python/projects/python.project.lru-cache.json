@@ -1,0 +1,204 @@
+{
+  "id": "python.project.lru-cache",
+  "title": "Build an O(1) LRU cache",
+  "subject_id": "programming.python",
+  "summary": "Implement a fixed-capacity least-recently-used cache whose get and put are both O(1), then prove it holds up under a large workload.",
+  "brief_md": "We keep recomputing expensive results and our memory keeps growing. Build us a **fixed-capacity LRU cache**: a bounded key/value store that, when full, evicts the *least-recently-used* entry to make room.\n\nThe whole point of this module is that the complexity of the data structure you choose is part of the contract, so the headline requirement is performance: **`get` and `put` must both be O(1) amortised**, not O(n). A version that scans a list to find the least-recently-used key on every write will pass the small correctness tests and then fall over in production — the final milestone exists to catch exactly that.\n\nBuild a `LRUCache` class in `lru.py` with this contract:\n\n- `LRUCache(capacity)` — `capacity` is a positive integer; a non-positive capacity raises `ValueError`.\n- `put(key, value)` — insert or update. Updating an existing key refreshes its recency. When the cache is at capacity and a *new* key arrives, evict the least-recently-used key first.\n- `get(key)` — return the value and mark the key most-recently-used. A missing key raises `KeyError` (and counts as a miss).\n- `key in cache` — a non-mutating peek: it must **not** change recency or the hit/miss counters.\n- `len(cache)` — current number of stored entries.\n- `cache.stats` — a dict `{\"hits\": int, \"misses\": int}` counting `get` outcomes.\n- `repr(cache)` — includes the capacity and current size.\n\nUse the container that makes the recency operations O(1). `collections.OrderedDict` (with `move_to_end` and `popitem(last=False)`) is the intended tool; a hand-rolled dict-plus-doubly-linked-list is also accepted. Do not reach for `functools.lru_cache` — the exercise is to build the mechanism, not call it.",
+  "difficulty": 7,
+  "estimated_hours": 3.5,
+  "requirements": [
+    "`get` and `put` are both O(1) amortised — no linear scan per operation.",
+    "`put` on a full cache evicts the least-recently-used key before inserting a new one.",
+    "Both `get` and `put` on an existing key refresh that key's recency.",
+    "`get` on a missing key raises `KeyError`; a non-positive capacity raises `ValueError`.",
+    "`in` is a non-mutating peek; `len`, `stats` and `repr` behave as specified.",
+    "Recency and eviction are backed by an O(1) structure (OrderedDict or a linked list), not a re-sorted list."
+  ],
+  "constraints": [
+    "Do not use `functools.lru_cache` or any third-party cache library — build the mechanism yourself.",
+    "No linear scan (`min`, `.index`, re-sorting the keys) on the hot path of `get`/`put`.",
+    "Standard library only."
+  ],
+  "non_goals": [
+    "Thread safety — assume single-threaded access.",
+    "Time-based expiry (TTL) — eviction is purely by recency and capacity.",
+    "Persistence to disk."
+  ],
+  "required_skills": [
+    "python.skill.choose-a-container",
+    "python.skill.design-function-signatures"
+  ],
+  "taught_skills": [
+    "python.skill.analyse-complexity",
+    "python.skill.choose-a-container"
+  ],
+  "prerequisite_projects": [],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 30,
+    "memory_mb": 512,
+    "cpu_limit": 1.0,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "starter_files": [
+    {
+      "path": "lru.py",
+      "content": "\"\"\"A fixed-capacity least-recently-used cache with O(1) get and put.\n\nImplement the contract below. The recency + eviction operations must be O(1);\ncollections.OrderedDict (move_to_end / popitem(last=False)) is the intended tool.\nDo not use functools.lru_cache.\n\"\"\"\nfrom collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        raise NotImplementedError\n\n    def get(self, key):\n        raise NotImplementedError\n\n    def put(self, key, value):\n        raise NotImplementedError\n\n    @property\n    def stats(self):\n        raise NotImplementedError\n\n    def __len__(self):\n        raise NotImplementedError\n\n    def __contains__(self, key):\n        raise NotImplementedError\n\n    def __repr__(self):\n        raise NotImplementedError\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "milestones": [
+    {
+      "id": "python.project.lru-cache.m1-core",
+      "title": "Core store: put, get, and the two error contracts",
+      "description_md": "Get the basic store working. `put` inserts, `get` returns the value or raises `KeyError`, `len` reflects the count, and constructing with a non-positive capacity raises `ValueError`. Recency and eviction come next — for now just store and retrieve.",
+      "skills": ["python.skill.choose-a-container", "python.skill.design-function-signatures"],
+      "weight": 1.0,
+      "tests": [
+        {
+          "id": "m1-put-get",
+          "name": "put then get returns the stored value",
+          "kind": "pytest",
+          "visible": true,
+          "weight": 1.0,
+          "file": "test_m1_core.py",
+          "body": "import pytest\n\nfrom lru import LRUCache\n\n\ndef test_put_then_get():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    assert c.get(\"a\") == 1\n\n\ndef test_update_existing_key_changes_value_not_size():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"a\", 99)\n    assert c.get(\"a\") == 99\n    assert len(c) == 1\n\n\ndef test_missing_key_raises_keyerror():\n    c = LRUCache(2)\n    with pytest.raises(KeyError):\n        c.get(\"nope\")\n\n\ndef test_non_positive_capacity_raises_valueerror():\n    with pytest.raises(ValueError):\n        LRUCache(0)\n    with pytest.raises(ValueError):\n        LRUCache(-3)\n\n\ndef test_len_tracks_entries():\n    c = LRUCache(3)\n    assert len(c) == 0\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert len(c) == 2\n"
+        }
+      ]
+    },
+    {
+      "id": "python.project.lru-cache.m2-recency",
+      "title": "Recency and eviction",
+      "description_md": "Make it a real LRU. When the cache is full and a new key arrives, evict the least-recently-used entry. Both `get` and `put` on an existing key must move that key to most-recently-used, so a key you keep touching is never the one evicted. This is the milestone where the choice of an O(1) recency structure starts to matter.",
+      "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
+      "weight": 1.0,
+      "tests": [
+        {
+          "id": "m2-evicts-lru",
+          "name": "a full cache evicts the least-recently-used key",
+          "kind": "pytest",
+          "visible": true,
+          "weight": 2.0,
+          "file": "test_m2_recency.py",
+          "body": "import pytest\n\nfrom lru import LRUCache\n\n\ndef test_evicts_least_recently_used():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"c\", 3)          # 'a' is LRU -> evicted\n    assert \"a\" not in c\n    assert c.get(\"b\") == 2\n    assert c.get(\"c\") == 3\n\n\ndef test_get_refreshes_recency():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert c.get(\"a\") == 1   # 'a' now most-recently-used, 'b' is LRU\n    c.put(\"c\", 3)            # evicts 'b', not 'a'\n    assert \"b\" not in c\n    assert c.get(\"a\") == 1\n\n\ndef test_put_on_existing_key_refreshes_recency():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"a\", 10)           # updating 'a' makes it MRU, 'b' is LRU\n    c.put(\"c\", 3)            # evicts 'b'\n    assert \"b\" not in c\n    assert c.get(\"a\") == 10\n"
+        }
+      ]
+    },
+    {
+      "id": "python.project.lru-cache.m3-introspection",
+      "title": "Introspection: in, stats and repr",
+      "description_md": "Round out the type's protocols. `key in cache` is a non-mutating peek — it must not change recency and must not touch the hit/miss counters. `cache.stats` reports `{\"hits\", \"misses\"}` accumulated by `get`. `repr(cache)` shows the capacity and current size so it is useful in a debugger.",
+      "skills": ["python.skill.implement-dunder-protocols"],
+      "weight": 1.0,
+      "tests": [
+        {
+          "id": "m3-contains-peek",
+          "name": "`in` peeks without changing recency or counters",
+          "kind": "pytest",
+          "visible": true,
+          "weight": 1.0,
+          "file": "test_m3_contains.py",
+          "body": "from lru import LRUCache\n\n\ndef test_contains_does_not_change_recency():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert (\"a\" in c) is True     # peek must NOT refresh 'a'\n    c.put(\"c\", 3)                 # 'a' is still LRU -> evicted\n    assert \"a\" not in c\n\n\ndef test_contains_does_not_count_as_hit_or_miss():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    _ = \"a\" in c\n    _ = \"z\" in c\n    assert c.stats == {\"hits\": 0, \"misses\": 0}\n"
+        },
+        {
+          "id": "m3-stats-and-repr",
+          "name": "stats counts get outcomes; repr shows capacity and size",
+          "kind": "pytest",
+          "visible": false,
+          "weight": 1.0,
+          "file": "test_m3_stats.py",
+          "body": "import pytest\n\nfrom lru import LRUCache\n\n\ndef test_stats_counts_hits_and_misses():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.get(\"a\")\n    c.get(\"a\")\n    with pytest.raises(KeyError):\n        c.get(\"missing\")\n    assert c.stats == {\"hits\": 2, \"misses\": 1}\n\n\ndef test_repr_shows_capacity_and_size():\n    c = LRUCache(5)\n    c.put(\"a\", 1)\n    text = repr(c)\n    assert \"5\" in text and \"1\" in text\n"
+        }
+      ]
+    },
+    {
+      "id": "python.project.lru-cache.m4-scale",
+      "title": "Prove it is O(1) under load",
+      "description_md": "The correctness tests above pass for an O(n) implementation too. This milestone runs a large workload — hundreds of thousands of operations against a bounded cache — and asserts the results are correct. A per-operation linear scan turns this into hundreds of millions of steps and blows the sandbox timeout; an O(1) OrderedDict-based implementation finishes comfortably. Passing here is your evidence that the complexity contract actually holds.",
+      "skills": ["python.skill.analyse-complexity"],
+      "weight": 1.0,
+      "tests": [
+        {
+          "id": "m4-large-workload",
+          "name": "a large workload stays correct (and fast enough not to time out)",
+          "kind": "pytest",
+          "visible": false,
+          "weight": 2.0,
+          "file": "test_m4_scale.py",
+          "body": "from lru import LRUCache\n\n\ndef test_large_workload_is_correct_and_bounded():\n    capacity = 2000\n    c = LRUCache(capacity)\n    n = 400_000\n    # Insert 0..n; only the most recent `capacity` keys should survive.\n    for i in range(n):\n        c.put(i, i * 2)\n    assert len(c) == capacity\n    # The oldest keys were evicted long ago...\n    assert 0 not in c\n    assert (n - capacity - 1) not in c\n    # ...and the most recent `capacity` keys are all present with correct values.\n    for i in range(n - capacity, n):\n        assert c.get(i) == i * 2\n\n\ndef test_hot_key_is_never_evicted():\n    c = LRUCache(100)\n    c.put(\"hot\", \"v\")\n    for i in range(50_000):\n        c.put(i, i)          # constant churn of cold keys\n        assert c.get(\"hot\") == \"v\"   # touching 'hot' keeps it MRU forever\n    assert \"hot\" in c\n"
+        }
+      ]
+    }
+  ],
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 0.75,
+    "partial_credit": true,
+    "dimension": "production",
+    "rubric": [
+      {
+        "id": "rub-core",
+        "description": "Core store works: put/get round-trip, KeyError on miss, ValueError on bad capacity, len is accurate.",
+        "weight": 0.25,
+        "dimension": "practice",
+        "automated": true
+      },
+      {
+        "id": "rub-recency",
+        "description": "Correct LRU semantics: eviction removes the true least-recently-used key, and both get and put refresh recency.",
+        "weight": 0.3,
+        "dimension": "practice",
+        "automated": true
+      },
+      {
+        "id": "rub-protocols",
+        "description": "Protocols are correct: `in` is a non-mutating peek, stats counts get outcomes, repr is informative.",
+        "weight": 0.2,
+        "dimension": "lab",
+        "automated": true
+      },
+      {
+        "id": "rub-complexity",
+        "description": "Operations are O(1) amortised — the large-workload milestone passes within the sandbox timeout.",
+        "weight": 0.25,
+        "dimension": "production",
+        "automated": true
+      }
+    ]
+  },
+  "stretch_goals": [
+    "Add a `capacity` setter that shrinks the cache, evicting LRU entries until it fits.",
+    "Add `peek(key)` that returns the value without refreshing recency or touching stats.",
+    "Add a `hit_rate` property derived from stats, defined to be 0.0 before any get."
+  ],
+  "sources": [
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/collections.html#collections.OrderedDict",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "collections.OrderedDict.move_to_end / popitem"
+    },
+    {
+      "source_id": "python.wiki.time-complexity",
+      "url": "https://wiki.python.org/moin/TimeComplexity",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "dict get/set/delete average O(1)"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/functools.html#functools.lru_cache",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "functools.lru_cache (the batteries-included version we are re-building)"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

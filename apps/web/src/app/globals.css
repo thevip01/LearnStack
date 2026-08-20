@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Dark-first, IDE-flavoured. Every colour is an rgb triplet so Tailwind's
+ * `/opacity` modifiers work and so a subject ThemeSpec can overwrite --os-accent
+ * on the runtime root without touching anything else.
+ */
+:root {
+  color-scheme: dark;
+
+  --os-canvas: 9 11 16;
+  --os-surface: 15 18 26;
+  --os-raised: 22 26 36;
+  --os-line: 38 44 58;
+  --os-line-strong: 60 68 88;
+  --os-ink: 226 232 240;
+  --os-muted: 148 163 184;
+  --os-faint: 108 122 145;
+
+  --os-accent: 99 102 241;
+  --os-accent-soft: 67 70 140;
+
+  --os-ok: 52 199 123;
+  --os-warn: 234 179 8;
+  --os-danger: 244 89 89;
+  --os-info: 56 174 240;
+
+  --os-pad: 0.75rem;
+  --os-pad-sm: 0.5rem;
+  --os-row-h: 1.75rem;
+
+  --os-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --os-font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-size: 14px;
+  }
+
+  /* Focus is never removed, only restyled: the whole app is keyboard reachable. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-1 ring-offset-canvas;
+  }
+
+  ::selection {
+    @apply bg-accent/30;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--os-line-strong)) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full border-2 border-transparent bg-line-strong bg-clip-content;
+  }
+
+  kbd {
+    @apply rounded border border-line bg-raised px-1 font-mono text-2xs text-muted;
+  }
+}
+
+@layer components {
+  /* Markdown coming from the API. Scoped so authored content cannot restyle the shell. */
+  .md-body {
+    @apply text-[0.875rem] leading-relaxed text-ink/90;
+  }
+  .md-body > * + * {
+    @apply mt-3;
+  }
+  .md-body h1,
+  .md-body h2,
+  .md-body h3,
+  .md-body h4 {
+    @apply mt-5 font-semibold text-ink;
+  }
+  .md-body h1 {
+    @apply text-lg;
+  }
+  .md-body h2 {
+    @apply text-base;
+  }
+  .md-body h3,
+  .md-body h4 {
+    @apply text-sm uppercase tracking-wide text-muted;
+  }
+  .md-body a {
+    @apply text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent;
+  }
+  .md-body code {
+    @apply rounded border border-line bg-raised px-1 py-0.5 font-mono text-[0.8125rem] text-ink;
+  }
+  .md-body pre {
+    @apply overflow-x-auto rounded-panel border border-line bg-surface p-3;
+  }
+  .md-body pre code {
+    @apply border-0 bg-transparent p-0;
+  }
+  .md-body ul {
+    @apply list-disc space-y-1 pl-5;
+  }
+  .md-body ol {
+    @apply list-decimal space-y-1 pl-5;
+  }
+  .md-body blockquote {
+    @apply border-l-2 border-accent/50 pl-3 text-muted;
+  }
+  .md-body table {
+    @apply w-full border-collapse text-left text-[0.8125rem];
+  }
+  .md-body th,
+  .md-body td {
+    @apply border border-line px-2 py-1 align-top;
+  }
+  .md-body th {
+    @apply bg-raised font-semibold text-muted;
+  }
+  .md-body hr {
+    @apply border-line;
+  }
+
+  .panel-chrome {
+    @apply flex min-h-0 min-w-0 flex-col overflow-hidden bg-surface;
+  }
+
+  .panel-scroll {
+    @apply min-h-0 flex-1 overflow-auto;
+  }
+
+  .skeleton-bar {
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--os-raised)) 0%,
+      rgb(var(--os-line)) 40%,
+      rgb(var(--os-raised)) 80%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded;
+  }
+}
+
+/* React Flow paints its own surface; align it with the workspace. */
+.react-flow__node {
+  font-family: var(--os-font-sans);
+}
+
+.react-flow__attribution {
+  display: none;
+}

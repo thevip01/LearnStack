@@ -1,0 +1,144 @@
+# LearnOS — local development stack.
+#
+# `docker compose up` must work with no .env file and no edits. Everything below
+# has a default that holds on a laptop.
+#
+# Two deliberate choices worth understanding before you deploy this anywhere:
+#
+# 1. The api service mounts the host Docker socket so the execution service can
+#    launch sandbox containers. That grants the api container root-equivalent
+#    access to the host. It is acceptable on a development laptop and is NOT
+#    acceptable in production — see docs/architecture/20-security.md for the
+#    two supported ways out (a socket proxy, or a remote sandbox host).
+# 2. ./subjects is mounted read-only into api and read-write into ingestion.
+#    The API is a consumer of subject packages; only the ingestion build stage
+#    is allowed to write one.
+
+name: learnos
+
+services:
+  postgres:
+    # pgvector rather than plain postgres so the embedding column in
+    # concept_index has somewhere to live when an embedding provider is
+    # configured. Search degrades to lexical-only until then.
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: learnos
+      POSTGRES_PASSWORD: learnos
+      POSTGRES_DB: learnos
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learnos -d learnos"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      # Context is the repo root because the image installs the local
+      # packages/knowledge-schema before apps/api.
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      ENV: ${ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://learnos:learnos@postgres:5432/learnos
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-jwt-secret-change-me}
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-10080}
+      SUBJECTS_DIR: /app/subjects
+      SANDBOX_MODE: ${SANDBOX_MODE:-auto}
+      DOCKER_HOST: unix:///var/run/docker.sock
+      SANDBOX_NETWORK: ${SANDBOX_NETWORK:-none}
+      EXECUTION_MAX_CONCURRENCY: ${EXECUTION_MAX_CONCURRENCY:-4}
+      EXECUTION_OUTPUT_LIMIT_BYTES: ${EXECUTION_OUTPUT_LIMIT_BYTES:-64000}
+      AUTO_CREATE_SCHEMA: ${AUTO_CREATE_SCHEMA:-true}
+      SEED_DEMO_USER: ${SEED_DEMO_USER:-true}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@learnos.dev}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-learnos-demo-2026}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      OBJECT_STORAGE_DIR: /app/var/objects
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./subjects:/app/subjects:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - api-objects:/app/var/objects
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: apps/web
+    environment:
+      # NEXT_PUBLIC_* is baked into the browser bundle and must be the URL the
+      # browser can reach. API_INTERNAL_URL is for server-side fetches inside
+      # the compose network.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      API_INTERNAL_URL: http://api:8000
+      NODE_ENV: production
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Build-only service. `docker compose --profile images build` produces the
+  # sandbox runner image that the execution service launches. It is never run
+  # as a long-lived service.
+  runner-python:
+    profiles: ["images"]
+    image: learnos/runner-python:3.12
+    build:
+      context: infrastructure/docker/runner-python
+    command: ["python", "-c", "print('runner image built')"]
+
+  # The ingestion pipeline is a CLI, not a server. Start it with
+  # `docker compose --profile ingestion run --rm ingestion <args>`.
+  ingestion:
+    profiles: ["ingestion"]
+    build:
+      context: .
+      dockerfile: services/ingestion/Dockerfile
+    environment:
+      ENV: ${ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: postgresql+asyncpg://learnos:learnos@postgres:5432/learnos
+      SUBJECTS_DIR: /app/subjects
+      INGESTION_STORAGE_DIR: /app/var/ingestion
+    volumes:
+      # Read-write: the build stage writes approved candidates into a package.
+      - ./subjects:/app/subjects
+      - ingestion-data:/app/var/ingestion
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["learnos-ingest"]
+    command: ["--help"]
+
+volumes:
+  postgres-data:
+  api-objects:
+  ingestion-data:

@@ -1,0 +1,235 @@
+{
+  "id": "python.comprehensions",
+  "title": "Comprehensions and generator expressions",
+  "subject_id": "programming.python",
+  "category": "Data modelling",
+  "summary": "A comprehension is a single expression that builds a container from an iterable. Its value is not brevity — it is that the shape of the result is visible on one line, and that the generator form lets you process a stream without ever holding it in memory.",
+  "definition": "A comprehension is an expression of the form `[expr for target in iterable if condition]`, evaluated in its own scope, producing a list (`[...]`), set (`{...}`), or dict (`{k: v for ...}`). Wrapping the same clause in parentheses produces a generator expression: a lazy iterator that computes each item only when asked.",
+  "purpose": "The loop-and-append pattern buries the answer to \"what is this collection?\" inside three lines of bookkeeping. A comprehension states the mapping and the filter in the order you would say them aloud, which makes an incorrect one visibly incorrect. The generator form matters for a different reason: it turns a memory-bound transformation into a streaming one, which is the difference between processing a 4 GB file and being killed by the OOM reaper.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "Every comprehension has three parts, and reading them in the right order is the whole skill:\n\n```python\n[transform(row) for row in rows if keep(row)]\n#  ^ output      ^ binding      ^ filter\n```\n\nEvaluation order is left-to-right *from the `for`*: take each `row` from `rows`, discard it unless `keep(row)`, then evaluate `transform(row)` and collect the result. The output expression comes first in the text and last in the execution, which is the one thing that trips up readers new to the form.\n\nThe four bracket forms produce four different things, and the difference is not cosmetic:\n\n- `[x for x in it]` → a **list**: materialised, indexable, re-iterable, costs memory proportional to the input.\n- `{x for x in it}` → a **set**: deduplicated, unordered, membership in O(1).\n- `{k: v for k, v in it}` → a **dict**: last key wins on collision, silently.\n- `(x for x in it)` → a **generator**: nothing has happened yet. Consumes one item at a time and is exhausted after one pass.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/expressions.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "6.2.4. Displays for lists, sets and dictionaries"
+        },
+        {
+          "source_id": "python.pep202",
+          "url": "https://peps.python.org/pep-0202/",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "List Comprehensions — rationale"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "The four forms, and what each one costs",
+      "runnable": true,
+      "code": "rows = [(\"eu\", 3), (\"us\", 5), (\"eu\", 2)]\n\nprint([r[1] * 2 for r in rows])                 # list: all of it, now\nprint({r[0] for r in rows})                     # set: unique regions\nprint({r[0]: r[1] for r in rows})               # dict: 'eu' -> 2, last wins\n\nlazy = (r[1] for r in rows)                     # generator: nothing computed\nprint(lazy)\nprint(sum(lazy))                                # consumed here\nprint(sum(lazy))                                # exhausted: 0, not 10",
+      "expected_output": "[6, 10, 4]\n{'eu', 'us'}\n{'eu': 2, 'us': 5}\n<generator object <genexpr> at 0x...>\n10\n0"
+    },
+    {
+      "type": "callout",
+      "variant": "warning",
+      "title": "A generator is exhausted after one pass, and says nothing about it",
+      "md": "`sum(gen)` twice gives you the answer and then `0`. `if gen:` is always `True`, even for an empty one, because a generator has no `__len__` and no `__bool__`. `len(gen)` raises.\n\nThis is the price of laziness and it is worth paying — but the moment you need two passes, a length, or an index, materialise it: `items = list(gen)`. Deciding that once, explicitly, is much cheaper than debugging a function that returns the right answer to its first caller and zero to its second."
+    },
+    {
+      "type": "prose",
+      "md": "A comprehension runs in its own scope. The loop variable does not leak into the enclosing function, which is the deliberate fix for the Python 2 behaviour where it did:\n\n```python\nx = \"outer\"\nvalues = [x for x in range(3)]\nprint(x)   # 'outer' — untouched\n```\n\nThat scope is implemented as an implicit function, which has two consequences worth knowing. First, the iterable of the *outermost* `for` is evaluated in the enclosing scope and passed in — so `[x for x in undefined_name]` fails immediately, while a filter referencing an undefined name fails on first iteration. Second, inside a class body a comprehension cannot see class-level names except through that first iterable, which is a genuine and surprising restriction.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/expressions.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "6.2.8. Comprehensions — implicitly nested scope"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "columns": ["Need", "Reach for", "Why not the other"],
+      "rows": [
+        ["A list you will index or iterate twice", "`[...]`", "a generator gives you one pass and no `len`"],
+        ["Feeding `sum`/`any`/`all`/`max` once", "`(...)`", "the list is built and thrown away — pure waste"],
+        ["Streaming a file larger than memory", "`(...)`", "a list comprehension holds every line at once"],
+        ["Uniqueness", "`{...}`", "`list(set(...))` loses order and costs a pass"],
+        ["An index of records by id", "`{k: v for ...}`", "a list forces an O(n) scan per lookup"],
+        ["Three or more clauses, or a nested conditional", "a `for` loop", "past two clauses the comprehension stops being readable"]
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "Nesting order, and the walrus for compute-once filters",
+      "runnable": true,
+      "code": "matrix = [[1, 2], [3, 4]]\n\n# Clauses read in the same order as the nested loops they replace.\nprint([cell for row in matrix for cell in row])\n\n# A nested comprehension builds a list per row instead of flattening.\nprint([[cell * 10 for cell in row] for row in matrix])\n\n# Without the walrus, expensive(x) would run twice per item.\ndef expensive(n):\n    return n * n\n\nprint([squared for n in range(5) if (squared := expensive(n)) > 4])",
+      "expected_output": "[1, 2, 3, 4]\n[[10, 20], [30, 40]]\n[9, 16]"
+    },
+    {
+      "type": "steps",
+      "title": "Turning a loop into a comprehension safely",
+      "steps": [
+        "Confirm the loop's only job is to build one collection. If it also logs, writes, or breaks early, leave it as a loop.",
+        "Write the output expression first — the thing being appended.",
+        "Add the `for` clauses in the same order as the original nested loops.",
+        "Add the filter last, as an `if` after the innermost `for`. Two conditions chain with `and`, not with a second `if`.",
+        "Choose the bracket by what the caller needs: `[]` to keep, `()` to stream, `{}` to dedupe or index.",
+        "Read it back aloud. If you cannot, the loop was clearer — revert."
+      ]
+    },
+    {
+      "type": "term",
+      "term": "generator expression",
+      "definition_md": "A lazy comprehension, written with parentheses, that yields items on demand and never materialises the whole result. When it is the sole argument to a call the parentheses can be dropped: `sum(x * 2 for x in rows)`. Introduced by PEP 289 precisely so that `sum([...])` did not have to build a throwaway list.",
+      "aliases": ["genexpr", "lazy comprehension"]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.comprehensions.quiz.scoping"
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "Where laziness pays and where it hurts",
+      "md": "Pays: log processing, CSV and JSONL ingestion, database cursors, anything where the input size is set by the world rather than by you. `sum(1 for line in f if \"ERROR\" in line)` has a memory profile independent of file size.\n\nHurts: laziness moves the work — and therefore the exception — to whoever consumes the generator, which may be a different module, a different thread, or inside a `try` that was never written to expect it. A generator that reads a file also holds the handle open until exhausted. Inside a request handler, prefer to materialise at the boundary so that failures happen where they can still be handled."
+    }
+  ],
+  "components": [
+    { "name": "output expression", "role": "What is collected. Evaluated last, written first.", "required": true },
+    { "name": "for clause", "role": "Binds the loop target in the comprehension's own scope; the outermost iterable is evaluated eagerly.", "required": true },
+    { "name": "if clause", "role": "Filter applied before the output expression runs.", "required": false },
+    { "name": "bracket form", "role": "Selects list, set, dict or generator — the single most consequential choice in the line.", "required": true }
+  ],
+  "prerequisites": ["python.sequences-and-mappings", "python.functions-and-signatures"],
+  "related": ["python.complexity", "python.closures-and-late-binding"],
+  "common_errors": [
+    {
+      "error": "A generator produces the right answer once and then behaves as if empty.",
+      "cause": "Generators are single-pass iterators; the second consumer sees an exhausted one.",
+      "fix": "Materialise with `list(...)` when more than one pass is needed, or return a factory that builds a fresh generator per call.",
+      "sources": [
+        {
+          "source_id": "python.pep289",
+          "url": "https://peps.python.org/pep-0289/",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "Generator Expressions — semantics"
+        }
+      ]
+    },
+    {
+      "error": "`TypeError: object of type 'generator' has no len()`, or `if gen:` is true for an empty generator.",
+      "cause": "Laziness means the length is unknown until exhaustion, so no `__len__`/`__bool__` is provided.",
+      "fix": "Convert to a list, or restructure to `first = next(gen, None)` when you only need to know whether anything is there."
+    },
+    {
+      "error": "A dict comprehension silently drops rows.",
+      "cause": "Duplicate keys overwrite: the last occurrence wins, with no error and no warning.",
+      "fix": "Group instead of index — `defaultdict(list)` — or assert uniqueness before building: `assert len(rows) == len({r.id for r in rows})`."
+    },
+    {
+      "error": "A comprehension over a `zip`/`map`/file object returns nothing on a later line.",
+      "cause": "The iterable was already consumed by an earlier pass; comprehensions do not rewind their input.",
+      "fix": "Materialise the source once (`rows = list(zip(a, b))`) and comprehend over that."
+    },
+    {
+      "error": "A nested comprehension yields lists where a flat sequence was expected, or vice versa.",
+      "cause": "`[[c for c in row] for row in m]` nests; `[c for row in m for c in row]` flattens. The clause order is the difference.",
+      "fix": "Read the `for` clauses outermost-to-innermost, exactly as the equivalent nested loops would be written."
+    },
+    {
+      "error": "A `NameError` inside a comprehension in a class body, for a name defined in that class body.",
+      "cause": "The implicit scope cannot see class-level names, except via the outermost iterable which is evaluated outside it.",
+      "fix": "Move the value into the outermost iterable, or build the collection in `__init__` where normal scoping applies."
+    }
+  ],
+  "best_practices": [
+    "Choose the bracket by what the caller needs, and treat `[...]` fed straight into `sum`/`any`/`all`/`max` as a bug worth fixing.",
+    "Cap yourself at two clauses plus one filter. Past that, a named `for` loop with a comment is the more maintainable code.",
+    "Prefer `dict.fromkeys(items)` or a set comprehension over building a list and deduping afterwards.",
+    "Use the walrus operator to bind an expensive intermediate once when both the filter and the output need it.",
+    "Never put side effects in a comprehension — no `print`, no `append` to something else, no I/O. A comprehension is for producing a value.",
+    "Return a list from a public function unless streaming is part of the contract; a generator makes exhaustion the caller's problem."
+  ],
+  "production_considerations": [
+    "Generator expressions are the standard fix for OOM in batch jobs: constant memory regardless of input size, and no code-structure change beyond the brackets.",
+    "Laziness defers exceptions to the consumer, so a `try/except` around the comprehension catches nothing. Wrap the consumption, not the construction.",
+    "A generator over a file or a DB cursor holds that resource until exhausted or garbage-collected; inside a request handler that can hold a connection well past the response.",
+    "Comprehensions are meaningfully faster than an equivalent `append` loop because the append is done by a specialised opcode rather than a method lookup per item — but the container choice still dominates.",
+    "`itertools.islice` plus a generator is how you sample a huge stream without loading it; a list comprehension with a slice loads everything first."
+  ],
+  "anti_patterns": [
+    "`[x for x in items]` as a copy — write `list(items)`.",
+    "`sum([x for x in items])` — the list exists only to be discarded.",
+    "Comprehensions with side effects, especially `[log(x) for x in items]` used as a loop.",
+    "Three or more `for` clauses, or a comprehension spanning more than about two lines.",
+    "Returning a generator from a public API without documenting single-pass semantics."
+  ],
+  "examples": [
+    {
+      "title": "Streaming a file that does not fit in memory",
+      "language": "python",
+      "code": "def error_count(path):\n    with open(path) as handle:\n        # One line resident at a time; memory is flat regardless of file size.\n        return sum(1 for line in handle if \" ERROR \" in line)\n\ndef error_count_bad(path):\n    with open(path) as handle:\n        # Builds a list of every matching line first, then counts it.\n        return len([line for line in handle if \" ERROR \" in line])",
+      "md": "Identical results, identical readability. One is O(1) in memory and one is O(matches)."
+    },
+    {
+      "title": "Indexing versus grouping",
+      "language": "python",
+      "code": "from collections import defaultdict\n\nrows = [(\"eu\", 1), (\"eu\", 2), (\"us\", 3)]\n\nindex = {region: value for region, value in rows}   # 'eu' -> 2; row 1 is gone\ngroups = defaultdict(list)\nfor region, value in rows:\n    groups[region].append(value)\n\nprint(index, dict(groups))",
+      "output": "{'eu': 2, 'us': 3} {'eu': [1, 2], 'us': [3]}"
+    }
+  ],
+  "skills": ["python.skill.write-comprehensions"],
+  "practice": [
+    "python.practice.comprehensions.quiz.scoping",
+    "python.practice.containers.code.dedupe-preserving-order"
+  ],
+  "keywords": ["comprehension", "generator expression", "lazy", "genexpr", "walrus", "streaming", "dict comprehension"],
+  "estimated_minutes": 16,
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/expressions.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "6.2.8. Comprehensions"
+    },
+    {
+      "source_id": "python.docs.tutorial",
+      "url": "https://docs.python.org/3/tutorial/datastructures.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "5.1.3. List Comprehensions"
+    },
+    {
+      "source_id": "python.pep202",
+      "url": "https://peps.python.org/pep-0202/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 202 — List Comprehensions"
+    },
+    {
+      "source_id": "python.pep289",
+      "url": "https://peps.python.org/pep-0289/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 289 — Generator Expressions"
+    },
+    {
+      "source_id": "python.pep20",
+      "url": "https://peps.python.org/pep-0020/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Simple is better than complex; readability counts"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

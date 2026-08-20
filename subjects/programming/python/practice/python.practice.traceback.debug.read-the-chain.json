@@ -1,0 +1,111 @@
+{
+  "id": "python.practice.traceback.debug.read-the-chain",
+  "kind": "debug",
+  "title": "Reading the chain to the real cause",
+  "subject_id": "programming.python",
+  "concept_id": "python.exceptions",
+  "skills": ["python.skill.debug-a-traceback"],
+  "difficulty": 5,
+  "estimated_minutes": 20,
+  "prompt_md": "A small pipeline parses a row of raw strings into a typed record. It fails in production with a two-part traceback: a low-level error, then a `The above exception was the direct cause of the following exception:` separator, then a higher-level `PipelineError`.\n\nYour job is to *read the chain* and fix the **root** cause, not the surface symptom.\n\nThe rule for reading a chained traceback: Python prints the **original** exception first, then the exception that was raised while handling it. The bottom-most frame of the *first* block is where the real failure happened. Follow it to the offending line and fix that line so the whole pipeline succeeds.\n\nDo not fix this by widening the `except` or by deleting the `raise ... from`. The chaining is good; the bug it is reporting is real. Keep `parse_row`'s contract: it returns a `dict` with `id` (int), `score` (float), and `tags` (list of stripped strings).",
+  "symptom_md": "```text\nTraceback (most recent call last):\n  File \"pipeline.py\", line 12, in parse_row\n    \"id\": int(raw[\"id\"]),\n          ^^^^^^^^^^^^^^\nKeyError: 'id'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"pipeline.py\", line 20, in run\n    return parse_row(row)\n           ^^^^^^^^^^^^^^^\nPipelineError: failed to parse row\n```\n\nThe visible `PipelineError` is only the wrapper. The first block — a `KeyError: 'id'` at the `int(raw[\"id\"])` line — is the real cause: the incoming row uses a different key than the parser reads.",
+  "tags": ["traceback", "exception-chaining", "root-cause", "keyerror"],
+  "requirements_md": [
+    "`parse_row(row)` returns `{'id': int, 'score': float, 'tags': [str, ...]}`.",
+    "The fix addresses the root cause shown in the FIRST traceback block, not the wrapping PipelineError.",
+    "Keep the `raise PipelineError(...) from exc` chaining intact.",
+    "`run(row)` succeeds for the provided well-formed row.",
+    "Do not modify the test file."
+  ],
+  "environment": {
+    "runtime": "python",
+    "runtime_version": "3.12",
+    "timeout_s": 20,
+    "memory_mb": 256,
+    "cpu_limit": 0.5,
+    "network": "none",
+    "packages": ["pytest"]
+  },
+  "entrypoint": "pipeline.py",
+  "broken_files": [
+    {
+      "path": "pipeline.py",
+      "content": "\"\"\"Parse a raw row (all strings) into a typed record.\n\nThe incoming rows look like:\n    {\"user_id\": \"42\", \"score\": \"9.5\", \"tags\": \"a, b ,c\"}\n\nparse_row should return:\n    {\"id\": 42, \"score\": 9.5, \"tags\": [\"a\", \"b\", \"c\"]}\n\"\"\"\n\n\nclass PipelineError(Exception):\n    \"\"\"Raised when a row cannot be parsed.\"\"\"\n\n\ndef parse_row(raw):\n    try:\n        return {\n            \"id\": int(raw[\"id\"]),\n            \"score\": float(raw[\"score\"]),\n            \"tags\": [t.strip() for t in raw[\"tags\"].split(\",\")],\n        }\n    except (KeyError, ValueError) as exc:\n        raise PipelineError(\"failed to parse row\") from exc\n\n\ndef run(row):\n    return parse_row(row)\n",
+      "readonly": false,
+      "hidden": false
+    }
+  ],
+  "solution_files": [
+    {
+      "path": "pipeline.py",
+      "content": "\"\"\"Parse a raw row (all strings) into a typed record.\n\nThe incoming rows look like:\n    {\"user_id\": \"42\", \"score\": \"9.5\", \"tags\": \"a, b ,c\"}\n\nparse_row should return:\n    {\"id\": 42, \"score\": 9.5, \"tags\": [\"a\", \"b\", \"c\"]}\n\"\"\"\n\n\nclass PipelineError(Exception):\n    \"\"\"Raised when a row cannot be parsed.\"\"\"\n\n\ndef parse_row(raw):\n    try:\n        return {\n            \"id\": int(raw[\"user_id\"]),   # root cause: the row's key is 'user_id', not 'id'\n            \"score\": float(raw[\"score\"]),\n            \"tags\": [t.strip() for t in raw[\"tags\"].split(\",\")],\n        }\n    except (KeyError, ValueError) as exc:\n        raise PipelineError(\"failed to parse row\") from exc\n\n\ndef run(row):\n    return parse_row(row)\n",
+      "readonly": false,
+      "hidden": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-pipeline-parses-row",
+      "name": "the well-formed row parses to the typed record",
+      "kind": "pytest",
+      "visible": true,
+      "weight": 2.0,
+      "file": "test_parse.py",
+      "body": "from pipeline import run\n\n\ndef test_parses_typed_record():\n    row = {\"user_id\": \"42\", \"score\": \"9.5\", \"tags\": \"a, b ,c\"}\n    assert run(row) == {\"id\": 42, \"score\": 9.5, \"tags\": [\"a\", \"b\", \"c\"]}\n\n\ndef test_id_is_int_and_score_is_float():\n    result = run({\"user_id\": \"7\", \"score\": \"1\", \"tags\": \"x\"})\n    assert result[\"id\"] == 7 and isinstance(result[\"id\"], int)\n    assert result[\"score\"] == 1.0 and isinstance(result[\"score\"], float)\n"
+    },
+    {
+      "id": "test-pipeline-chain-preserved",
+      "name": "genuinely bad rows still raise a chained PipelineError",
+      "kind": "pytest",
+      "visible": false,
+      "weight": 2.0,
+      "file": "test_chain.py",
+      "body": "import pytest\n\nfrom pipeline import PipelineError, run\n\n\ndef test_bad_score_still_chains():\n    # 'score' is present but not a number -> ValueError -> chained PipelineError\n    row = {\"user_id\": \"42\", \"score\": \"not-a-number\", \"tags\": \"a\"}\n    with pytest.raises(PipelineError) as info:\n        run(row)\n    assert info.value.__cause__ is not None, \"chaining with 'from exc' must be preserved\"\n    assert isinstance(info.value.__cause__, ValueError)\n\n\ndef test_missing_required_key_still_chains():\n    row = {\"user_id\": \"42\", \"tags\": \"a\"}   # no score\n    with pytest.raises(PipelineError) as info:\n        run(row)\n    assert isinstance(info.value.__cause__, KeyError)\n"
+    }
+  ],
+  "hints": [
+    {
+      "level": 1,
+      "md": "Read the traceback top-to-bottom. The first block ends in `KeyError: 'id'` at `int(raw[\"id\"])`; the second block is just the `PipelineError` wrapper raised while handling it. The `PipelineError` is a symptom — the `KeyError` is the cause.",
+      "reveals_solution": false
+    },
+    {
+      "level": 2,
+      "md": "A `KeyError: 'id'` means `raw` has no key `\"id\"`. Compare the docstring's sample row (`{\"user_id\": \"42\", ...}`) with the line that reads `raw[\"id\"]`. The parser is reading the wrong key. Fix the key, not the `except`.",
+      "reveals_solution": false
+    },
+    {
+      "level": 3,
+      "md": "Change the id line to read the actual key:\n```python\n\"id\": int(raw[\"user_id\"]),\n```\nEverything else — the `float`, the `tags` split, and the `raise PipelineError(...) from exc` chaining — stays exactly as is. The chain was correctly *reporting* the bug; you just had to follow it to the source.",
+      "reveals_solution": true
+    }
+  ],
+  "root_cause_md": "The displayed `PipelineError` is a **wrapper**, not the fault. Python prints chained exceptions oldest-first: the top block is the original exception, then `The above exception was the direct cause of the following exception:` marks a `raise ... from`, and the bottom block is the exception raised while handling it. So the diagnostic signal is in the *first* block — `KeyError: 'id'` at `int(raw[\"id\"])` — which says the row has no `\"id\"` key. The sample row uses `\"user_id\"`, so the parser is simply reading the wrong key.\n\nThe fix is on that one line: read `raw[\"user_id\"]`. The `except (KeyError, ValueError)` and the `raise PipelineError(...) from exc` are correct and should stay — the chaining is exactly what made the bug diagnosable, surfacing a friendly high-level error while preserving the precise cause as `__cause__`. Widening the `except` or dropping the chaining would only re-hide the information the traceback worked to show you. The skill being exercised is reading a two-part traceback and acting on the root frame rather than the surface one.",
+  "evaluation": {
+    "strategy": "pytest",
+    "pass_threshold": 1.0,
+    "partial_credit": true,
+    "dimension": "debugging"
+  },
+  "sources": [
+    {
+      "source_id": "python.pep3134",
+      "url": "https://peps.python.org/pep-3134/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 3134 — Exception Chaining and Embedded Tracebacks"
+    },
+    {
+      "source_id": "python.docs.tutorial",
+      "url": "https://docs.python.org/3/tutorial/errors.html#exception-chaining",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Errors and Exceptions — exception chaining"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

@@ -1,0 +1,222 @@
+{
+  "id": "python.decorators",
+  "title": "Decorators",
+  "subject_id": "programming.python",
+  "category": "Functions and scope",
+  "summary": "A decorator is a callable that takes a function and returns a replacement for it. `@cache` is not syntax with special powers — it is `f = cache(f)` written above the definition, which is why everything you know about closures applies unchanged.",
+  "definition": "A decorator is any callable applied with `@name` immediately above a `def` or `class`, whose return value is bound to the original name. The transformation is purely `target = decorator(target)`, evaluated once at definition time, in bottom-to-top order when several are stacked.",
+  "purpose": "Cross-cutting behaviour — caching, retries, timing, authorisation, logging — belongs in one place, not copied into thirty function bodies. Decorators let you attach that behaviour without editing the function it wraps, and read it at the call site. The reason to understand the mechanism rather than memorise `@functools.wraps` is that a decorator silently replaces your function: if the replacement loses the signature, the docstring, or the exception it should propagate, everything downstream — help text, introspection, test collection, monitoring — degrades quietly.",
+  "body": [
+    {
+      "type": "prose",
+      "md": "Desugar it once and the mystery goes away:\n\n```python\n@timed\ndef fetch(url): ...\n\n# is exactly\ndef fetch(url): ...\nfetch = timed(fetch)\n```\n\nSo `timed` must accept one argument (the function) and return something callable in its place. That replacement is almost always a closure over the original — which is why the late-binding and cell-variable rules from closures matter here rather than being separate knowledge.\n\nStacking applies bottom-up, closest to the `def` first:\n\n```python\n@app.route(\"/users\")   # applied last, sees the cached wrapper\n@cache                 # applied first, wraps the raw function\ndef users(): ...\n```\n\nGetting that order wrong is a real bug, not a style question: registering the uncached function with the router, then caching the object nobody calls, produces a route that recomputes every request and a cache that is never hit.",
+      "sources": [
+        {
+          "source_id": "python.docs.reference",
+          "url": "https://docs.python.org/3/reference/compound_stmts.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "8.7. Function definitions — decorators"
+        },
+        {
+          "source_id": "python.pep318",
+          "url": "https://peps.python.org/pep-0318/",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "PEP 318 — Decorators for Functions and Methods"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "The shape to memorise: `*args, **kwargs` plus `functools.wraps`",
+      "runnable": true,
+      "code": "import functools\n\ndef timed(func):\n    @functools.wraps(func)               # copies __name__, __doc__, __wrapped__\n    def wrapper(*args, **kwargs):        # accepts any signature\n        result = func(*args, **kwargs)   # forwards positionally and by keyword\n        return result                    # returns the value — easy to forget\n    return wrapper\n\n@timed\ndef add(a, b):\n    \"\"\"Add two numbers.\"\"\"\n    return a + b\n\nprint(add(1, 2), add.__name__, add.__doc__)",
+      "expected_output": "3 add Add two numbers."
+    },
+    {
+      "type": "callout",
+      "variant": "danger",
+      "title": "Without `functools.wraps` the function you shipped is gone",
+      "md": "The wrapper is a different object. Skip `wraps` and `add.__name__` becomes `\"wrapper\"`, the docstring disappears, `inspect.signature` reports `(*args, **kwargs)`, and every tool that reads those breaks: `help()`, Sphinx, pytest's test discovery by name, FastAPI's request validation (which builds its schema from the signature), and any log line that includes `func.__name__`.\n\n`wraps` also sets `__wrapped__`, which is how `inspect.signature` recovers the real parameters. It is one line and there is no case where omitting it is correct."
+    },
+    {
+      "type": "prose",
+      "md": "A decorator that takes arguments needs one more layer, because `@retry(times=3)` is *called* first and its return value is the decorator:\n\n```python\n@retry(times=3)\ndef flaky(): ...\n\n# desugars to\nflaky = retry(times=3)(flaky)\n```\n\nThree nested functions, each with one job: the outer captures the configuration, the middle receives the function, the inner does the work. If you find yourself writing `def retry(func, times=3)` and wondering why `@retry(times=3)` passes an int where a function should be, this is the missing layer.\n\nThe alternative is a class with `__init__` and `__call__`, which is easier to read when the decorator holds state — a call counter, a circuit breaker, a registry — because the state lives in `self` rather than in nonlocal cells."
+    },
+    {
+      "type": "code",
+      "runtime": "python",
+      "language": "python",
+      "caption": "Parameterised decorator, and the class form",
+      "runnable": true,
+      "code": "import functools\n\ndef retry(times=3):\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            last = None\n            for attempt in range(times):\n                try:\n                    return func(*args, **kwargs)\n                except ValueError as exc:\n                    last = exc\n            raise last              # never swallow the final failure\n        return wrapper\n    return decorator\n\nclass CountCalls:\n    def __init__(self, func):\n        functools.update_wrapper(self, func)   # the class-form equivalent of wraps\n        self.func = func\n        self.calls = 0\n\n    def __call__(self, *args, **kwargs):\n        self.calls += 1\n        return self.func(*args, **kwargs)\n\n@CountCalls\ndef ping():\n    return \"pong\"\n\nping(); ping()\nprint(ping.calls, ping.__name__)",
+      "expected_output": "2 ping"
+    },
+    {
+      "type": "table",
+      "columns": ["Standard library decorator", "What it replaces the function with", "Watch out for"],
+      "rows": [
+        ["`functools.wraps` / `update_wrapper`", "the same wrapper, with the original's metadata copied", "not a decorator for your function — for your *wrapper*"],
+        ["`functools.cache` / `lru_cache`", "a memoising wrapper keyed on the arguments", "arguments must be hashable; the cache holds strong references forever"],
+        ["`functools.cached_property`", "a descriptor that computes once per instance", "needs a `__dict__`, so it is incompatible with `__slots__`"],
+        ["`property`", "a data descriptor on the class", "silently shadows an attribute of the same name"],
+        ["`staticmethod` / `classmethod`", "a descriptor changing what the first argument is", "stacking order with `property` matters and is easy to get wrong"],
+        ["`contextlib.contextmanager`", "a factory returning a context manager", "the generator must `yield` exactly once"],
+        ["`dataclasses.dataclass`", "the same class, with generated `__init__`/`__repr__`/`__eq__`", "mutable defaults must use `field(default_factory=...)`"]
+      ]
+    },
+    {
+      "type": "steps",
+      "title": "Writing a decorator you will not regret",
+      "steps": [
+        "Decide whether it takes arguments. No → one level. Yes → three levels, or a class.",
+        "Give the wrapper `*args, **kwargs` so it does not constrain the functions it can decorate.",
+        "Apply `@functools.wraps(func)` to the wrapper. Always, no exceptions.",
+        "Return the result of the inner call. A decorator that forgets this turns every decorated function into one that returns `None`.",
+        "Do not catch exceptions you cannot handle, and never swallow the last one in a retry loop.",
+        "Attach an escape hatch — `wrapper.__wrapped__` comes free from `wraps`; add `wrapper.cache_clear`-style handles if the decorator holds state that tests need to reset."
+      ]
+    },
+    {
+      "type": "term",
+      "term": "closure cell",
+      "definition_md": "The storage a nested function uses for a name it reads from an enclosing scope. A decorator's wrapper closes over `func` in exactly this way, which is why the decorated function stays reachable and why `nonlocal` is needed to *rebind* (rather than mutate) captured state inside the wrapper.",
+      "aliases": ["cell variable", "free variable"]
+    },
+    {
+      "type": "embed_practice",
+      "practice_id": "python.practice.decorators.code.retry"
+    },
+    {
+      "type": "callout",
+      "variant": "production",
+      "title": "The two decorators that cause incidents",
+      "md": "**`lru_cache` on a method.** `self` becomes part of the cache key, so every instance is retained by the cache for the life of the process. On a per-request object that is an unbounded memory leak that looks like a slow leak in the app rather than a caching bug. Cache a module-level function of the identifiers instead, or use `cached_property` for per-instance work.\n\n**A retry decorator on a non-idempotent operation.** Retrying a `POST /charge` that timed out after the charge succeeded bills the customer twice. Retries belong on reads and on writes carrying an idempotency key — the decorator cannot tell the difference, so the decision has to be conscious at every application site."
+    }
+  ],
+  "components": [
+    { "name": "decorator callable", "role": "Takes the function, returns its replacement. Runs once, at definition time.", "required": true },
+    { "name": "wrapper", "role": "The closure that actually runs at call time; owns the added behaviour.", "required": false },
+    { "name": "functools.wraps", "role": "Copies identity metadata onto the wrapper and records `__wrapped__`.", "required": true },
+    { "name": "argument layer", "role": "The extra outer function that captures configuration for `@deco(...)`.", "required": false }
+  ],
+  "prerequisites": ["python.closures-and-late-binding", "python.functions-and-signatures"],
+  "related": ["python.classes-and-dunders", "python.exceptions"],
+  "common_errors": [
+    {
+      "error": "After decorating, `func.__name__` is `'wrapper'`, the docstring is gone, and `inspect.signature` shows `(*args, **kwargs)`.",
+      "cause": "The wrapper is a distinct function object and metadata is not inherited.",
+      "fix": "`@functools.wraps(func)` on the wrapper (or `functools.update_wrapper(self, func)` in the class form).",
+      "sources": [
+        {
+          "source_id": "python.docs.library",
+          "url": "https://docs.python.org/3/library/functools.html",
+          "retrieved_at": "2026-08-17T00:00:00Z",
+          "locator": "functools.wraps"
+        }
+      ]
+    },
+    {
+      "error": "Every decorated function suddenly returns `None`.",
+      "cause": "The wrapper calls the function but does not `return` its result.",
+      "fix": "`return func(*args, **kwargs)`. This is the most common decorator bug and the easiest to miss, because nothing raises."
+    },
+    {
+      "error": "`TypeError: decorator() takes 1 positional argument but 2 were given`, or the function object arrives where a config value was expected.",
+      "cause": "`@deco(arg)` calls `deco` first; a one-level decorator has no layer to receive the arguments.",
+      "fix": "Add the outer factory layer: `def deco(arg): def decorator(func): ... return decorator`."
+    },
+    {
+      "error": "A route is registered but the cache never hits, or authorisation is bypassed.",
+      "cause": "Stacking order. Decorators apply bottom-up; the one nearest the `def` wraps first and the topmost sees the already-wrapped object.",
+      "fix": "Put registration decorators (`@app.route`, `@task`) outermost, and behaviour decorators nearest the `def`."
+    },
+    {
+      "error": "Memory grows steadily in a long-running service after adding `@lru_cache` to a method.",
+      "cause": "`self` is part of the key, so the cache pins every instance it has ever seen.",
+      "fix": "Move the cache to a module-level function taking the identifying values, or use `cached_property` for per-instance caching."
+    },
+    {
+      "error": "`TypeError: unhashable type: 'dict'` from a cached function.",
+      "cause": "`lru_cache` keys on the arguments and therefore requires them all to be hashable.",
+      "fix": "Normalise to a tuple/frozenset at the boundary, or cache an inner function that takes only scalars."
+    }
+  ],
+  "best_practices": [
+    "Always `functools.wraps`. Treat its absence in review as a defect, not a nitpick.",
+    "Give wrappers `*args, **kwargs` so a decorator does not silently constrain which functions it can be applied to.",
+    "Prefer the class form when the decorator holds mutable state; `self.calls` is clearer than a `nonlocal` counter.",
+    "Keep decorators thin. Anything longer than a screen belongs in a named helper the wrapper calls.",
+    "Expose a way to reach the undecorated function for tests — `wraps` provides `__wrapped__` for free.",
+    "Bound every cache. `functools.cache` is unbounded by design; in a service, `lru_cache(maxsize=...)` is the version that cannot exhaust memory."
+  ],
+  "production_considerations": [
+    "Decorators run at import time. Anything expensive or failure-prone in the decorator body (a network call, a config read) turns a module import into a startup failure.",
+    "A decorator that catches broad exceptions can hide errors from your monitoring; if a wrapper logs and returns a default, the metric that would have alerted never fires.",
+    "Retry decorators need jitter and a cap, and must only be applied to idempotent operations — the decorator itself cannot verify either property.",
+    "Signature-preserving matters beyond aesthetics: FastAPI, Click, pytest fixtures and Pydantic validators all read the signature, and a wrapper without `__wrapped__` breaks them.",
+    "Stacked decorators multiply per-call overhead. In a hot path, one wrapper doing three things beats three wrappers doing one each."
+  ],
+  "anti_patterns": [
+    "A wrapper without `functools.wraps`.",
+    "A wrapper that swallows exceptions and returns `None` on failure.",
+    "`@lru_cache` on instance methods, or on anything taking a mutable argument.",
+    "Decorators that mutate global state at import time (registry side effects are the acceptable exception, and should be explicit).",
+    "Deep stacks of decorators on a hot function where the ordering is load-bearing but undocumented."
+  ],
+  "examples": [
+    {
+      "title": "Why stacking order is a correctness question",
+      "language": "python",
+      "code": "# WRONG: the router holds the raw function; the cache wraps an object nobody calls.\n@cache\n@app.route(\"/report\")\ndef report(): ...\n\n# RIGHT: the router registers the cached wrapper.\n@app.route(\"/report\")\n@cache\ndef report(): ...",
+      "md": "Bottom-up application means the decorator nearest the `def` is the one inside. Registration decorators must sit outermost so that what they register is the fully wrapped callable."
+    },
+    {
+      "title": "Preserving introspection, verified",
+      "language": "python",
+      "code": "import functools, inspect\n\ndef bare(func):\n    def wrapper(*a, **kw):\n        return func(*a, **kw)\n    return wrapper\n\ndef careful(func):\n    @functools.wraps(func)\n    def wrapper(*a, **kw):\n        return func(*a, **kw)\n    return wrapper\n\ndef greet(name: str, punct: str = \"!\") -> str:\n    \"\"\"Say hello.\"\"\"\n    return f\"hi {name}{punct}\"\n\nprint(inspect.signature(bare(greet)))\nprint(inspect.signature(careful(greet)))",
+      "output": "(*a, **kw)\n(name: str, punct: str = '!') -> str"
+    }
+  ],
+  "skills": ["python.skill.write-decorators", "python.skill.reason-about-closures"],
+  "practice": [
+    "python.practice.decorators.code.retry",
+    "python.practice.decorators.debug.lost-metadata"
+  ],
+  "keywords": ["decorator", "functools.wraps", "wrapper", "lru_cache", "closure", "PEP 318", "stacking order"],
+  "estimated_minutes": 20,
+  "sources": [
+    {
+      "source_id": "python.docs.reference",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "8.7. Function definitions — decorator application order"
+    },
+    {
+      "source_id": "python.pep318",
+      "url": "https://peps.python.org/pep-0318/",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "PEP 318 — Decorators for Functions and Methods"
+    },
+    {
+      "source_id": "python.docs.library",
+      "url": "https://docs.python.org/3/library/functools.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "functools — wraps, cache, lru_cache, cached_property"
+    },
+    {
+      "source_id": "python.docs.howto",
+      "url": "https://docs.python.org/3/howto/descriptor.html",
+      "retrieved_at": "2026-08-17T00:00:00Z",
+      "locator": "Descriptor HowTo Guide — property, staticmethod, classmethod"
+    }
+  ],
+  "provenance": {
+    "generator": "human",
+    "generated_at": "2026-08-19T00:00:00Z",
+    "reviewed_by": "learnos-content-review",
+    "reviewed_at": "2026-08-19T00:00:00Z",
+    "status": "published"
+  }
+}

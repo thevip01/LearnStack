@@ -1,0 +1,233 @@
+"""learnos_schema — the single source of truth for LearnOS content contracts.
+
+Both the API and the ingestion service import from here. Nothing in this package
+imports from either, and nothing here touches a database or the network, so the
+schema stays usable as a plain library for authoring and CI validation.
+"""
+
+from __future__ import annotations
+
+SCHEMA_VERSION = "1.0"
+
+from .common import (  # noqa: E402
+    Confidence,
+    Difficulty,
+    Id,
+    LearningMode,
+    LifecycleStatus,
+    MasteryDimension,
+    PackageVersion,
+    Provenance,
+    RuntimeKind,
+    SchemaModel,
+    Score,
+    SourceRef,
+    SourceType,
+    slug,
+    utcnow,
+)
+from .content import (  # noqa: E402
+    CalloutBlock,
+    CodeBlock,
+    CommandBlock,
+    ContentBlock,
+    DiagramBlock,
+    EmbedPracticeBlock,
+    ProseBlock,
+    StepsBlock,
+    TableBlock,
+    TermBlock,
+)
+from .concept import CommonError, Concept, ConceptComponent, Example  # noqa: E402
+from .curriculum import Curriculum, Module, Skill, Track  # noqa: E402
+from .execution import (  # noqa: E402
+    ExecutionRequest,
+    ExecutionResult,
+    ExecutionStatus,
+    ResourceUsage,
+    TestResult,
+)
+from .ingestion import (  # noqa: E402
+    AdapterKind,
+    Chunk,
+    ExtractionCandidate,
+    ExtractionRequest,
+    ExtractionTarget,
+    FetchPolicy,
+    IngestionRun,
+    IngestionStage,
+    ParsedDocument,
+    RawDocument,
+    SourceDiff,
+    SourceSpec,
+    StageReport,
+    ValidationIssue,
+)
+from .manifest import DomainRef, RuntimeSpec, SubjectManifest  # noqa: E402
+from .mastery import (  # noqa: E402
+    AT_RISK_THRESHOLD,
+    DEFAULT_DIMENSION_WEIGHTS,
+    DimensionScore,
+    EVIDENCE_HALF_LIFE_DAYS,
+    Evidence,
+    MASTERY_THRESHOLD,
+    RECENCY_FLOOR,
+    SkillMastery,
+    apply_hint_penalty,
+    compute_dimension_score,
+    compute_skill_mastery,
+    target_difficulty,
+    update_ability,
+)
+from .package import (  # noqa: E402
+    PackageValidationError,
+    SourceRegistryEntry,
+    SubjectPackage,
+    discover_packages,
+    load_all_packages,
+    load_subject_package,
+)
+from .practice import (  # noqa: E402
+    APITask,
+    ArchitectureNode,
+    ArchitectureTask,
+    CodeTask,
+    DebugTask,
+    Evaluation,
+    Hint,
+    IncidentSignal,
+    IncidentTask,
+    PracticeKind,
+    PracticeTask,
+    Question,
+    QuizTask,
+    RubricCriterion,
+    SandboxLimits,
+    SourceFile,
+    SQLTask,
+    TerminalTask,
+    TestCase,
+    sanitize_question,
+)
+from .project import Assessment, AssessmentSection, Milestone, Project  # noqa: E402
+from .ui import ModeLayout, NavigationItem, Panel, PanelType, ThemeSpec, UISchema  # noqa: E402
+
+__all__ = [
+    "SCHEMA_VERSION",
+    # common
+    "Confidence",
+    "Difficulty",
+    "Id",
+    "LearningMode",
+    "LifecycleStatus",
+    "MasteryDimension",
+    "PackageVersion",
+    "Provenance",
+    "RuntimeKind",
+    "SchemaModel",
+    "Score",
+    "SourceRef",
+    "SourceType",
+    "slug",
+    "utcnow",
+    # content
+    "CalloutBlock",
+    "CodeBlock",
+    "CommandBlock",
+    "ContentBlock",
+    "DiagramBlock",
+    "EmbedPracticeBlock",
+    "ProseBlock",
+    "StepsBlock",
+    "TableBlock",
+    "TermBlock",
+    # concept
+    "CommonError",
+    "Concept",
+    "ConceptComponent",
+    "Example",
+    # curriculum
+    "Curriculum",
+    "Module",
+    "Skill",
+    "Track",
+    # execution
+    "ExecutionRequest",
+    "ExecutionResult",
+    "ExecutionStatus",
+    "ResourceUsage",
+    "TestResult",
+    # ingestion
+    "AdapterKind",
+    "Chunk",
+    "ExtractionCandidate",
+    "ExtractionRequest",
+    "ExtractionTarget",
+    "FetchPolicy",
+    "IngestionRun",
+    "IngestionStage",
+    "ParsedDocument",
+    "RawDocument",
+    "SourceDiff",
+    "SourceSpec",
+    "StageReport",
+    "ValidationIssue",
+    # manifest
+    "DomainRef",
+    "RuntimeSpec",
+    "SubjectManifest",
+    # mastery
+    "AT_RISK_THRESHOLD",
+    "DEFAULT_DIMENSION_WEIGHTS",
+    "DimensionScore",
+    "EVIDENCE_HALF_LIFE_DAYS",
+    "Evidence",
+    "MASTERY_THRESHOLD",
+    "RECENCY_FLOOR",
+    "SkillMastery",
+    "apply_hint_penalty",
+    "compute_dimension_score",
+    "compute_skill_mastery",
+    "target_difficulty",
+    "update_ability",
+    # package
+    "PackageValidationError",
+    "SourceRegistryEntry",
+    "SubjectPackage",
+    "discover_packages",
+    "load_all_packages",
+    "load_subject_package",
+    # practice
+    "APITask",
+    "ArchitectureNode",
+    "ArchitectureTask",
+    "CodeTask",
+    "DebugTask",
+    "Evaluation",
+    "Hint",
+    "IncidentSignal",
+    "IncidentTask",
+    "PracticeKind",
+    "PracticeTask",
+    "Question",
+    "QuizTask",
+    "RubricCriterion",
+    "SQLTask",
+    "SandboxLimits",
+    "SourceFile",
+    "TerminalTask",
+    "TestCase",
+    "sanitize_question",
+    # project / assessment
+    "Assessment",
+    "AssessmentSection",
+    "Milestone",
+    "Project",
+    # ui
+    "ModeLayout",
+    "NavigationItem",
+    "Panel",
+    "PanelType",
+    "ThemeSpec",
+    "UISchema",
+]
