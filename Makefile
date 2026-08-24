@@ -78,6 +78,14 @@ dev-api: ## Run the API on the host with reload
 dev-web: ## Run the web app on the host with reload
 	cd apps/web && npm run dev
 
+.PHONY: dev-local
+dev-local: ## Run the whole stack on the host with no Docker, Postgres or Redis
+	tools/dev_local.sh
+
+.PHONY: dev-local-api
+dev-local-api: ## Same, but the API only
+	tools/dev_local.sh --api-only
+
 # ---------------------------------------------------------------------------
 # Content
 # ---------------------------------------------------------------------------
@@ -108,8 +116,13 @@ test: test-schema test-api test-ingestion ## Run every test suite that exists
 
 # pytest exits 4 on a missing directory, which reads as "the tests failed" and
 # teaches everyone to stop running `make test`. Saying "no suite yet" out loud is
-# more honest and keeps the target usable while the gap gets closed. Only
-# apps/api/tests is still missing.
+# more honest and keeps the target usable while the gap gets closed. All three
+# suites exist now; the guards stay because a suite can be deleted or moved, and
+# the failure mode they prevent is silent.
+#
+# Three invocations rather than one `pytest` over all three paths. Each suite has
+# its own `tests/` package, so a single run would import two different
+# `tests.conftest` modules and fail collection with ImportPathMismatchError.
 .PHONY: test-schema
 test-schema:
 	@if [ -d $(SCHEMA)/tests ]; then pytest $(SCHEMA)/tests -q; else echo "no suite yet: $(SCHEMA)/tests"; fi

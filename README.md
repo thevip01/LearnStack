@@ -87,8 +87,23 @@ root-equivalent access and is acceptable on a laptop and never in production, an
 is mounted read-only into the api and read-write into ingestion, since the API consumes subject
 packages and only the ingestion build stage may write one.
 
-For a host-native setup with no Docker, `SANDBOX_MODE=subprocess` degrades execution to the
-non-containerised path and the practice kinds that need a sandbox skip rather than fail.
+### Without Docker
+
+```bash
+make dev-local     # api on :8000, web on :3000, Ctrl-C stops both
+```
+
+One command, no Postgres, no Redis, no Docker daemon. It creates `.venv` on first run, so it
+needs Python 3.12 or newer on `PATH` (`PYTHON=python3.12 make dev-local` if `python3` is older),
+and Node 20 or newer. Sign in with the seeded demo account printed on startup.
+
+What this trades away is written out at the top of `tools/dev_local.sh`. In short: SQLite instead
+of Postgres, which costs the pgvector half of hybrid search and shows up as
+`search_index_built hybrid=False`; no cache, which the cache layer already degrades to; and
+`SANDBOX_MODE=subprocess`, which is the one that matters, because learner code then runs as your
+user with your filesystem and your network. That is fine for the demo content in this repo and is
+not fine for anything you did not write yourself. The script refuses to start with a non
+development `ENV` for that reason.
 
 ## Verification
 
@@ -141,9 +156,17 @@ than pattern-matching a fix.
 ## Status
 
 The frontend and the API are feature complete and verified offline, typechecked, and building.
+Tier 3 of the runbook, the full `learn -> practice -> grade -> mastery` loop, passes 37 of 37
+assertions against a live stack. The test suites are 225 tests: 65 schema, 16 API, 144 ingestion.
 The ingestion pipeline ships with `EXTRACTOR=stub` as the default and no LLM client wired, so
 the whole pipeline is runnable and testable on a fresh checkout with no API key. That is not a
 placeholder for something missing; it is what makes the pipeline testable at all.
 
-Known gaps: `apps/api/tests` is not written yet, and tier 3 of the runbook has not been run
-against a live stack.
+Known gaps, in the order they would bite. The web app has no automated tests: it is typechecked
+and it builds, and every route has been exercised by hand, but nothing would catch a regression
+in a component. Hybrid search only has its lexical half wired end to end, because embeddings need
+a model and the pgvector path is exercised by tier 3 rather than by a unit test. The ingestion
+extractor is `stub` by default, so a real content build needs an LLM client written against the
+interface in `services/ingestion/learnos_ingestion/extractors/`. And `SANDBOX_MODE=subprocess`
+exists for laptops without Docker and must never serve anyone, which is enforced in `config.py`
+rather than left to a comment.
