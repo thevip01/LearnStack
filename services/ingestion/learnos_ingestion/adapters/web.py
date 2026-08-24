@@ -1,7 +1,7 @@
 """HTTP adapters: a single page, a sitemap tree, an RSS feed.
 
 All three share ``_http_document``, which is where conditional requests live. A
-re-crawl sends ``If-None-Match`` and treats 304 as "unchanged" — that is the
+re-crawl sends ``If-None-Match`` and treats 304 as "unchanged". That is the
 cheapest possible refresh, and it is why ``RawDocument`` carries ``etag`` at all.
 """
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import httpx
 
 #: Content types worth keeping. Anything else is fetched and discarded at the
-#: header stage rather than downloaded — a docs site links to plenty of tarballs.
+#: header stage rather than downloaded: a docs site links to plenty of tarballs.
 TEXTUAL = ("text/", "application/xhtml", "application/json", "application/xml", "+xml")
 
 _HREF = re.compile(rb"""href\s*=\s*["']([^"'#>]+)""", re.IGNORECASE)
@@ -99,7 +99,7 @@ class WebAdapter(SourceAdapter):
 
     Link extraction is a regex over bytes rather than a parse. That is deliberate:
     this stage decides *what to fetch*, and running a full HTML parser here would
-    mean parsing every document twice — once to find links and again in the parse
+    mean parsing every document twice, once to find links and again in the parse
     stage. The regex over-matches (it will happily yield a URL from inside a
     ``<script>`` string); ``permits`` and the content-type check absorb that, and a
     handful of wasted HEADs is cheaper than a second parse of every page.

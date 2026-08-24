@@ -8,14 +8,14 @@ content change from a no-op refresh.
 
 Two modes, chosen automatically:
 
-* **authoritative** — if ``learnos_schema`` is importable (i.e. you have run
+* **authoritative**: if ``learnos_schema`` is importable (i.e. you have run
   ``make install`` / installed the ``knowledge-schema`` package), the hash is
   ``SubjectPackage.compute_content_hash()``: a sha256 over the fully-validated,
   default-filled model dump, excluding the volatile manifest fields
   (``generated_at``, ``published_at``, ``content_hash``). This is the value CI
   and the ingestion pipeline agree on.
 
-* **stdlib-fallback** — if the schema package is not importable (e.g. a minimal
+* **stdlib-fallback**: if the schema package is not importable (e.g. a minimal
   checkout with no dependencies), the hash is computed with the standard
   library only: a sha256 over every ``*.json`` file in the package, each file
   canonicalised, and the manifest's three volatile fields removed. This has no
@@ -46,7 +46,7 @@ VOLATILE_MANIFEST_FIELDS = ("generated_at", "published_at", "content_hash")
 
 
 # ---------------------------------------------------------------------------
-# authoritative mode — uses the real schema when it is importable
+# authoritative mode: uses the real schema when it is importable
 # ---------------------------------------------------------------------------
 def _authoritative_hash(package_dir: Path) -> str | None:
     """Return the canonical hash, or None if the schema package is unavailable."""
@@ -59,7 +59,7 @@ def _authoritative_hash(package_dir: Path) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# stdlib fallback — no third-party dependencies
+# stdlib fallback: no third-party dependencies
 # ---------------------------------------------------------------------------
 def _canonical_bytes(path: Path, *, is_manifest: bool) -> bytes:
     """Return canonical bytes for one file.

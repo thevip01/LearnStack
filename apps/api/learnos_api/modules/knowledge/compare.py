@@ -38,7 +38,7 @@ FACETS: list[tuple[str, Callable[[Concept], str | None]]] = [
     ("Definition", lambda c: c.definition or None),
     ("Purpose", lambda c: c.purpose or None),
     ("Category", lambda c: c.category or None),
-    ("Made of", lambda c: _bullets(f"**{comp.name}** — {comp.role}" for comp in c.components)),
+    ("Made of", lambda c: _bullets(f"**{comp.name}**: {comp.role}" for comp in c.components)),
     ("Best practices", lambda c: _bullets(c.best_practices)),
     ("Anti-patterns", lambda c: _bullets(c.anti_patterns)),
     ("In production", lambda c: _bullets(c.production_considerations)),
@@ -86,7 +86,7 @@ def build(concepts: Sequence[Concept]) -> CompareOut:
 def suggested_pairs(package: SubjectPackage, concept_id: str) -> list[str]:
     """What this concept is worth comparing against.
 
-    Authored analogues first — they are the deliberate cross-subject links — then
+    Authored analogues first (they are the deliberate cross-subject links), then
     same-category siblings, which is a decent heuristic for "these two get confused
     with each other".
     """

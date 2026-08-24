@@ -31,7 +31,7 @@ class TestContentHash:
 
         Without length prefixing, concatenation makes these identical, and a document
         whose (source_id, locator) pair happens to split differently gets the same id
-        as an unrelated one — two sources silently overwriting each other's rows.
+        as an unrelated one, two sources silently overwriting each other's rows.
         """
         assert content_hash("ab", "c") != content_hash("a", "bc")
 
@@ -67,7 +67,7 @@ class TestChunkId:
         A chunk's id changing on edit is what lets the diff name exactly which
         concepts an edit invalidated. If chunk ids were position-only, a paragraph
         rewrite would leave every citation pointing at text that no longer says what
-        the concept claims — and nothing would flag it.
+        the concept claims, and nothing would flag it.
         """
         before = chunk_id_for("doc.1", 9, "the original paragraph")
         after = chunk_id_for("doc.1", 9, "the edited paragraph")

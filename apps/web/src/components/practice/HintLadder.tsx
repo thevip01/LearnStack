@@ -15,7 +15,7 @@ import type { MasteryDimension } from "@/lib/types";
  *
  * The cost is shown *before* the hint is revealed because that is the whole point
  * of the ladder: spending a hint is a decision, not an accident. The multiplier
- * mirrored in lib/format is a preview only — the API applies the real penalty.
+ * mirrored in lib/format is a preview only: the API applies the real penalty.
  */
 export function HintLadder({
   taskId,

@@ -3,12 +3,12 @@
 This is where incremental ingestion is decided. Every fetched body is classified
 against what the database already knows:
 
-* **unchanged** — same ``document_id``, same ``content_hash``. Nothing downstream
+* **unchanged**: same ``document_id``, same ``content_hash``. Nothing downstream
   runs for it. This is the overwhelmingly common case on a refresh and the reason
   a re-crawl costs minutes rather than an extractor budget.
-* **changed** — same ``document_id``, different hash. Re-parsed, re-chunked, and the
+* **changed**: same ``document_id``, different hash. Re-parsed, re-chunked, and the
   concepts citing its old chunks are flagged by the diff.
-* **added** — unseen ``document_id``.
+* **added**: unseen ``document_id``.
 
 The classification is returned rather than acted on, because ``dry_run`` has to be
 able to report exactly what a real run would do without writing anything.
@@ -38,12 +38,12 @@ class FetchOutcome:
     changed: list[RawDocument] = field(default_factory=list)
     unchanged: list[str] = field(default_factory=list)
     #: ``document_id``s the database has but this crawl did not see. Candidates for
-    #: deletion — but only when the crawl was complete, see ``removable``.
+    #: deletion, but only when the crawl was complete, see ``removable``.
     missing: list[str] = field(default_factory=list)
     refused: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     #: True when the crawl hit ``max_pages``, meaning ``missing`` is not evidence of
-    #: removal — the pages may simply be past the cap.
+    #: removal: the pages may simply be past the cap.
     truncated: bool = False
 
     @property
@@ -152,8 +152,8 @@ async def _body_for(
     """Re-read a document's bytes for storage.
 
     Local documents are read from disk; remote ones are re-requested. The second
-    request is real waste, and the alternative — carrying every body in memory
-    through the adapter — means a two-hundred-page crawl holds two hundred bodies at
+    request is real waste, and the alternative, carrying every body in memory
+    through the adapter, means a two-hundred-page crawl holds two hundred bodies at
     once. Trading a cached re-request for bounded memory is the right way round;
     HTTP caching makes the second request cheap in practice.
     """

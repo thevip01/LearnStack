@@ -1,7 +1,7 @@
 """Rolling evidence up into the progress payloads.
 
-Two caches sit in front of this, and both are caches in the strict sense — either
-can be thrown away without losing information:
+Two caches sit in front of this, and both are caches in the strict sense (either
+can be thrown away without losing information):
 
 * ``user_skill_state`` (Postgres) holds the last computed overall/coverage/
   dimensions for a skill. It is *also* the authoritative home of two values that
@@ -58,7 +58,7 @@ DIMENSION_ORDER = [enum_value(d) for d in DEFAULT_DIMENSION_WEIGHTS]
 
 
 # ---------------------------------------------------------------------------
-# Pure maths (no I/O) — this is what the tests exercise
+# Pure maths (no I/O): this is what the tests exercise
 # ---------------------------------------------------------------------------
 
 
@@ -117,7 +117,7 @@ def overall_from_masteries(masteries: Iterable[SkillMastery]) -> tuple[float, fl
     """Subject overall and coverage, averaged over skills with any evidence.
 
     Skills that have never been touched are excluded, so starting a new subject
-    does not show 3% overall — it shows the score on what has actually been done,
+    does not show 3% overall: it shows the score on what has actually been done,
     with ``skills_total`` alongside it to give the honest denominator.
     """
     measured = [m for m in masteries if m.evidence_count > 0]

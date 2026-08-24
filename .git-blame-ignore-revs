@@ -1,0 +1,11 @@
+# Revisions that changed formatting only, and that `git blame` should skip.
+#
+# GitHub applies this file automatically. A local clone opts in once:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Keep a comment above each entry describing what the commit did, so a reader
+# can judge for themselves whether skipping it is still the right call.
+
+# style: replace every em dash with ordinary punctuation (765 sites, 175 files)
+1a819c6f307ae6542e141601d89f79e37e1a18d8

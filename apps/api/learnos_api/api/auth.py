@@ -80,7 +80,7 @@ async def logout(response: Response, settings: SettingsDep) -> Response:
     Deliberately does not require authentication and deliberately does not
     blacklist the token. A logout that 401s because the token already expired is
     a logout that leaves the cookie behind, and server-side revocation needs a
-    token store this phase does not have — so bearer tokens stay valid until they
+    token store this phase does not have, so bearer tokens stay valid until they
     expire, which is why ``JWT_EXPIRES_MINUTES`` is a week and not a month.
     """
     service.clear_session_cookie(response, settings)

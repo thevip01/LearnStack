@@ -88,7 +88,7 @@ class TestStubExtractor:
 
     async def test_an_existing_id_becomes_a_duplicate_flag_not_a_silent_skip(self) -> None:
         """A source that now says something about an existing concept is usually a
-        signal the concept needs updating — a reviewer has to see it."""
+        signal the concept needs updating: a reviewer has to see it."""
         candidates = await StubExtractor().extract(
             request_for(ExtractionTarget.CONCEPT.value, existing=["programming.python.closures-and-late-binding"])
         )
@@ -99,7 +99,7 @@ class TestStubExtractor:
     async def test_practice_is_a_schema_valid_quiz(self) -> None:
         """The payload must satisfy the real discriminated union, not resemble it.
 
-        ``PracticeTask`` has no "predict output" kind — the shape is a quiz holding one
+        ``PracticeTask`` has no "predict output" kind: the shape is a quiz holding one
         short-answer question. A payload with an invented ``kind`` validates against
         nothing and can never be approved.
         """
@@ -115,7 +115,7 @@ class TestStubExtractor:
 
         The error issue is what keeps the task out of ``is_promotable``, so a question
         with no answer key cannot reach a learner. It has to be the extractor's own
-        issue because an empty ``answer`` list is schema-valid — nothing downstream
+        issue because an empty ``answer`` list is schema-valid: nothing downstream
         would otherwise notice.
         """
         candidates = await StubExtractor().extract(request_for(ExtractionTarget.PRACTICE.value))

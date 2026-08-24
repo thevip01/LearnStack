@@ -10,7 +10,7 @@ about *content*:
 
 * Whitespace and case are normalised for text answers, because "Reference" and
   "reference " are the same answer and marking one wrong teaches nothing.
-* Order matters only where the question says it does — ``ordering`` cares,
+* Order matters only where the question says it does: ``ordering`` cares,
   ``multi_select`` does not.
 * ``short_answer`` accepts any of the authored alternatives, and additionally
   requires every ``must_include`` fragment. That is how an authored question asks
@@ -226,7 +226,7 @@ def grade_quiz(
 def _quiz_feedback(correct: int, total: int, passed: bool, task: QuizTask) -> str:
     threshold = int(round(float(task.evaluation.pass_threshold) * 100))
     if total == 0:
-        return "This quiz has no questions. That is a content bug — please report it."
+        return "This quiz has no questions. That is a content bug. Please report it."
     headline = f"**{correct} of {total} correct.**"
     if passed:
         return f"{headline} That clears the {threshold}% needed to pass."
@@ -234,6 +234,6 @@ def _quiz_feedback(correct: int, total: int, passed: bool, task: QuizTask) -> st
     noun = "question" if missed == 1 else "questions"
     return (
         f"{headline} You need {threshold}% to pass, so review the {missed} {noun} "
-        "marked below and try again — the explanations say what the expected "
+        "marked below and try again: the explanations say what the expected "
         "reasoning was."
     )

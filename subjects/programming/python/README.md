@@ -1,10 +1,10 @@
-# Python — LearnOS subject package
+# Python: LearnOS subject package
 
 This directory is a **subject package**: a self-contained, validated bundle of
 JSON that fully describes a subject to LearnOS. There is no Python-specific
 application code anywhere in the platform. The generic Subject Runtime reads
-this directory, and everything a learner sees — the curriculum, the reading,
-the practice, the sandbox, the assessment, the mastery model — is produced from
+this directory, and everything a learner sees (the curriculum, the reading,
+the practice, the sandbox, the assessment, the mastery model) is produced from
 the data below. This package is the reference implementation of that idea, and
 the proof that *the subject is data*.
 
@@ -41,7 +41,7 @@ programming/python/
 ├── practice/          # 22 practice tasks (quizzes, code, debug)
 ├── projects/          # 1 project (the LRU cache capstone)
 ├── assessments/       # 1 assessment (the module checkpoint)
-└── labs/              # (none yet — labs are optional long-form guided builds)
+└── labs/              # (none yet, labs are optional long-form guided builds)
 ```
 
 Every file is keyed by a dotted **id** (e.g. `python.exceptions`,
@@ -54,14 +54,14 @@ The validator checks that every reference resolves.
 
 Twenty-two tasks, spanning three kinds and all six question types:
 
-- **10 quizzes** — multiple-choice, multi-select, fill-in-the-blank, ordering,
+- **10 quizzes**: multiple-choice, multi-select, fill-in-the-blank, ordering,
   matching and short-answer questions. Correct answers live only in the
   `answer` field and are stripped before anything reaches a learner.
-- **6 code tasks** — write code against a hidden test suite in the sandbox
+- **6 code tasks**: write code against a hidden test suite in the sandbox
   (dedupe preserving order, a keyword-only config normaliser, a closure-based
   counter factory, a `functools.wraps` retry decorator, and two labs: copy
   semantics and a `@total_ordering` Money value type).
-- **6 debug tasks** — a broken program plus a symptom; find and fix the root
+- **6 debug tasks**: a broken program plus a symptom; find and fix the root
   cause (shared mutable default, late-binding loop, a decorator that erases
   metadata, a swallowed exception, an unhashable dict key, and reading a
   chained traceback to its origin).
@@ -73,13 +73,13 @@ it, and its lifecycle status.
 ## Mastery is multi-dimensional
 
 A learner does not have a single "Python score". Each of the twelve skills
-declares `dimension_weights` across six axes — concept, practice, lab,
-debugging, production, retention — and a skill's mastery is only as complete as
+declares `dimension_weights` across six axes (concept, practice, lab,
+debugging, production, retention) and a skill's mastery is only as complete as
 the dimensions that are actually *measured* by some practice task. The
 validator enforces this: if a skill weights the `debugging` dimension but no
 practice task measures debugging for that skill, that is an **error**, not a
 warning, because the skill's mastery would be silently capped. This is why the
-practice set is shaped the way it is — the debug tasks exist to make the
+practice set is shaped the way it is: the debug tasks exist to make the
 debugging dimension reachable for the skills that claim it.
 
 ## Validating the package
@@ -117,11 +117,11 @@ python3 tools/build_content_hash.py subjects/programming/python
 ```
 
 The tool has two modes and picks automatically. When `learnos_schema` is
-importable it writes the **authoritative** hash —
+importable it writes the **authoritative** hash:
 `SubjectPackage.compute_content_hash()`, a sha256 over the fully-validated,
 default-filled model dump with the volatile manifest fields excluded. In a
 minimal checkout with no dependencies it falls back to a **stdlib** hash over
-the canonicalised JSON files, which is stable and non-placeholder — enough to
+the canonicalised JSON files, which is stable and non-placeholder, enough to
 publish and to pin a version. Re-run it once dependencies are installed to
 converge on the canonical value. Use `--check` in CI to fail a build whose
 manifest hash is stale.
@@ -147,5 +147,5 @@ them up front saves a round trip:
 
 To extend the subject, add a JSON file under the right directory, wire its id
 into the concept/skill/module that should reference it, re-run the validator
-until it prints `OK`, and re-stamp the content hash. No code changes required —
+until it prints `OK`, and re-stamp the content hash. No code changes required:
 that is the whole point.

@@ -26,7 +26,7 @@ async def seed_demo_user(session: AsyncSession, settings: Settings) -> None:
 
     Deliberately not an upsert. Somebody who has changed the demo password, or
     promoted the account, or accumulated progress on it should not have any of that
-    reset by a restart — and a seeder that rewrites a password on every boot is a
+    reset by a restart, and a seeder that rewrites a password on every boot is a
     seeder that silently locks people out of their own dev environment.
     """
     existing = await auth_service.get_user_by_email(session, settings.DEMO_USER_EMAIL)

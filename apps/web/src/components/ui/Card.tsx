@@ -1,16 +1,23 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({
   children,
   className,
+  style,
   as: Tag = "div",
 }: {
   children: ReactNode;
   className?: string;
+  /** Lets a caller scope CSS custom properties (a subject ThemeSpec) to one card. */
+  style?: CSSProperties;
   as?: "div" | "section" | "li" | "article";
 }) {
-  return <Tag className={cn("rounded-panel border border-line bg-surface", className)}>{children}</Tag>;
+  return (
+    <Tag style={style} className={cn("rounded-panel border border-line bg-surface", className)}>
+      {children}
+    </Tag>
+  );
 }
 
 export function CardHeader({

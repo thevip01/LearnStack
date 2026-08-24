@@ -1,8 +1,8 @@
 """Adapter policy.
 
 Everything here is a refusal test. The adapter layer is the only place in LearnOS
-that reaches outside the deployment, and the four gates in ``SourceAdapter.run`` —
-licence, robots, rate limit, page cap — are the whole reason that is acceptable.
+that reaches outside the deployment, and the four gates in ``SourceAdapter.run``
+(licence, robots, rate limit, page cap) are the whole reason that is acceptable.
 They live in the base class rather than in each adapter because "every adapter
 remembered to check" is not a security property, and these tests exist to keep it
 that way as adapters get added.
@@ -107,7 +107,7 @@ class TestLocalAdapterSandbox:
         """Subject packages are editable content.
 
         If a path in one were trusted, "add a source" would be equivalent to "read
-        any file the ingestion process can read" — which includes the environment of
+        any file the ingestion process can read", which includes the environment of
         the one container with outbound network access.
         """
         adapter = LocalAdapter(spec(entrypoint="../../../etc/passwd"), root=tmp_path)
@@ -153,7 +153,7 @@ class TestRateLimiter:
         """A strict interval, not a token bucket.
 
         A bucket would permit a burst, which is the one thing a crawler must not do to
-        someone else's docs site — and the thing that gets an IP blocked.
+        someone else's docs site, and the thing that gets an IP blocked.
         """
         limiter = RateLimiter(rps=20.0)  # 50ms interval
         await limiter.wait()
@@ -185,7 +185,7 @@ class TestRegistry:
             for_source(broken)
 
     def test_for_source_threads_the_root_into_the_local_adapter(self, tmp_path: Path) -> None:
-        """Constructed without a root, ``LocalAdapter`` sandboxes to the process cwd —
+        """Constructed without a root, ``LocalAdapter`` sandboxes to the process cwd,
         which in the ingestion container is /app, i.e. everything."""
         adapter = for_source(spec(adapter="local"), local_root=tmp_path)
         assert isinstance(adapter, LocalAdapter)

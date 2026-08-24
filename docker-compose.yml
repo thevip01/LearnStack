@@ -1,4 +1,4 @@
-# LearnOS — local development stack.
+# LearnOS: local development stack.
 #
 # `docker compose up` must work with no .env file and no edits. Everything below
 # has a default that holds on a laptop.
@@ -8,7 +8,7 @@
 # 1. The api service mounts the host Docker socket so the execution service can
 #    launch sandbox containers. That grants the api container root-equivalent
 #    access to the host. It is acceptable on a development laptop and is NOT
-#    acceptable in production — see docs/architecture/20-security.md for the
+#    acceptable in production. See docs/architecture/20-security.md for the
 #    two supported ways out (a socket proxy, or a remote sandbox host).
 # 2. ./subjects is mounted read-only into api and read-write into ingestion.
 #    The API is a consumer of subject packages; only the ingestion build stage

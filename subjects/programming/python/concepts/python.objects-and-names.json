@@ -9,7 +9,7 @@
   "body": [
     {
       "type": "prose",
-      "md": "Python has no variables in the C sense. There is no fixed slot of memory whose contents you overwrite. There is a **namespace** (a mapping from names to objects) and there are **objects** (which live on the heap and are shared freely).\n\n`config = {\"retries\": 3}` does two separate things: it creates a dict object, then it binds the name `config` in the current namespace to that object. The name owns nothing. Bind a second name to the same dict and there is still exactly one dict.\n\nThat leaves you two verbs which are easy to confuse:\n\n- **Rebinding** — `name = something_else`. Only the namespace changes. Every other name bound to the old object is untouched.\n- **Mutating** — `obj.append(x)`, `obj[k] = v`, `obj.attr = v`. Only the object changes. Every name bound to it sees the new state, because there is only one object to see.\n\nAn object stays alive as long as it is reachable. CPython implements that with a per-object reference count plus a cycle collector, but the language only promises that you cannot observe an object after it becomes unreachable. That is why production code must never depend on a particular `id()` value or on the moment `__del__` runs: ids are reused once an object is collected.",
+      "md": "Python has no variables in the C sense. There is no fixed slot of memory whose contents you overwrite. There is a **namespace** (a mapping from names to objects) and there are **objects** (which live on the heap and are shared freely).\n\n`config = {\"retries\": 3}` does two separate things: it creates a dict object, then it binds the name `config` in the current namespace to that object. The name owns nothing. Bind a second name to the same dict and there is still exactly one dict.\n\nThat leaves you two verbs which are easy to confuse:\n\n- **Rebinding**: `name = something_else`. Only the namespace changes. Every other name bound to the old object is untouched.\n- **Mutating**: `obj.append(x)`, `obj[k] = v`, `obj.attr = v`. Only the object changes. Every name bound to it sees the new state, because there is only one object to see.\n\nAn object stays alive as long as it is reachable. CPython implements that with a per-object reference count plus a cycle collector, but the language only promises that you cannot observe an object after it becomes unreachable. That is why production code must never depend on a particular `id()` value or on the moment `__del__` runs: ids are reused once an object is collected.",
       "sources": [
         {
           "source_id": "python.docs.reference",
@@ -50,12 +50,12 @@
       "type": "callout",
       "variant": "warning",
       "title": "A mutation through an alias is a mutation of the original",
-      "md": "There is no such thing as \"my copy of the list\" unless you made one. Passing a list to a function, appending it to another list, storing it on `self`, or putting it in a cache all create new *bindings*, never new objects.\n\n```python\ndef render(rows):\n    rows.sort(key=lambda r: r[\"name\"])   # reorders the caller's list\n    return \"\\n\".join(r[\"name\"] for r in rows)\n```\n\nThe caller passed a list; it gets back a string *and* a silently reordered list. If the caller was relying on insertion order — say it is a paginated result set — you have just corrupted their data from inside a function whose name promises to render. Either copy on entry (`rows = list(rows)`), or say so in the docstring and in the function's name (`render_sorted_in_place`)."
+      "md": "There is no such thing as \"my copy of the list\" unless you made one. Passing a list to a function, appending it to another list, storing it on `self`, or putting it in a cache all create new *bindings*, never new objects.\n\n```python\ndef render(rows):\n    rows.sort(key=lambda r: r[\"name\"])   # reorders the caller's list\n    return \"\\n\".join(r[\"name\"] for r in rows)\n```\n\nThe caller passed a list; it gets back a string *and* a silently reordered list. If the caller was relying on insertion order (say it is a paginated result set), you have just corrupted their data from inside a function whose name promises to render. Either copy on entry (`rows = list(rows)`), or say so in the docstring and in the function's name (`render_sorted_in_place`)."
     },
     {
       "type": "term",
       "term": "immutable",
-      "definition_md": "An object is **immutable** when its value cannot change after creation: `int`, `float`, `complex`, `bool`, `str`, `bytes`, `tuple`, `frozenset`, `range` and `None` are the built-in cases. You can always rebind a name that pointed at one — `n = n + 1` produces a new `int` — but nothing you can write makes the old object different.\n\nTwo precisions that people get wrong:\n\n- **Immutable is not the same as hashable.** Most immutable built-ins are hashable, but `hash(([1], [2]))` raises `TypeError: unhashable type: 'list'`, because hashing a tuple recurses into its items. Hashability is a property of the whole object graph, not of the outer container.\n- **Immutability is shallow.** A tuple's *bindings* are fixed; the objects they refer to need not be. `t = ([],)` then `t[0].append(1)` succeeds and leaves `t` as `([1],)`. The tuple never changed; its element did.",
+      "definition_md": "An object is **immutable** when its value cannot change after creation: `int`, `float`, `complex`, `bool`, `str`, `bytes`, `tuple`, `frozenset`, `range` and `None` are the built-in cases. You can always rebind a name that pointed at one (`n = n + 1` produces a new `int`), but nothing you can write makes the old object different.\n\nTwo precisions that people get wrong:\n\n- **Immutable is not the same as hashable.** Most immutable built-ins are hashable, but `hash(([1], [2]))` raises `TypeError: unhashable type: 'list'`, because hashing a tuple recurses into its items. Hashability is a property of the whole object graph, not of the outer container.\n- **Immutability is shallow.** A tuple's *bindings* are fixed; the objects they refer to need not be. `t = ([],)` then `t[0].append(1)` succeeds and leaves `t` as `([1],)`. The tuple never changed; its element did.",
       "aliases": [
         "frozen"
       ]
@@ -97,18 +97,18 @@
           "`x = [1, 2]`",
           "Yes",
           "No",
-          "No — other names still refer to the old list"
+          "No, other names still refer to the old list"
         ],
         [
           "`x = x + [3]`",
           "Yes",
           "No",
-          "No — `list.__add__` returns a brand-new list"
+          "No, `list.__add__` returns a brand-new list"
         ],
         [
           "`x += [3]`",
           "Yes, back to the same object",
-          "Yes — `list.__iadd__` is `extend`",
+          "Yes, `list.__iadd__` is `extend`",
           "Yes"
         ],
         [
@@ -126,17 +126,17 @@
         [
           "`x.sort()`",
           "No",
-          "Yes — sorts in place and returns `None`",
+          "Yes, sorts in place and returns `None`",
           "Yes"
         ],
         [
           "`sorted(x)`",
           "No",
           "No",
-          "No — returns a new list, which is discarded unless you bind it"
+          "No, returns a new list, which is discarded unless you bind it"
         ]
       ],
-      "caption": "`+=` is the row people get wrong. On a list it mutates in place and then stores the name again, pointing at the object it already had, so aliases see the change. On a tuple, `str` or `int` there is no in-place hook, so `+=` can only build a new object and rebind — which is exactly why `x += [3]` and `x = x + [3]` are not interchangeable."
+      "caption": "`+=` is the row people get wrong. On a list it mutates in place and then stores the name again, pointing at the object it already had, so aliases see the change. On a tuple, `str` or `int` there is no in-place hook, so `+=` can only build a new object and rebind, which is exactly why `x += [3]` and `x = x + [3]` are not interchangeable."
     },
     {
       "type": "steps",
@@ -153,7 +153,7 @@
   "components": [
     {
       "name": "name (binding)",
-      "role": "An entry in a namespace — module globals, a function's locals, a class body, or an object's `__dict__` — that refers to an object. Names have scope and lifetime of their own; they carry no type and no value. Assignment, `import`, `def`, `class`, `for` targets, `with ... as` and function parameters all create bindings."
+      "role": "An entry in a namespace (module globals, a function's locals, a class body, or an object's `__dict__`) that refers to an object. Names have scope and lifetime of their own; they carry no type and no value. Assignment, `import`, `def`, `class`, `for` targets, `with ... as` and function parameters all create bindings."
     },
     {
       "name": "object",
@@ -161,7 +161,7 @@
     },
     {
       "name": "reachability (CPython: reference count plus cycle collector)",
-      "role": "What keeps an object alive. CPython increments a per-object count on each new reference and frees the object at zero, with a generational collector to break reference cycles. This is an implementation detail you should never write logic against, but it explains why an object stays alive as long as anything still refers to it — including a cache, a closure or a traceback you stored.",
+      "role": "What keeps an object alive. CPython increments a per-object count on each new reference and frees the object at zero, with a generational collector to break reference cycles. This is an implementation detail you should never write logic against, but it explains why an object stays alive as long as anything still refers to it, including a cache, a closure or a traceback you stored.",
       "required": false
     }
   ],
@@ -184,7 +184,7 @@
     },
     {
       "error": "`a = 257; b = 257; a is b` gives `False`, but the same two lines with `256` give `True`. Worse, in one module it is `True` and in the REPL it is `False`.",
-      "cause": "CPython preallocates and shares every `int` from -5 to 256, and the compiler folds and de-duplicates equal constants within a single code object. So identity of small ints depends on the value, on where the literal appears, and on the interpreter version — none of which is part of the language.",
+      "cause": "CPython preallocates and shares every `int` from -5 to 256, and the compiler folds and de-duplicates equal constants within a single code object. So identity of small ints depends on the value, on where the literal appears, and on the interpreter version, none of which is part of the language.",
       "fix": "Compare numbers with `==`. There is never a correct reason to compare ints with `is`. If you need identity semantics for a fixed set of values, use an `enum.Enum`, whose members are guaranteed singletons.",
       "sources": [
         {
@@ -213,7 +213,7 @@
     {
       "error": "TypeError: 'tuple' object does not support item assignment",
       "cause": "You tried `point[0] = 9` on a tuple. A tuple's bindings are fixed at creation: it has no `__setitem__`. This usually means a function that used to hand back a list now hands back a tuple, or that you unpacked a record and tried to edit it in place.",
-      "fix": "Build a new tuple instead of editing one: `point = (9,) + point[1:]`, or `point._replace(x=9)` if it is a `NamedTuple`, or `dataclasses.replace(point, x=9)` for a frozen dataclass. If the value genuinely needs to change over time, it is not a record — use a list or a mutable dataclass.",
+      "fix": "Build a new tuple instead of editing one: `point = (9,) + point[1:]`, or `point._replace(x=9)` if it is a `NamedTuple`, or `dataclasses.replace(point, x=9)` for a frozen dataclass. If the value genuinely needs to change over time, it is not a record: use a list or a mutable dataclass.",
       "sources": [
         {
           "source_id": "python.docs.glossary",
@@ -241,35 +241,35 @@
     "Compare with `==` unless you specifically mean \"the same object\". Reserve `is` for `None`, `True`, `False`, sentinels you created with `object()`, and enum members.",
     "Copy at the boundary of the code you own. If a function intends to reorder or extend a caller's collection for its own purposes, start with `rows = list(rows)`; the cost is one shallow copy and the bug class disappears.",
     "Prefer returning a new object to mutating an argument. `list.sort()` returns `None` on purpose: the language is telling you that a function which both mutates and returns is the hardest kind to reason about.",
-    "When `None` is a legal value, use a private sentinel — `_MISSING = object()` — and test it with `is`. That is the one comparison where identity is exactly the right question.",
+    "When `None` is a legal value, use a private sentinel (`_MISSING = object()`) and test it with `is`. That is the one comparison where identity is exactly the right question.",
     "For data that gets shared widely, reach for a type that cannot be mutated: `tuple`, `frozenset`, `@dataclass(frozen=True)`, or `types.MappingProxyType` over a config dict. Immutability is cheaper than discipline.",
     "In debug output print `a is b`, never `id(a)`. The boolean answers a question; the address is a number that changes every run and gets reused after collection."
   ],
   "production_considerations": [
-    "A module-level `DEFAULTS = {...}` mutated by one request handler is corrupted for every request that follows, in that worker, until it restarts — so the bug is load-dependent, survives a redeploy of the *other* service, and never reproduces in a single-request test. Build a per-request copy, or wrap the shared object in `types.MappingProxyType` so the mutation raises instead of leaking.",
+    "A module-level `DEFAULTS = {...}` mutated by one request handler is corrupted for every request that follows, in that worker, until it restarts, so the bug is load-dependent, survives a redeploy of the *other* service, and never reproduces in a single-request test. Build a per-request copy, or wrap the shared object in `types.MappingProxyType` so the mutation raises instead of leaking.",
     "`copy.deepcopy` is the reflex fix and it is expensive: it walks the entire reachable object graph, maintains a memo dict to handle shared references and cycles, and invokes `__deepcopy__`/`__reduce_ex__` per object. It shows up in profiles of serialisation and ORM-heavy paths. Copy the one level you actually mutate (`dict(cfg)`, `list(rows)`), or make the shared data immutable so no copy is needed.",
     "Dataclasses close one door and leave another open: `x: list = []` raises `ValueError: mutable default <class 'list'> for field x is not allowed: use default_factory`, so use `field(default_factory=list)`. But `field(default=SOME_DICT)` is accepted and shares that one dict across every instance, and so does a plain class attribute. The check is a heuristic for the three obvious builtins, not a guarantee.",
-    "Caches key on hashability and on hash *stability*. `functools.lru_cache` hashes its arguments, so passing a dict raises `TypeError: unhashable type: 'dict'`; and if you pass a hashable wrapper whose contents you later mutate, you get a stale hit forever with no error at all. Key caches on immutable values — tuples of scalars, frozensets, canonical JSON strings.",
+    "Caches key on hashability and on hash *stability*. `functools.lru_cache` hashes its arguments, so passing a dict raises `TypeError: unhashable type: 'dict'`; and if you pass a hashable wrapper whose contents you later mutate, you get a stale hit forever with no error at all. Key caches on immutable values: tuples of scalars, frozensets, canonical JSON strings.",
     "Under threads, two names bound to one object are shared state with no synchronisation at all. Some individual list and dict operations are atomic under CPython's GIL, but read-modify-write sequences (`if k not in d: d[k] = ...`, `counter[k] += 1`) are not. Use a lock, or a per-thread object, and do not treat \"the GIL protects me\" as a design."
   ],
   "anti_patterns": [
-    "`if status is \"active\":` or `if code is 200:` — green in tests where both sides come from literals in one module, silently false once the value is parsed from JSON, a database row or an environment variable.",
+    "`if status is \"active\":` or `if code is 200:`, green in tests where both sides come from literals in one module, silently false once the value is parsed from JSON, a database row or an environment variable.",
     "Using argument mutation as a side channel: `def normalise(cfg): cfg[\"host\"] = cfg[\"host\"].lower()` with no return value. The caller cannot tell from the call site that its object changed, and two callers sharing that dict now interfere.",
     "Defensive `copy.deepcopy(obj)` at every layer \"to be safe\". It hides the ownership question instead of answering it, and turns an O(1) hand-off into an O(size of the graph) copy on a hot path.",
-    "Module-level mutable state — `CACHE = {}`, `SESSION = {}`, `DEFAULTS = {...}` — written to by request handlers. It works under one worker and one thread, and fails under the concurrency you deploy with.",
+    "Module-level mutable state (`CACHE = {}`, `SESSION = {}`, `DEFAULTS = {...}`) written to by request handlers. It works under one worker and one thread, and fails under the concurrency you deploy with.",
     "Using `id()` as a stable identifier or a dedupe key. Ids are unique only among simultaneously live objects and are reused after collection, so an `id`-keyed dict will happily return another object's entry."
   ],
   "examples": [
     {
       "title": "One shared default dict, corrupted by the first request",
-      "md": "`config=DEFAULTS` binds the parameter to the module-level dict on every call — the default is evaluated once, at function definition. The first request that overrides a timeout rewrites the default for every request after it.",
+      "md": "`config=DEFAULTS` binds the parameter to the module-level dict on every call: the default is evaluated once, at function definition. The first request that overrides a timeout rewrites the default for every request after it.",
       "code": "DEFAULTS = {\"retries\": 3, \"timeout\": 5.0}\n\ndef handle(request, config=DEFAULTS):\n    if \"timeout\" in request:\n        config[\"timeout\"] = request[\"timeout\"]   # mutates the module-level dict\n    return config[\"timeout\"]\n\nprint(handle({\"timeout\": 0.5}))\nprint(handle({}))            # a different request, same dict\nprint(DEFAULTS)",
       "language": "python",
       "output": "0.5\n0.5\n{'retries': 3, 'timeout': 0.5}"
     },
     {
       "title": "The fix: an immutable shared default plus a per-call copy",
-      "md": "`MappingProxyType` makes the leak impossible rather than unlikely — an accidental write raises instead of silently poisoning the next request — and `dict(DEFAULTS)` gives each call its own object to work on.",
+      "md": "`MappingProxyType` makes the leak impossible rather than unlikely (an accidental write raises instead of silently poisoning the next request), and `dict(DEFAULTS)` gives each call its own object to work on.",
       "code": "from types import MappingProxyType\n\nDEFAULTS = MappingProxyType({\"retries\": 3, \"timeout\": 5.0})\n\ndef handle(request):\n    config = dict(DEFAULTS)      # this call's own object\n    config.update(request)\n    return config[\"timeout\"]\n\nprint(handle({\"timeout\": 0.5}), handle({}), DEFAULTS[\"timeout\"])\ntry:\n    DEFAULTS[\"timeout\"] = 0.1\nexcept TypeError as exc:\n    print(\"TypeError:\", exc)",
       "language": "python",
       "output": "0.5 5.0 5.0\nTypeError: 'mappingproxy' object does not support item assignment"

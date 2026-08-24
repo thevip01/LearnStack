@@ -2,7 +2,7 @@
 
 Served entirely from the registry's in-memory dictionaries plus one aggregate
 query for the signed-in learner's numbers. No package file is read here, and no
-per-subject rollup is computed — see ``rollup.catalog_snapshot`` for why the cards
+per-subject rollup is computed. See ``rollup.catalog_snapshot`` for why the cards
 read a cache while the progress page does not.
 """
 

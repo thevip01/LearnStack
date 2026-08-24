@@ -6,7 +6,7 @@ mastery sounds helpful and in practice hides the concept a learner was looking f
 because the ranker decided they were not ready for it.
 
 Compare resolves ids across every loaded subject, which is what makes
-``Concept.analogues`` work as a cross-subject bridge — "a Python decorator is to a
+``Concept.analogues`` work as a cross-subject bridge: "a Python decorator is to a
 function what an AWS ALB listener rule is to a request" is only expressible if the
 comparison is not scoped to one package.
 """

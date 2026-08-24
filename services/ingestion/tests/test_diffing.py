@@ -5,7 +5,7 @@ ingestion is worth building at all: a refresh must regenerate only what actually
 changed, because the alternative replaces content that learners already have mastery
 evidence attached to.
 
-The two properties that carry the design are asserted here — an unchanged paragraph
+The two properties that carry the design are asserted here: an unchanged paragraph
 invalidates nothing, and an incomplete crawl invalidates nothing at all.
 """
 

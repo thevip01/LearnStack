@@ -1,8 +1,8 @@
 """The subject runtime envelope.
 
 ``SubjectRuntimeOut`` is the single payload that turns the generic frontend into
-this subject. Everything here is precomputed server-side — merged mode layouts,
-flattened navigation — because each of those derivations would otherwise be
+this subject. Everything here is precomputed server-side (merged mode layouts,
+flattened navigation) because each of those derivations would otherwise be
 reimplemented in the web app, and a second implementation is a second set of
 subject-specific bugs.
 """

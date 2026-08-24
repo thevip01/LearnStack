@@ -18,7 +18,7 @@ dependencies = [
   "sqlalchemy[asyncio]>=2.0.31,<2.1",
   "asyncpg>=0.29,<0.31",
   "structlog>=24.4,<25",
-  # For the SQLAlchemy table declarations only — see storage/repository.py for why
+  # For the SQLAlchemy table declarations only. See storage/repository.py for why
   # the models are shared rather than duplicated. The Dockerfile installs this with
   # --no-deps precisely so FastAPI, uvicorn and the Docker SDK do not end up in the
   # one container that has outbound network access.

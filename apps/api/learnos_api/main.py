@@ -19,7 +19,7 @@ startup, and every request is served from the assembled result. That is the whol
 reason a subject can be data rather than code: the cost of "the subject is a
 directory of JSON" is paid once per process, not once per request.
 
-Failures at startup are asymmetric on purpose. A missing database is fatal — there
+Failures at startup are asymmetric on purpose. A missing database is fatal: there
 is nothing to serve. A missing Docker daemon is not: the platform still teaches,
 it just cannot run code, and it says so in ``/readyz``. Refusing to boot because a
 sandbox is unavailable would make the theory half of the product unavailable too.
@@ -54,8 +54,8 @@ VERSION_HEADER = "x-learnos-version"
 DESCRIPTION = """
 One runtime, many subjects.
 
-A subject is a *package of data* — manifest, curriculum, concepts, practice tasks,
-UI layout — not an application. Selecting `Cloud → AWS → Load Balancing` loads a
+A subject is a *package of data* (manifest, curriculum, concepts, practice tasks,
+UI layout), not an application. Selecting `Cloud → AWS → Load Balancing` loads a
 different package into the same runtime; nothing about the code is AWS-specific.
 
 The loop this API implements: **Source → Structured Knowledge → Subject Package →
@@ -142,7 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
 
     # Credentials are allowed because the session travels as a cookie, and that
-    # rules out a wildcard origin — the browser refuses the combination anyway, so
+    # rules out a wildcard origin: the browser refuses the combination anyway, so
     # a wildcard here would break the web app rather than loosen it.
     #
     # Starlette runs middleware in reverse registration order, so the request-id

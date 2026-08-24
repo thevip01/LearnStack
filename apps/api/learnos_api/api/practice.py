@@ -6,7 +6,7 @@ otherwise be swallowed by the path parameter.
 
 The router is deliberately thin. It resolves the task, resolves the attempt,
 checks that the two belong together, and hands off to ``practice.submit``. It does
-not grade, does not touch mastery and does not compose feedback — every one of
+not grade, does not touch mastery and does not compose feedback: every one of
 those lives behind the pipeline so that all seven task kinds cannot diverge.
 
 Two things it *does* own:
@@ -41,7 +41,7 @@ class HintRequestIn(BaseModel):
 
     ``level`` is optional; omitting it takes the next unrevealed rung. Naming a
     higher level is allowed and charges for every rung up to it, which is why this
-    is a POST and not a GET — see ``attempts.reveal_hint``.
+    is a POST and not a GET. See ``attempts.reveal_hint``.
     """
 
     level: int | None = Field(default=None, ge=1, le=10)
@@ -182,7 +182,7 @@ async def _attempt_for(session, *, attempt_id: str, user_id, task_id: str):
     """Load an attempt and refuse it if it cannot accept more work.
 
     ``load_attempt`` already scopes to the caller, so the task check is not an
-    ownership check — it stops a client from posting task B's answer against task
+    ownership check: it stops a client from posting task B's answer against task
     A's attempt, which would file the evidence under the wrong skill.
 
     A ``failed`` attempt is still open for business: an attempt is a working

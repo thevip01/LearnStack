@@ -1,7 +1,7 @@
 [project]
 name = "learnos-api"
 version = "0.1.0"
-description = "LearnOS API — a generic subject runtime served over HTTP."
+description = "LearnOS API: a generic subject runtime served over HTTP."
 requires-python = ">=3.12"
 
 # Versions are pinned to compatible ranges rather than exact pins: the lockfile

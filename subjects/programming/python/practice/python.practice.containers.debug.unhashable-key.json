@@ -7,13 +7,13 @@
   "skills": ["python.skill.choose-a-container"],
   "difficulty": 5,
   "estimated_minutes": 15,
-  "prompt_md": "A tagging service groups incidents by the set of services they touch. It worked in development and fails on the first real payload.\n\nRead the traceback, find the reason the key is rejected, and fix `group_by_services` so the grouping key is hashable **and** order-insensitive — two incidents touching `['api', 'db']` and `['db', 'api']` are the same group.\n\nDo not change the tests, and do not work around the problem by serialising keys to strings: the tests check that the key round-trips back to a real collection of service names.",
+  "prompt_md": "A tagging service groups incidents by the set of services they touch. It worked in development and fails on the first real payload.\n\nRead the traceback, find the reason the key is rejected, and fix `group_by_services` so the grouping key is hashable **and** order-insensitive: two incidents touching `['api', 'db']` and `['db', 'api']` are the same group.\n\nDo not change the tests, and do not work around the problem by serialising keys to strings: the tests check that the key round-trips back to a real collection of service names.",
   "symptom_md": "The service raises on startup as soon as it processes the first incident batch:\n\n```\nTraceback (most recent call last):\n  File \"grouping.py\", line 41, in <module>\n    print(group_by_services(SAMPLE))\n  File \"grouping.py\", line 24, in group_by_services\n    groups[key].append(incident)\nTypeError: unhashable type: 'list'\n```\n\nDevelopment used a fixture where every incident touched exactly one service, so the key happened to be a one-element list and nobody noticed. Production payloads carry several.",
   "tags": ["hashable", "TypeError", "frozenset", "dict-key", "defaultdict"],
   "requirements_md": [
     "`group_by_services(incidents)` returns a mapping from a service-set key to the list of incidents touching exactly that set.",
     "The key must be hashable and order-insensitive: `['api', 'db']` and `['db', 'api']` group together.",
-    "The key must remain a collection of service names — not a joined string.",
+    "The key must remain a collection of service names, not a joined string.",
     "Duplicate service names within one incident must not create a separate group.",
     "Incident order within each group must match input order.",
     "Do not modify the test files."
@@ -81,7 +81,7 @@
     },
     {
       "level": 2,
-      "md": "A list is mutable, so its hash could change after insertion and the entry would become unfindable — hence no `__hash__`. You need an immutable key. But note the second requirement: the key must also treat `['api','db']` and `['db','api']` as equal, so `tuple(...)` alone is not enough and `tuple(sorted(...))` still keeps duplicates apart. Which immutable built-in collection is *inherently* unordered and duplicate-free?",
+      "md": "A list is mutable, so its hash could change after insertion and the entry would become unfindable, hence no `__hash__`. You need an immutable key. But note the second requirement: the key must also treat `['api','db']` and `['db','api']` as equal, so `tuple(...)` alone is not enough and `tuple(sorted(...))` still keeps duplicates apart. Which immutable built-in collection is *inherently* unordered and duplicate-free?",
       "reveals_solution": false
     },
     {
@@ -90,7 +90,7 @@
       "reveals_solution": true
     }
   ],
-  "root_cause_md": "`dict` and `set` require keys to be hashable, and mutable built-in containers deliberately do not implement `__hash__` — if a key's hash could change after insertion, the entry would be unreachable and the invariant of the hash table would be broken. The fixture masked it because a one-element list is still a list; the type was always wrong, the payload just never exercised it.\n\nThe deeper lesson is that the fix is a *type* choice, not a normalisation step. `frozenset` encodes \"an unordered, duplicate-free, immutable collection\" directly, so order-insensitivity and duplicate collapsing come for free. Reaching for `tuple(sorted(services))` would satisfy the hashability error while leaving `['api','api','db']` as a distinct group — a bug that would surface later and much more confusingly.",
+  "root_cause_md": "`dict` and `set` require keys to be hashable, and mutable built-in containers deliberately do not implement `__hash__`: if a key's hash could change after insertion, the entry would be unreachable and the invariant of the hash table would be broken. The fixture masked it because a one-element list is still a list; the type was always wrong, the payload just never exercised it.\n\nThe deeper lesson is that the fix is a *type* choice, not a normalisation step. `frozenset` encodes \"an unordered, duplicate-free, immutable collection\" directly, so order-insensitivity and duplicate collapsing come for free. Reaching for `tuple(sorted(services))` would satisfy the hashability error while leaving `['api','api','db']` as a distinct group, a bug that would surface later and much more confusingly.",
   "evaluation": {
     "strategy": "pytest",
     "pass_threshold": 1.0,

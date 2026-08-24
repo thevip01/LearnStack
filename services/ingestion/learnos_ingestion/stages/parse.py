@@ -1,7 +1,7 @@
 """Parse and clean: bytes to text worth chunking.
 
 Parse and clean are one module because the boundary between them is artificial in
-practice — you cannot extract a heading path from HTML without having already
+practice: you cannot extract a heading path from HTML without having already
 decided that the nav sidebar is not content. Splitting them into two passes would
 mean either parsing twice or passing a half-cleaned tree between stages.
 
@@ -168,7 +168,7 @@ def parse_html(body: bytes, *, url: str | None) -> tuple[str, str | None, list[s
 
 
 def parse_markdown(text: str) -> tuple[str, str | None, list[str], list[dict]]:
-    """Markdown needs no conversion — only heading and fence extraction."""
+    """Markdown needs no conversion, only heading and fence extraction."""
     lines = text.split("\n")
     title: str | None = None
     heading_path: list[str] = []
@@ -268,13 +268,13 @@ def parse_document(
 async def run_parse(
     documents: list[tuple[str, str, str, bytes, str | None]],
     *,
-    repo,  # IngestionRepository — untyped to avoid a circular import
+    repo,  # IngestionRepository, untyped to avoid a circular import
     dry_run: bool = True,
 ) -> tuple[list[ParsedDocument], StageReport]:
     """Parse every touched document.
 
     Takes ``(document_id, source_id, media_type, body, url)`` tuples rather than
-    ``RawDocument`` objects because the body is not on the model — it lives in the
+    ``RawDocument`` objects because the body is not on the model: it lives in the
     object store, and the pipeline is what knows how to pair them.
     """
     report = StageReport(stage=IngestionStage.PARSE, items_in=len(documents))
@@ -304,7 +304,7 @@ async def run_parse(
 def clean_report(parsed: list[ParsedDocument], raw_bytes: int) -> StageReport:
     """The clean stage's report.
 
-    Clean has no separate pass — ``clean_text`` runs inside parse — so this
+    Clean has no separate pass (``clean_text`` runs inside parse), so this
     summarises what that removed. Reported separately because the ratio is the
     single most useful signal that a source's boilerplate selectors are wrong: a
     docs site that suddenly cleans down to 5% of its bytes has changed its template.
@@ -322,6 +322,6 @@ def clean_report(parsed: list[ParsedDocument], raw_bytes: int) -> StageReport:
             report.ok = False
             report.messages.append(
                 "under 5% of bytes survived cleaning, which usually means the source changed template "
-                "and CHROME_HINTS is now deleting content — check a parsed document before approving candidates"
+                "and CHROME_HINTS is now deleting content; check a parsed document before approving candidates"
             )
     return report

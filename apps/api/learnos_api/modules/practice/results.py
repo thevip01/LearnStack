@@ -1,6 +1,6 @@
 """What a grader returns.
 
-Every grader — quiz, code, sql, terminal, architecture, incident — produces this
+Every grader (quiz, code, sql, terminal, architecture, incident) produces this
 one shape, and the submission pipeline never branches on task kind again after
 the grader returns. That is the whole reason this dataclass exists: without it,
 "what does a pass mean" would be answered slightly differently in seven places.

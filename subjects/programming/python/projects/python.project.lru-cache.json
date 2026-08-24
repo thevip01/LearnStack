@@ -3,11 +3,11 @@
   "title": "Build an O(1) LRU cache",
   "subject_id": "programming.python",
   "summary": "Implement a fixed-capacity least-recently-used cache whose get and put are both O(1), then prove it holds up under a large workload.",
-  "brief_md": "We keep recomputing expensive results and our memory keeps growing. Build us a **fixed-capacity LRU cache**: a bounded key/value store that, when full, evicts the *least-recently-used* entry to make room.\n\nThe whole point of this module is that the complexity of the data structure you choose is part of the contract, so the headline requirement is performance: **`get` and `put` must both be O(1) amortised**, not O(n). A version that scans a list to find the least-recently-used key on every write will pass the small correctness tests and then fall over in production — the final milestone exists to catch exactly that.\n\nBuild a `LRUCache` class in `lru.py` with this contract:\n\n- `LRUCache(capacity)` — `capacity` is a positive integer; a non-positive capacity raises `ValueError`.\n- `put(key, value)` — insert or update. Updating an existing key refreshes its recency. When the cache is at capacity and a *new* key arrives, evict the least-recently-used key first.\n- `get(key)` — return the value and mark the key most-recently-used. A missing key raises `KeyError` (and counts as a miss).\n- `key in cache` — a non-mutating peek: it must **not** change recency or the hit/miss counters.\n- `len(cache)` — current number of stored entries.\n- `cache.stats` — a dict `{\"hits\": int, \"misses\": int}` counting `get` outcomes.\n- `repr(cache)` — includes the capacity and current size.\n\nUse the container that makes the recency operations O(1). `collections.OrderedDict` (with `move_to_end` and `popitem(last=False)`) is the intended tool; a hand-rolled dict-plus-doubly-linked-list is also accepted. Do not reach for `functools.lru_cache` — the exercise is to build the mechanism, not call it.",
+  "brief_md": "We keep recomputing expensive results and our memory keeps growing. Build us a **fixed-capacity LRU cache**: a bounded key/value store that, when full, evicts the *least-recently-used* entry to make room.\n\nThe whole point of this module is that the complexity of the data structure you choose is part of the contract, so the headline requirement is performance: **`get` and `put` must both be O(1) amortised**, not O(n). A version that scans a list to find the least-recently-used key on every write will pass the small correctness tests and then fall over in production: the final milestone exists to catch exactly that.\n\nBuild a `LRUCache` class in `lru.py` with this contract:\n\n- `LRUCache(capacity)`: `capacity` is a positive integer; a non-positive capacity raises `ValueError`.\n- `put(key, value)`: insert or update. Updating an existing key refreshes its recency. When the cache is at capacity and a *new* key arrives, evict the least-recently-used key first.\n- `get(key)`: return the value and mark the key most-recently-used. A missing key raises `KeyError` (and counts as a miss).\n- `key in cache`: a non-mutating peek that must **not** change recency or the hit/miss counters.\n- `len(cache)`: current number of stored entries.\n- `cache.stats`: a dict `{\"hits\": int, \"misses\": int}` counting `get` outcomes.\n- `repr(cache)`: includes the capacity and current size.\n\nUse the container that makes the recency operations O(1). `collections.OrderedDict` (with `move_to_end` and `popitem(last=False)`) is the intended tool; a hand-rolled dict-plus-doubly-linked-list is also accepted. Do not reach for `functools.lru_cache`: the exercise is to build the mechanism, not call it.",
   "difficulty": 7,
   "estimated_hours": 3.5,
   "requirements": [
-    "`get` and `put` are both O(1) amortised — no linear scan per operation.",
+    "`get` and `put` are both O(1) amortised: no linear scan per operation.",
     "`put` on a full cache evicts the least-recently-used key before inserting a new one.",
     "Both `get` and `put` on an existing key refresh that key's recency.",
     "`get` on a missing key raises `KeyError`; a non-positive capacity raises `ValueError`.",
@@ -15,13 +15,13 @@
     "Recency and eviction are backed by an O(1) structure (OrderedDict or a linked list), not a re-sorted list."
   ],
   "constraints": [
-    "Do not use `functools.lru_cache` or any third-party cache library — build the mechanism yourself.",
+    "Do not use `functools.lru_cache` or any third-party cache library: build the mechanism yourself.",
     "No linear scan (`min`, `.index`, re-sorting the keys) on the hot path of `get`/`put`.",
     "Standard library only."
   ],
   "non_goals": [
-    "Thread safety — assume single-threaded access.",
-    "Time-based expiry (TTL) — eviction is purely by recency and capacity.",
+    "Thread safety: assume single-threaded access.",
+    "Time-based expiry (TTL): eviction is purely by recency and capacity.",
     "Persistence to disk."
   ],
   "required_skills": [
@@ -54,7 +54,7 @@
     {
       "id": "python.project.lru-cache.m1-core",
       "title": "Core store: put, get, and the two error contracts",
-      "description_md": "Get the basic store working. `put` inserts, `get` returns the value or raises `KeyError`, `len` reflects the count, and constructing with a non-positive capacity raises `ValueError`. Recency and eviction come next — for now just store and retrieve.",
+      "description_md": "Get the basic store working. `put` inserts, `get` returns the value or raises `KeyError`, `len` reflects the count, and constructing with a non-positive capacity raises `ValueError`. Recency and eviction come next: for now just store and retrieve.",
       "skills": ["python.skill.choose-a-container", "python.skill.design-function-signatures"],
       "weight": 1.0,
       "tests": [
@@ -90,7 +90,7 @@
     {
       "id": "python.project.lru-cache.m3-introspection",
       "title": "Introspection: in, stats and repr",
-      "description_md": "Round out the type's protocols. `key in cache` is a non-mutating peek — it must not change recency and must not touch the hit/miss counters. `cache.stats` reports `{\"hits\", \"misses\"}` accumulated by `get`. `repr(cache)` shows the capacity and current size so it is useful in a debugger.",
+      "description_md": "Round out the type's protocols. `key in cache` is a non-mutating peek: it must not change recency and must not touch the hit/miss counters. `cache.stats` reports `{\"hits\", \"misses\"}` accumulated by `get`. `repr(cache)` shows the capacity and current size so it is useful in a debugger.",
       "skills": ["python.skill.implement-dunder-protocols"],
       "weight": 1.0,
       "tests": [
@@ -117,7 +117,7 @@
     {
       "id": "python.project.lru-cache.m4-scale",
       "title": "Prove it is O(1) under load",
-      "description_md": "The correctness tests above pass for an O(n) implementation too. This milestone runs a large workload — hundreds of thousands of operations against a bounded cache — and asserts the results are correct. A per-operation linear scan turns this into hundreds of millions of steps and blows the sandbox timeout; an O(1) OrderedDict-based implementation finishes comfortably. Passing here is your evidence that the complexity contract actually holds.",
+      "description_md": "The correctness tests above pass for an O(n) implementation too. This milestone runs a large workload (hundreds of thousands of operations against a bounded cache) and asserts the results are correct. A per-operation linear scan turns this into hundreds of millions of steps and blows the sandbox timeout; an O(1) OrderedDict-based implementation finishes comfortably. Passing here is your evidence that the complexity contract actually holds.",
       "skills": ["python.skill.analyse-complexity"],
       "weight": 1.0,
       "tests": [
@@ -162,7 +162,7 @@
       },
       {
         "id": "rub-complexity",
-        "description": "Operations are O(1) amortised — the large-workload milestone passes within the sandbox timeout.",
+        "description": "Operations are O(1) amortised: the large-workload milestone passes within the sandbox timeout.",
         "weight": 0.25,
         "dimension": "production",
         "automated": true

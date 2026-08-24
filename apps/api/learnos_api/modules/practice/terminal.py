@@ -1,7 +1,7 @@
 """Terminal grading.
 
 A terminal task gives the learner a filesystem and a goal, they submit a sequence
-of commands, and the grader checks the *end state* — not the commands. That
+of commands, and the grader checks the *end state*, not the commands. That
 distinction is the whole design: there are five reasonable ways to move a file,
 and a grader that pattern-matches the command string teaches the learner to guess
 the author's phrasing rather than to use the tool.
@@ -137,7 +137,7 @@ def _parse(stdout: str) -> dict[str, Any] | None:
 def _disallowed(task: TerminalTask, commands: Sequence[str]) -> list[str]:
     """Commands the task's allowlist forbids.
 
-    This is a teaching constraint, not a security control — the sandbox is what
+    This is a teaching constraint, not a security control: the sandbox is what
     provides safety. A task that says "do this with ``find``" is entitled to
     reject ``python -c``, and the rejection has to be explained rather than
     silently scored as a fail.
@@ -254,7 +254,7 @@ def _terminal_feedback(tests: list[TestResult], passed: bool, failed_commands: l
         lines.append("")
         lines.append("Unmet goals:")
         for test in failing[:8]:
-            note = f" — {test.message.splitlines()[0][:200]}" if test.message else ""
+            note = f": {test.message.splitlines()[0][:200]}" if test.message else ""
             lines.append(f"- `{test.name}`{note}")
     if failed_commands:
         lines.append("")
@@ -262,7 +262,7 @@ def _terminal_feedback(tests: list[TestResult], passed: bool, failed_commands: l
         for entry in failed_commands[:5]:
             stderr = str(entry.get("stderr") or "").splitlines()
             first = stderr[0][:160] if stderr else ""
-            lines.append(f"- `{entry.get('command')}` (exit {entry.get('exit_code')}){' — ' + first if first else ''}")
+            lines.append(f"- `{entry.get('command')}` (exit {entry.get('exit_code')}){': ' + first if first else ''}")
     return "\n".join(lines)
 
 

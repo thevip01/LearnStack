@@ -44,7 +44,7 @@ export type NavTreeNode = { item: NavigationItem; children: NavTreeNode[] };
 /**
  * `navigation` arrives flattened, ordered and depth-tagged, so the tree is
  * rebuilt from `parent_id` in one pass. Items whose parent is missing are
- * attached at the root rather than dropped — a package with a dangling
+ * attached at the root rather than dropped: a package with a dangling
  * `parent_id` should still be navigable.
  */
 export function buildNavTree(items: NavigationItem[]): NavTreeNode[] {

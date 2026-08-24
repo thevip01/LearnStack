@@ -1,7 +1,7 @@
 """Evidence: the only thing this system actually stores about a learner.
 
 ``mastery_evidence`` is append-only. Nothing updates a row, nothing deletes one,
-and no score is ever written to it — a score is a *derived* value computed from
+and no score is ever written to it: a score is a *derived* value computed from
 the rows by ``learnos_schema.mastery``. That choice costs a little query time and
 buys three things:
 

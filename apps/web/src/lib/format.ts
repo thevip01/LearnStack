@@ -85,7 +85,7 @@ export const MASTERY_STATE_LABELS: Record<MasteryState, string> = {
 };
 
 /**
- * Status tone plus a glyph. Colour alone is never the signal — every caller
+ * Status tone plus a glyph. Colour alone is never the signal, so every caller
  * renders the glyph or the label beside it.
  */
 export function masteryStateTone(state: string): { className: string; glyph: string } {
@@ -110,7 +110,7 @@ export function difficultyLabel(difficulty: number | null | undefined): string {
 
 /**
  * Mirrored from learnos_schema/mastery.py so the hint ladder can state the cost
- * before a learner spends it. If these drift, the schema is authoritative — the
+ * before a learner spends it. If these drift, the schema is authoritative: the
  * UI only ever previews the penalty, the API applies it.
  */
 export const HINT_PENALTY_PER_LEVEL = 0.15;

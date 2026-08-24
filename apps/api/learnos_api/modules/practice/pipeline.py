@@ -1,20 +1,20 @@
 """The submission pipeline: one path from posted payload to graded response.
 
 Every practice kind funnels through :func:`submit`. That is the point of the
-``GradeOutcome`` shape — after ``_grade`` returns, nothing in this file knows or
+``GradeOutcome`` shape: after ``_grade`` returns, nothing in this file knows or
 cares whether the learner wrote Python, drew a diagram or answered a quiz. The
 steps are always the same:
 
 1. Check the payload's ``kind`` against the authored task's kind.
 2. Grade (pure, or via the sandbox).
-3. Snapshot mastery *before*, write evidence, snapshot *after* — so the deltas
+3. Snapshot mastery *before*, write evidence, snapshot *after*, so the deltas
    the UI animates are measured rather than predicted.
 4. Update ability and the failure counter, log activity, invalidate the cache.
 5. Decide what may now be revealed, and what to suggest next.
 
 Ordering note: evidence is written before the "after" snapshot is computed, and
 both happen inside the request's transaction. If the commit fails, the learner
-sees an error and no mastery moved — which is the only honest failure mode. A
+sees an error and no mastery moved, which is the only honest failure mode. A
 design that returned the response first and persisted afterwards would show
 progress that does not exist.
 """

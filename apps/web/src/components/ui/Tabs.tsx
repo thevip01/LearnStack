@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export type TabItem = { id: string; label: ReactNode; badge?: ReactNode; disabled?: boolean };
 
 /**
- * Roving-tabindex tablist. Arrow keys move, Home/End jump — required because a
+ * Roving-tabindex tablist. Arrow keys move, Home/End jump, required because a
  * slot holding several panels is navigated entirely from the keyboard.
  */
 export function Tabs({

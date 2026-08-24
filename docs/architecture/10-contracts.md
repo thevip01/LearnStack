@@ -171,8 +171,8 @@ type RecommendationsOut = {
 }
 ```
 
-`reason` is a short human sentence — "IAM gates four skills you have not
-started" — and is displayed verbatim. The recommender must produce it; the
+`reason` is a short human sentence ("IAM gates four skills you have not
+started") and is displayed verbatim. The recommender must produce it; the
 frontend never composes one.
 
 Readiness gate: a prerequisite skill blocks when its `overall < 0.6`. The
@@ -248,7 +248,7 @@ GET  /api/v1/execution/runs/{id}   -> ExecutionResult
 Runs under 5 seconds of declared timeout are executed inline and return `200`.
 Anything longer is queued and returns `202` with a polling id. Ad-hoc runs are
 rate limited per user and always use the tightest default limits, regardless of
-what the caller asks for — a runnable snippet in a lesson cannot request the
+what the caller asks for: a runnable snippet in a lesson cannot request the
 network.
 
 ---

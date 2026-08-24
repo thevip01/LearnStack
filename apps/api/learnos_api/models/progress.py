@@ -2,8 +2,8 @@
 
 ``mastery_evidence`` is the only table in this schema that is authoritative about
 what a learner knows, and it is append-only. Nothing updates a score in place.
-That is what makes it possible to change the mastery maths — decay half-life,
-hint penalty, dimension weights — and recompute history rather than migrate it,
+That is what makes it possible to change the mastery maths (decay half-life,
+hint penalty, dimension weights) and recompute history rather than migrate it,
 and it is why a grader bug is recoverable.
 
 ``user_skill_state`` is a cache of the rollup plus the two pieces of adaptive
@@ -28,7 +28,7 @@ class MasteryEvidence(Base):
 
     No ``updated_at``: rows are never updated. ``created_at`` is the observation
     time and feeds the recency decay, so it is set explicitly by the writer rather
-    than defaulted by the database — replaying historical evidence has to be able
+    than defaulted by the database: replaying historical evidence has to be able
     to backdate.
     """
 

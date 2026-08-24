@@ -6,7 +6,7 @@ stub is pure computation over text, and an LLM extractor is a network client wit
 retries and a token budget. What they share is a signature.
 
 **No LLM client ships wired.** ``EXTRACTOR=stub`` is the default, and the stub makes
-no network call. This is not a placeholder for something missing — it is what makes
+no network call. This is not a placeholder for something missing: it is what makes
 the whole pipeline runnable and testable on a fresh checkout with no key, and it is
 what makes the stage boundaries verifiable independently of a model's behaviour. The
 LLM path is one file behind an optional dependency; see ``llm.py``.
@@ -38,8 +38,8 @@ class Extractor(Protocol):
 
         Must not raise for content reasons. A chunk it cannot make sense of yields
         either no candidate or a low-confidence one with a ``ValidationIssue``
-        attached — an exception would abort the batch and lose the candidates it had
-        already produced.
+        attached, because an exception would abort the batch and lose the candidates it
+        had already produced.
         """
         ...
 

@@ -24,14 +24,14 @@
         { "id": "d", "md": "`limit` becomes `None`." }
       ],
       "answer": "a",
-      "explanation_md": "`0` is falsy, so `or` moves on and evaluates its right operand. The pattern means \"if the value is falsy, replace it\" — not \"if the value is missing, replace it\". Use `limit = 100 if limit is None else limit`.",
+      "explanation_md": "`0` is falsy, so `or` moves on and evaluates its right operand. The pattern means \"if the value is falsy, replace it\", not \"if the value is missing, replace it\". Use `limit = 100 if limit is None else limit`.",
       "skills": ["python.skill.write-truthiness-safe-conditionals"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/expressions.html#boolean-operations",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Boolean operations — x or y"
+          "locator": "Boolean operations: x or y"
         }
       ]
     },
@@ -52,7 +52,7 @@
         { "id": "g", "md": "`\" \"` (a single space)" }
       ],
       "answer": ["a", "b", "d", "f"],
-      "explanation_md": "Zero of any numeric type and every empty built-in container are falsy. A non-empty string is truthy regardless of what it contains — `\"0\"` and `\" \"` are both truthy, which is why validating user input with `if value:` accepts `\"0\"` and rejects `\"\"`. Midnight was falsy in Python 2 but is truthy from 3.5 onwards.",
+      "explanation_md": "Zero of any numeric type and every empty built-in container are falsy. A non-empty string is truthy regardless of what it contains: `\"0\"` and `\" \"` are both truthy, which is why validating user input with `if value:` accepts `\"0\"` and rejects `\"\"`. Midnight was falsy in Python 2 but is truthy from 3.5 onwards.",
       "skills": ["python.skill.write-truthiness-safe-conditionals"],
       "sources": [
         {
@@ -73,7 +73,7 @@
       "difficulty": 4,
       "dimension": "concept",
       "weight": 1.0,
-      "explanation_md": "`is None` is an identity test, so it is true only for `None` itself — `0`, `[]` and `\"\"` all pass through untouched. When `None` is a legitimate value, a module-level `object()` instance works as a unique sentinel: nothing a caller can construct is identical to it.",
+      "explanation_md": "`is None` is an identity test, so it is true only for `None` itself: `0`, `[]` and `\"\"` all pass through untouched. When `None` is a legitimate value, a module-level `object()` instance works as a unique sentinel: nothing a caller can construct is identical to it.",
       "skills": ["python.skill.write-truthiness-safe-conditionals"],
       "sources": [
         {
@@ -93,14 +93,14 @@
       "weight": 1.0,
       "answer": ["fallback", "\"fallback\"", "'fallback'", "the string fallback"],
       "must_include": ["fallback"],
-      "explanation_md": "`or` returns one of its operands, not a boolean. Since `[]` is falsy it returns the right operand, the string `\"fallback\"`. Symmetrically, `\"a\" and 0` returns `0`, and `[] and boom()` never calls `boom` at all — short-circuiting is why `if user and user.is_active` is safe.",
+      "explanation_md": "`or` returns one of its operands, not a boolean. Since `[]` is falsy it returns the right operand, the string `\"fallback\"`. Symmetrically, `\"a\" and 0` returns `0`, and `[] and boom()` never calls `boom` at all: short-circuiting is why `if user and user.is_active` is safe.",
       "skills": ["python.skill.write-truthiness-safe-conditionals"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/expressions.html#boolean-operations",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Boolean operations — the value returned"
+          "locator": "Boolean operations: the value returned"
         }
       ]
     },
@@ -112,20 +112,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`False` — `__bool__` is consulted first and `__len__` is never called." },
-        { "id": "b", "md": "`True` — a non-zero `__len__` always wins." },
+        { "id": "a", "md": "`False`: `__bool__` is consulted first and `__len__` is never called." },
+        { "id": "b", "md": "`True`: a non-zero `__len__` always wins." },
         { "id": "c", "md": "`TypeError`, because the two disagree." },
         { "id": "d", "md": "Undefined; it depends on the interpreter." }
       ],
       "answer": "a",
-      "explanation_md": "The protocol is: try `__bool__`, fall back to `__len__() != 0`, and default to true if neither exists. That fallback is why every empty container is falsy without defining `__bool__`, and why a custom class with no `__len__` is always truthy — including one that wraps an empty result set.",
+      "explanation_md": "The protocol is: try `__bool__`, fall back to `__len__() != 0`, and default to true if neither exists. That fallback is why every empty container is falsy without defining `__bool__`, and why a custom class with no `__len__` is always truthy, including one that wraps an empty result set.",
       "skills": ["python.skill.write-truthiness-safe-conditionals"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/datamodel.html#object.__bool__",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "object.__bool__ — fallback to __len__"
+          "locator": "object.__bool__: fallback to __len__"
         }
       ]
     }
@@ -144,7 +144,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) `limit` becomes `100` — the caller's `0` is swallowed. (2) Falsy: `0.0`, `[]`, `Decimal(\"0\")`, `{}`; truthy: `\"0\"`, `\" \"`, `time(0, 0)`. (3) `is`, then `object`. (4) `\"fallback\"`. (5) `False` — `__bool__` wins and `__len__` is never consulted.",
+      "md": "Answers: (1) `limit` becomes `100`: the caller's `0` is swallowed. (2) Falsy: `0.0`, `[]`, `Decimal(\"0\")`, `{}`; truthy: `\"0\"`, `\" \"`, `time(0, 0)`. (3) `is`, then `object`. (4) `\"fallback\"`. (5) `False`: `__bool__` wins and `__len__` is never consulted.",
       "reveals_solution": true
     }
   ],

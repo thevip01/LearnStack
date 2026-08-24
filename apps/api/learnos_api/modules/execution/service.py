@@ -262,7 +262,7 @@ class ExecutionService:
         """Insert a queued row, start the run in the background, return its id.
 
         The row is written before this returns so that the ``execution_id`` handed
-        back in the 202 is immediately pollable — a client that polls faster than
+        back in the 202 is immediately pollable: a client that polls faster than
         we insert would otherwise get a 404 for a run that exists.
         """
         execution_id = str(uuid.uuid4())
@@ -340,7 +340,7 @@ class ExecutionService:
         """Insert or update the ``executions`` row for a finished run.
 
         Output goes to object storage first: if that fails the row still lands with
-        null refs, which is a run you can see but whose logs are gone — strictly
+        null refs, which is a run you can see but whose logs are gone, strictly
         better than losing the record of the run.
         """
         stdout_ref = None

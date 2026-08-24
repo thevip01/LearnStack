@@ -21,7 +21,7 @@
 #      columns are installed at runtime by `knowledge.search.install_full_text`
 #      and are filtered out of autogenerate by `include_object` in env.py. If you
 #      want them under migration control instead, move that DDL here and delete
-#      the filter — but do both, not one.
+#      the filter, but do both, not one.
 #   2. `JSONVariant` renders as JSONB on Postgres and JSON on SQLite. Check the
 #      generated migration says JSONB.
 #   3. `uuid_pk` columns need `postgresql.UUID(as_uuid=True)`; if autogenerate

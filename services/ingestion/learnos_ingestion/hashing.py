@@ -5,7 +5,7 @@ That is what makes a re-crawl a diff instead of a rebuild: fetch the same page
 twice and you get the same ``document_id``, so the second run recognises it as
 unchanged and skips parse, chunk, embed and extract for it. With random ids the
 pipeline would have no way to tell "this page again" from "a new page", and every
-refresh would re-extract the entire source — burning extractor budget and
+refresh would re-extract the entire source, burning extractor budget and
 detaching learner progress from concepts that never actually changed.
 
 The hash is truncated to 40 hex characters. Full SHA-256 is 64, which does not fit
@@ -42,7 +42,7 @@ def content_hash(*parts: str | bytes) -> str:
 
 
 def stable_id(prefix: str, *parts: str) -> str:
-    """``<prefix>.<hash>`` — a content-derived identifier.
+    """``<prefix>.<hash>``: a content-derived identifier.
 
     Used where the id has to be stable across runs but does not have to be
     readable: documents and chunks. Concept and practice ids are authored by

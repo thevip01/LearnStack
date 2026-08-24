@@ -61,7 +61,7 @@ def test_file_path(test: TestCase) -> str:
 def test_functions(test: TestCase) -> list[str]:
     """Function names in a test body, so the harness can map node ids to ids.
 
-    Derived here because this is the only layer that holds the body — the
+    Derived here because this is the only layer that holds the body. The
     manifest deliberately does not carry it.
     """
     if not test.body:
@@ -91,8 +91,8 @@ def test_specs(tests: Sequence[TestCase]) -> list[TestSpec]:
 def authored_baseline(task: CodeTask) -> list[SourceFile]:
     """The files the learner starts from.
 
-    A debug task hands over ``broken_files`` — the point of the exercise is that
-    the starting state is wrong — and falls back to ``starter_files`` if an author
+    A debug task hands over ``broken_files`` (the point of the exercise is that
+    the starting state is wrong) and falls back to ``starter_files`` if an author
     left the list empty.
     """
     if isinstance(task, DebugTask) and task.broken_files:
@@ -254,7 +254,7 @@ async def grade_code(
             passed=False,
             feedback_md=(
                 "This task has no runnable tests, so there is nothing to grade. "
-                "That is a content bug — please report it."
+                "That is a content bug. Please report it."
             ),
             notes=["task has no test bodies"],
         )
@@ -319,13 +319,13 @@ def _no_report_feedback(status: str, result: ExecutionResult) -> str:
     if status == "memory_exceeded":
         return (
             "**Ran out of memory.** Something is holding on to more data than the "
-            "sandbox allows — often a list that grows inside a loop."
+            "sandbox allows, often a list that grows inside a loop."
         )
     detail = (result.stderr or result.stdout or "").strip()
     tail = "\n\n```\n" + detail[-1200:] + "\n```" if detail else ""
     return (
         "**The test run did not complete.** Nothing was scored because the test "
-        "suite could not be collected — usually a syntax error or an import that "
+        "suite could not be collected, usually a syntax error or an import that "
         "fails before any test runs." + tail
     )
 
@@ -355,7 +355,7 @@ def _code_feedback(
         lines.append("")
         lines.append("Failing checks:")
         for test in failing[:8]:
-            note = f" — {test.message.splitlines()[0][:200]}" if test.message else ""
+            note = f": {test.message.splitlines()[0][:200]}" if test.message else ""
             lines.append(f"- `{test.name}`{note}")
         if len(failing) > 8:
             lines.append(f"- …and {len(failing) - 8} more")

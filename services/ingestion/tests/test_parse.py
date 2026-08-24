@@ -3,7 +3,7 @@
 The stage that decides what counts as content. Its failure mode is the quietest one
 in the pipeline: a selector that removes too much deletes text without erroring, and
 nobody notices until a learner reads a concept with a hole in it. So the tests here
-lean on the two things that are checkable — code samples survive byte-exact, and a
+lean on the two things that are checkable: code samples survive byte-exact, and a
 page that cleans down to nothing is reported rather than stored.
 """
 
@@ -41,7 +41,7 @@ class TestCleanText:
         """Deliberately not normalising quotes or dashes.
 
         A smart quote in prose is correct and a smart quote in a code sample is a bug
-        in the source — this function cannot tell them apart, and guessing would
+        in the source: this function cannot tell them apart, and guessing would
         corrupt code, which is the one thing that must survive byte-exact.
         """
         text = "Use “smart” quotes — they are fine."
@@ -78,7 +78,7 @@ class TestParseMarkdown:
 
     def test_text_keeps_the_fences(self) -> None:
         """The chunker splits on fences to avoid bisecting them, so it needs them
-        present in the text — extracting them is additive, not a move."""
+        present in the text: extracting them is additive, not a move."""
         text, _, _, _ = parse_markdown("# T\n\n```py\nx = 1\n```\n")
         assert "```py" in text
 

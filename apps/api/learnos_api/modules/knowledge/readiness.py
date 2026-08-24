@@ -55,7 +55,7 @@ def blocking_prerequisites(
     """Direct prerequisites that are below the threshold.
 
     Only *direct* prerequisites are reported. If A needs B needs C and both are
-    unstarted, the actionable answer is B — telling the learner to go and do C as
+    unstarted, the actionable answer is B: telling the learner to go and do C as
     well is technically true and practically noise. C surfaces once B is opened.
     """
     index = package.curriculum.skill_index()
@@ -108,7 +108,7 @@ def is_ready(package: SubjectPackage, skill_id: str, masteries: dict[str, SkillM
 def concept_mastery(concept: Concept, masteries: dict[str, SkillMastery]) -> float | None:
     """A concept's mastery is the mean over the skills it feeds.
 
-    Concepts are not scored directly — nothing is measured by reading. What can be
+    Concepts are not scored directly: nothing is measured by reading. What can be
     said about a concept is how well the learner performs the skills it explains,
     which is why this returns ``None`` when the concept claims no skills at all.
     """

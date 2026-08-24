@@ -2,7 +2,7 @@
 
 Content-addressed rather than keyed by document id, which gives deduplication for
 free: a docs site that serves the same boilerplate page under six URLs stores it
-once. It also makes the store immutable — a hash never points at different bytes —
+once. It also makes the store immutable (a hash never points at different bytes),
 so a stale read is impossible and there is nothing to invalidate.
 
 Sharded two levels deep by the first four hex characters. One flat directory with
@@ -37,7 +37,7 @@ class RawStore:
         half-written file, and since the content cannot have changed there is
         nothing to gain by taking that risk.
 
-        The write is atomic — temp file then ``replace`` — so a crash mid-crawl
+        The write is atomic (temp file then ``replace``), so a crash mid-crawl
         leaves either the whole body or nothing, never a truncated document that
         would hash differently on the next run and look like a content change.
         """

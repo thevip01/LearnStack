@@ -1,6 +1,6 @@
 """The subject registry: load once, serve many.
 
-Filesystem reads happen exactly twice in this service's life — at startup and on
+Filesystem reads happen exactly twice in this service's life: at startup and on
 ``POST /admin/subjects/reload``. Every request is served from the in-memory
 dictionary this class holds. That is the requirement that makes the "generic
 subject runtime" thesis affordable: a subject package is megabytes of JSON with

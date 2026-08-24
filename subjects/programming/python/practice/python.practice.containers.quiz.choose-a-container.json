@@ -39,7 +39,7 @@
           "source_id": "python.wiki.time-complexity",
           "url": "https://wiki.python.org/moin/TimeComplexity",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "TimeComplexity — list, deque, set, dict"
+          "locator": "TimeComplexity: list, deque, set, dict"
         }
       ]
     },
@@ -51,20 +51,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "O(n·m) — hoist `seen = set(seen_ids)` above the loop and test against that." },
-        { "id": "b", "md": "O(n) — nothing needs fixing; `in` is a single operation." },
-        { "id": "c", "md": "O(n·m) — call `sorted(seen_ids)` first so `in` can binary-search." },
-        { "id": "d", "md": "O(n log n) — the interpreter indexes the list automatically." }
+        { "id": "a", "md": "O(n·m): hoist `seen = set(seen_ids)` above the loop and test against that." },
+        { "id": "b", "md": "O(n): nothing needs fixing; `in` is a single operation." },
+        { "id": "c", "md": "O(n·m): call `sorted(seen_ids)` first so `in` can binary-search." },
+        { "id": "d", "md": "O(n log n): the interpreter indexes the list automatically." }
       ],
       "answer": "a",
-      "explanation_md": "`in` on a list is a linear scan, so this is 100 000 × 50 000 ≈ 5 × 10⁹ comparisons. Converting once to a `set` costs O(m) and makes every test O(1). Sorting does *not* help: `in` never binary-searches, even on a sorted list — you would need `bisect` explicitly.",
+      "explanation_md": "`in` on a list is a linear scan, so this is 100 000 × 50 000 ≈ 5 × 10⁹ comparisons. Converting once to a `set` costs O(m) and makes every test O(1). Sorting does *not* help: `in` never binary-searches, even on a sorted list. You would need `bisect` explicitly.",
       "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
       "sources": [
         {
           "source_id": "python.wiki.time-complexity",
           "url": "https://wiki.python.org/moin/TimeComplexity",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "list — x in s is O(n)"
+          "locator": "list: x in s is O(n)"
         }
       ]
     },
@@ -84,7 +84,7 @@
         { "id": "f", "md": "`(\"eu-west-1\", [3])`" }
       ],
       "answer": ["a", "c", "e"],
-      "explanation_md": "Hashability requires `__hash__`, and mutable built-ins deliberately lack it. A tuple is hashable only if everything inside it is, so `(\"eu-west-1\", [3])` fails. A default object is hashable by identity — which is a trap in itself: two equal-looking `Order` instances are distinct keys until you define `__eq__` **and** `__hash__` together.",
+      "explanation_md": "Hashability requires `__hash__`, and mutable built-ins deliberately lack it. A tuple is hashable only if everything inside it is, so `(\"eu-west-1\", [3])` fails. A default object is hashable by identity, which is a trap in itself: two equal-looking `Order` instances are distinct keys until you define `__eq__` **and** `__hash__` together.",
       "skills": ["python.skill.choose-a-container"],
       "sources": [
         {
@@ -109,14 +109,14 @@
         { "id": "d", "md": "`[x for i, x in enumerate(items) if x not in items[:i]]`" }
       ],
       "answer": "a",
-      "explanation_md": "`dict.fromkeys` exploits the language guarantee that dicts preserve insertion order, in one linear pass. `set` loses order entirely. Option (c) calls `list.index` per element — O(n²) — and (d) slices *and* scans per element, which is O(n²) in time and O(n²) in allocation.",
+      "explanation_md": "`dict.fromkeys` exploits the language guarantee that dicts preserve insertion order, in one linear pass. `set` loses order entirely. Option (c) calls `list.index` per element (O(n²)) and (d) slices *and* scans per element, which is O(n²) in time and O(n²) in allocation.",
       "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/stdtypes.html#dict",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "dict — insertion order is preserved"
+          "locator": "dict: insertion order is preserved"
         }
       ]
     },
@@ -142,7 +142,7 @@
           "source_id": "python.wiki.time-complexity",
           "url": "https://wiki.python.org/moin/TimeComplexity",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "deque — popleft is O(1)"
+          "locator": "deque: popleft is O(1)"
         }
       ]
     }
@@ -182,7 +182,7 @@
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/collections.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "collections — deque, Counter, defaultdict"
+      "locator": "collections: deque, Counter, defaultdict"
     }
   ],
   "provenance": {

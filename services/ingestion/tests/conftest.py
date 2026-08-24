@@ -2,8 +2,8 @@
 
 No database. Every test in this suite runs against a fake repository or a pure
 function, and that is a deliberate constraint rather than a shortcut: the properties
-worth testing here — a document id ignores its body, a code fence never gets split, a
-non-permissive licence refuses to fetch — are properties of the algorithms, and
+worth testing here (a document id ignores its body, a code fence never gets split, a
+non-permissive licence refuses to fetch) are properties of the algorithms, and
 routing them through Postgres would only make the suite slow enough that nobody runs
 it before committing.
 

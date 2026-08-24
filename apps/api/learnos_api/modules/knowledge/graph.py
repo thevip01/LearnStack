@@ -2,17 +2,17 @@
 
 One graph, two node kinds. Concepts are what a learner reads; skills are what gets
 measured. Both are in the same payload because the interesting questions are
-cross-kind — "which concept do I read to fix this red skill" — and answering them
+cross-kind ("which concept do I read to fix this red skill"), and answering them
 client-side would need two fetches and a join the frontend is not allowed to make.
 
 Edge kinds, and why each exists:
 
-* ``prerequisite`` — must come before. Drives readiness. Drawn as a hard arrow.
-* ``composes`` — a concept contributes evidence to a skill. This is the bridge
+* ``prerequisite``: must come before. Drives readiness. Drawn as a hard arrow.
+* ``composes``: a concept contributes evidence to a skill. This is the bridge
   between the two node kinds.
-* ``analogue`` — "this is the AWS equivalent of that GCP thing". Cross-subject and
+* ``analogue``: "this is the AWS equivalent of that GCP thing". Cross-subject and
   the only edge kind allowed to point outside the current package.
-* ``evidences`` — a skill's dependency on another skill within the curriculum.
+* ``evidences``: a skill's dependency on another skill within the curriculum.
 """
 
 from __future__ import annotations
@@ -113,7 +113,7 @@ def build(
     kept = [
         edge
         for edge in edges(package)
-        # An analogue's target is allowed to be absent — it is a cross-subject
+        # An analogue's target is allowed to be absent: it is a cross-subject
         # pointer by design. Every other edge must connect two rendered nodes.
         if edge.source in ids and (edge.target in ids or edge.kind == "analogue")
     ]

@@ -64,7 +64,7 @@ class TestPut:
 
         Rewriting opens a window where a reader sees a half-written file, and since the
         content cannot have changed there is nothing to gain by taking that risk. The
-        second put here would be a no-op even if the bytes disagreed — which they
+        second put here would be a no-op even if the bytes disagreed, which they
         cannot, because the key is the hash of the bytes.
         """
         digest = content_hash(b"original")

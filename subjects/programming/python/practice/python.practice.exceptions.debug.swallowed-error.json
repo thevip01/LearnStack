@@ -7,7 +7,7 @@
   "skills": ["python.skill.define-error-contracts"],
   "difficulty": 6,
   "estimated_minutes": 20,
-  "prompt_md": "`load_config` reads a JSON file and returns the parsed dict. Someone wrapped it in a broad `try/except` to \"make it robust\". Now, when anything goes wrong, callers get an empty dict and no idea why — a missing file, a permissions error, and a typo in the JSON all look identical, and unrelated bugs (like a `KeyError` in a callback) get swallowed too.\n\nRewrite the error handling so the function honours a clear contract instead of hiding failures. It must:\n\n- Raise `FileNotFoundError` when the file does not exist (do not convert it to an empty dict).\n- Raise a `ConfigError` (provided) when the file exists but contains invalid JSON, chaining the original `json.JSONDecodeError` with `raise ... from`.\n- Not catch exceptions it has no business handling (e.g. `KeyError`, `KeyboardInterrupt`).\n- Return the parsed dict on success.\n\nDo not change the tests or the `ConfigError` class.",
+  "prompt_md": "`load_config` reads a JSON file and returns the parsed dict. Someone wrapped it in a broad `try/except` to \"make it robust\". Now, when anything goes wrong, callers get an empty dict and no idea why: a missing file, a permissions error, and a typo in the JSON all look identical, and unrelated bugs (like a `KeyError` in a callback) get swallowed too.\n\nRewrite the error handling so the function honours a clear contract instead of hiding failures. It must:\n\n- Raise `FileNotFoundError` when the file does not exist (do not convert it to an empty dict).\n- Raise a `ConfigError` (provided) when the file exists but contains invalid JSON, chaining the original `json.JSONDecodeError` with `raise ... from`.\n- Not catch exceptions it has no business handling (e.g. `KeyError`, `KeyboardInterrupt`).\n- Return the parsed dict on success.\n\nDo not change the tests or the `ConfigError` class.",
   "symptom_md": "```python\n>>> load_config(\"does-not-exist.json\")\n{}                              # should raise FileNotFoundError\n>>> load_config(\"broken.json\")  # file contains: {\"a\": 1,,}\n{}                              # should raise ConfigError explaining the parse failure\n```\n\nEvery failure mode collapses to the same silent `{}`. There is no way for a caller to tell \"no config yet\" from \"the config is corrupt\", and a stray bug inside the try block would vanish the same way.",
   "tags": ["exceptions", "error-contract", "exception-chaining", "bare-except", "raise-from"],
   "requirements_md": [
@@ -75,7 +75,7 @@
   "hints": [
     {
       "level": 1,
-      "md": "`except Exception: return {}` catches *everything* — the missing-file error, the JSON parse error, and any unrelated bug — and throws away the information. The first step is to stop catching broadly and only handle the specific things you can describe.",
+      "md": "`except Exception: return {}` catches *everything* (the missing-file error, the JSON parse error, and any unrelated bug) and throws away the information. The first step is to stop catching broadly and only handle the specific things you can describe.",
       "reveals_solution": false
     },
     {
@@ -85,11 +85,11 @@
     },
     {
       "level": 3,
-      "md": "```python\ndef load_config(path):\n    with open(path) as f:                    # missing file -> FileNotFoundError\n        try:\n            return json.load(f)\n        except json.JSONDecodeError as exc:\n            raise ConfigError(f\"invalid JSON in {path}: {exc}\") from exc\n```\nNarrow `except`, explicit chaining with `from exc`, and no catch-all — so a `KeyError` from anywhere else still propagates.",
+      "md": "```python\ndef load_config(path):\n    with open(path) as f:                    # missing file -> FileNotFoundError\n        try:\n            return json.load(f)\n        except json.JSONDecodeError as exc:\n            raise ConfigError(f\"invalid JSON in {path}: {exc}\") from exc\n```\nNarrow `except`, explicit chaining with `from exc`, and no catch-all, so a `KeyError` from anywhere else still propagates.",
       "reveals_solution": true
     }
   ],
-  "root_cause_md": "`except Exception: return {}` is a **catch-all that erases the error contract**. Three very different situations — the file is absent (`FileNotFoundError`), the file is present but malformed (`json.JSONDecodeError`), and some unrelated bug (a `KeyError`, an `AttributeError`, even `MemoryError`) — are all flattened into the same silent empty dict. Callers can no longer distinguish \"there is no config\" from \"the config is corrupt\", and genuine bugs are hidden instead of surfaced.\n\nThe fix restores an explicit contract. Don't wrap `open()`, so a missing file raises `FileNotFoundError` as callers expect. Wrap only the parse step and catch only `json.JSONDecodeError`, translating it into the domain-specific `ConfigError` with `raise ConfigError(...) from exc`. The `from exc` sets `__cause__`, so the chained traceback shows both the high-level \"invalid config\" message and the exact decode error underneath — you get a meaningful contract *and* keep the diagnostic detail. Because nothing else is caught, unrelated exceptions propagate normally.",
+  "root_cause_md": "`except Exception: return {}` is a **catch-all that erases the error contract**. Three very different situations: the file is absent (`FileNotFoundError`), the file is present but malformed (`json.JSONDecodeError`), and some unrelated bug (a `KeyError`, an `AttributeError`, even `MemoryError`). All three are flattened into the same silent empty dict. Callers can no longer distinguish \"there is no config\" from \"the config is corrupt\", and genuine bugs are hidden instead of surfaced.\n\nThe fix restores an explicit contract. Don't wrap `open()`, so a missing file raises `FileNotFoundError` as callers expect. Wrap only the parse step and catch only `json.JSONDecodeError`, translating it into the domain-specific `ConfigError` with `raise ConfigError(...) from exc`. The `from exc` sets `__cause__`, so the chained traceback shows both the high-level \"invalid config\" message and the exact decode error underneath: you get a meaningful contract *and* keep the diagnostic detail. Because nothing else is caught, unrelated exceptions propagate normally.",
   "evaluation": {
     "strategy": "pytest",
     "pass_threshold": 1.0,
@@ -101,13 +101,13 @@
       "source_id": "python.pep3134",
       "url": "https://peps.python.org/pep-3134/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "PEP 3134 — Exception Chaining and Embedded Tracebacks"
+      "locator": "PEP 3134: Exception Chaining and Embedded Tracebacks"
     },
     {
       "source_id": "python.docs.tutorial",
       "url": "https://docs.python.org/3/tutorial/errors.html#raising-and-handling-multiple-unrelated-exceptions",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Errors and Exceptions — raising and handling"
+      "locator": "Errors and Exceptions: raising and handling"
     }
   ],
   "provenance": {

@@ -9,7 +9,7 @@ can act on.
 property names live in this module, not in any subject package, which is what
 keeps ``target_properties: ["no_direct:internet:database"]`` meaningful for AWS,
 Kubernetes and a database course alike. A property this module does not recognise
-is reported as ungradable and excluded from the denominator — never silently
+is reported as ungradable and excluded from the denominator, never silently
 passed, because a typo in a package would otherwise hand out free marks.
 
 **Incident** is scored on three things a real diagnosis is scored on: did you do
@@ -148,7 +148,7 @@ def check_property(name: str, graph: Graph) -> bool | None:
 
     if head == "behind" and len(parts) >= 3:
         # Every node of type parts[1] must have every inbound edge come from
-        # parts[2] — "the database is only reachable through the app tier".
+        # parts[2]: "the database is only reachable through the app tier".
         gate = set(graph.ids_of_type(parts[2]))
         protected = graph.ids_of_type(parts[1])
         if not protected:
@@ -367,13 +367,13 @@ def grade_incident(
         wrong = sorted(chosen - correct)
         if wrong:
             lines.append(
-                f"{len(wrong)} of your chosen actions would not have helped here — "
+                f"{len(wrong)} of your chosen actions would not have helped here: "
                 "an action that does not address the mechanism usually makes the next incident harder to read."
             )
         if correct - chosen:
             lines.append(f"{len(correct - chosen)} necessary action(s) were not taken.")
     if diagnosis_score is not None:
-        lines.append(f"Diagnosis quality: {diagnosis_score:.0%} — you inspected {len(inspected_valid)} signal(s).")
+        lines.append(f"Diagnosis quality: {diagnosis_score:.0%}. You inspected {len(inspected_valid)} signal(s).")
         misled = [signal_id for signal_id in inspected_valid if signal_id in red_herrings]
         if misled:
             lines.append(f"{len(misled)} of those were red herrings.")

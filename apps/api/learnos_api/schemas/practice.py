@@ -156,7 +156,7 @@ SubmitIn = Annotated[
 class QuestionResultOut(ApiModel):
     question_id: str
     correct: bool
-    #: ``null`` on a wrong answer to a non-final attempt of a graded assessment —
+    #: ``null`` on a wrong answer to a non-final attempt of a graded assessment:
     #: revealing it there would turn a retake into a memory test.
     expected: Any | None = None
     explanation_md: str | None = None

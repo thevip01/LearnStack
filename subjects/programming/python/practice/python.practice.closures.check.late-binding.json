@@ -7,7 +7,7 @@
   "skills": ["python.skill.reason-about-closures"],
   "difficulty": 4,
   "estimated_minutes": 6,
-  "prompt_md": "A closure captures the *variable*, not the value it held when the closure was created. That one sentence explains every result below — work through them before revealing the answers.",
+  "prompt_md": "A closure captures the *variable*, not the value it held when the closure was created. That one sentence explains every result below: work through them before revealing the answers.",
   "tags": ["closures", "late-binding", "nonlocal", "free-variable", "scope"],
   "questions": [
     {
@@ -43,9 +43,9 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`[0, 1, 2]` — `i=i` binds the *current value* as a default at each iteration." },
-        { "id": "b", "md": "`[2, 2, 2]` — the default does not change anything." },
-        { "id": "c", "md": "`SyntaxError` — you cannot name a default after the free variable." },
+        { "id": "a", "md": "`[0, 1, 2]`: `i=i` binds the *current value* as a default at each iteration." },
+        { "id": "b", "md": "`[2, 2, 2]`: the default does not change anything." },
+        { "id": "c", "md": "`SyntaxError`: you cannot name a default after the free variable." },
         { "id": "d", "md": "`[0, 0, 0]`" }
       ],
       "answer": "a",
@@ -68,7 +68,7 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`UnboundLocalError` — `n += 1` makes `n` local to `tick`, so the read has no value yet." },
+        { "id": "a", "md": "`UnboundLocalError`: `n += 1` makes `n` local to `tick`, so the read has no value yet." },
         { "id": "b", "md": "Returns `1`; the closure updates `n` in the enclosing scope." },
         { "id": "c", "md": "Returns `0`." },
         { "id": "d", "md": "`NameError: n is not defined`." }
@@ -106,7 +106,7 @@
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/executionmodel.html#binding-of-names",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Execution model — binding of names, free variables"
+          "locator": "Execution model: binding of names, free variables"
         }
       ]
     },
@@ -118,8 +118,8 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`2` — both closures share the same cell for `x`." },
-        { "id": "b", "md": "`0` — each closure has its own copy of `x`." },
+        { "id": "a", "md": "`2`: both closures share the same cell for `x`." },
+        { "id": "b", "md": "`0`: each closure has its own copy of `x`." },
         { "id": "c", "md": "`1`." },
         { "id": "d", "md": "`UnboundLocalError`." }
       ],
@@ -131,7 +131,7 @@
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/datamodel.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Data model — cell objects hold closure variables"
+          "locator": "Data model: cell objects hold closure variables"
         }
       ]
     }
@@ -150,7 +150,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) `[2, 2, 2]`. (2) `[0, 1, 2]` — `i=i` snapshots each value. (3) `UnboundLocalError` — needs `nonlocal n`. (4) free variables are `a` and `b`. (5) `2` — the two closures share one cell.",
+      "md": "Answers: (1) `[2, 2, 2]`. (2) `[0, 1, 2]`: `i=i` snapshots each value. (3) `UnboundLocalError`: needs `nonlocal n`. (4) free variables are `a` and `b`. (5) `2`: the two closures share one cell.",
       "reveals_solution": true
     }
   ],
@@ -165,7 +165,7 @@
       "source_id": "python.docs.faq",
       "url": "https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Programming FAQ — lambdas in a loop"
+      "locator": "Programming FAQ: lambdas in a loop"
     },
     {
       "source_id": "python.docs.reference",

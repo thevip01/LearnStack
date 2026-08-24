@@ -11,14 +11,34 @@ export function cn(...inputs: ClassValue[]): string {
  * config degrades to the panel's default instead of throwing mid-render.
  */
 export function cfgString(config: Record<string, unknown>, key: string, fallback: string): string;
-export function cfgString(config: Record<string, unknown>, key: string): string | undefined;
+export function cfgString(config: Record<string, unknown>, key: string): string | null;
 export function cfgString(
   config: Record<string, unknown>,
   key: string,
   fallback?: string,
-): string | undefined {
+): string | null {
   const value = config[key];
-  return typeof value === "string" && value.length > 0 ? value : fallback;
+  // `null` rather than `undefined` for "the layout did not set this", because that
+  // is what the wire types use for an absent value and these results get handed
+  // straight to props typed from them.
+  return typeof value === "string" && value.length > 0 ? value : (fallback ?? null);
+}
+
+/**
+ * Look a key up in a string record, keeping the key and value together.
+ *
+ * `noUncheckedIndexedAccess` types every index read as `T | undefined`, which is
+ * accurate: an artifact map has no content under a name the run never emitted.
+ * Returning the pair or `null` makes callers handle that once, at the lookup,
+ * instead of asserting it away at each use.
+ */
+export function recordEntry(
+  record: Record<string, string>,
+  key: string | null | undefined,
+): { name: string; content: string } | null {
+  if (!key) return null;
+  const content = record[key];
+  return content === undefined ? null : { name: key, content };
 }
 
 export function cfgNumber(config: Record<string, unknown>, key: string, fallback: number): number {

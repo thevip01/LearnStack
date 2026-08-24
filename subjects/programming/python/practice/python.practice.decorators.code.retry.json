@@ -7,7 +7,7 @@
   "skills": ["python.skill.write-decorators"],
   "difficulty": 7,
   "estimated_minutes": 30,
-  "prompt_md": "Write `retry`, a parameterised decorator that retries a function when it raises a configured exception.\n\n```python\n@retry(attempts=3, exceptions=(ConnectionError,))\ndef fetch(url):\n    ...\n```\n\nRequirements the tests enforce:\n\n- `retry(attempts=3, exceptions=(ConnectionError,))` returns a decorator; applying it returns a wrapper callable.\n- The wrapper calls the function, and on a listed exception retries up to `attempts` times total (so `attempts=3` means at most 3 calls).\n- If every attempt fails, the **last** exception propagates unchanged.\n- An exception *not* in `exceptions` propagates immediately, with no retry.\n- On success it returns the function's return value and stops calling.\n- `*args` and `**kwargs` pass through untouched.\n- The wrapper preserves the wrapped function's `__name__`, `__doc__` and `__wrapped__` — i.e. it uses `functools.wraps`. This is the identity requirement decorators most often break.\n\nDefaults: `attempts=3`, `exceptions=(Exception,)`. You do not need real sleeping — an optional `on_retry` callback is invoked between attempts so the tests can observe retries deterministically.",
+  "prompt_md": "Write `retry`, a parameterised decorator that retries a function when it raises a configured exception.\n\n```python\n@retry(attempts=3, exceptions=(ConnectionError,))\ndef fetch(url):\n    ...\n```\n\nRequirements the tests enforce:\n\n- `retry(attempts=3, exceptions=(ConnectionError,))` returns a decorator; applying it returns a wrapper callable.\n- The wrapper calls the function, and on a listed exception retries up to `attempts` times total (so `attempts=3` means at most 3 calls).\n- If every attempt fails, the **last** exception propagates unchanged.\n- An exception *not* in `exceptions` propagates immediately, with no retry.\n- On success it returns the function's return value and stops calling.\n- `*args` and `**kwargs` pass through untouched.\n- The wrapper preserves the wrapped function's `__name__`, `__doc__` and `__wrapped__`, i.e. it uses `functools.wraps`. This is the identity requirement decorators most often break.\n\nDefaults: `attempts=3`, `exceptions=(Exception,)`. You do not need real sleeping: an optional `on_retry` callback is invoked between attempts so the tests can observe retries deterministically.",
   "tags": ["decorators", "functools.wraps", "parameterised-decorator", "retry", "args-kwargs"],
   "requirements_md": [
     "`retry(attempts=3, exceptions=(Exception,), on_retry=None)` is a decorator factory (three layers).",
@@ -89,7 +89,7 @@
     },
     {
       "level": 2,
-      "md": "In `wrapper`, loop `attempts` times: `try: return func(...)`, `except exceptions as exc:` remember it and continue. After the loop, `raise` the last one. `except exceptions` naturally lets unlisted exceptions propagate. And put `@functools.wraps(func)` on `wrapper` — that single line is what the identity tests check.",
+      "md": "In `wrapper`, loop `attempts` times: `try: return func(...)`, `except exceptions as exc:` remember it and continue. After the loop, `raise` the last one. `except exceptions` naturally lets unlisted exceptions propagate. And put `@functools.wraps(func)` on `wrapper`: that single line is what the identity tests check.",
       "reveals_solution": false
     },
     {
@@ -115,7 +115,7 @@
       "source_id": "python.pep318",
       "url": "https://peps.python.org/pep-0318/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "PEP 318 — Decorators for Functions and Methods"
+      "locator": "PEP 318: Decorators for Functions and Methods"
     }
   ],
   "provenance": {

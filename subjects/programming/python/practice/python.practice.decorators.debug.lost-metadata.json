@@ -7,7 +7,7 @@
   "skills": ["python.skill.write-decorators"],
   "difficulty": 5,
   "estimated_minutes": 15,
-  "prompt_md": "A `timed` decorator wraps a function to measure how long it runs. It works — the wrapped function still returns the right answer — but it silently destroys the function's identity: the name, the docstring, and the ability to introspect the original signature are all gone. A downstream tool that builds API docs from `__name__` and `__doc__` now shows every decorated endpoint as `wrapper` with no description.\n\nFix the decorator so the wrapped function keeps its `__name__`, `__doc__`, and exposes the original via `__wrapped__`. Do not remove the timing behaviour, and do not change how the decorator is applied.",
+  "prompt_md": "A `timed` decorator wraps a function to measure how long it runs. It works (the wrapped function still returns the right answer) but it silently destroys the function's identity: the name, the docstring, and the ability to introspect the original signature are all gone. A downstream tool that builds API docs from `__name__` and `__doc__` now shows every decorated endpoint as `wrapper` with no description.\n\nFix the decorator so the wrapped function keeps its `__name__`, `__doc__`, and exposes the original via `__wrapped__`. Do not remove the timing behaviour, and do not change how the decorator is applied.",
   "symptom_md": "```python\n@timed\ndef checkout(cart):\n    \"\"\"Charge the cart and return a receipt.\"\"\"\n    ...\n\n>>> checkout.__name__\n'wrapper'                      # expected 'checkout'\n>>> checkout.__doc__\nNone                           # expected 'Charge the cart and return a receipt.'\n>>> import inspect; inspect.signature(checkout)\n(*args, **kwargs)              # expected (cart)\n```\n\nEvery function decorated with `@timed` reports itself as `wrapper`, loses its docstring, and shows a generic `(*args, **kwargs)` signature instead of its real one.",
   "tags": ["decorators", "functools.wraps", "metadata", "introspection"],
   "requirements_md": [
@@ -66,7 +66,7 @@
   "hints": [
     {
       "level": 1,
-      "md": "The wrapper function you return is a brand-new function object called `wrapper`. It has its own `__name__` (`'wrapper'`) and no docstring, and it replaces the original — so all of the original's metadata is lost.",
+      "md": "The wrapper function you return is a brand-new function object called `wrapper`. It has its own `__name__` (`'wrapper'`) and no docstring, and it replaces the original, so all of the original's metadata is lost.",
       "reveals_solution": false
     },
     {
@@ -80,7 +80,7 @@
       "reveals_solution": true
     }
   ],
-  "root_cause_md": "A decorator replaces the original function with the wrapper it returns. That wrapper is an ordinary function whose `__name__` is `'wrapper'` and whose `__doc__` is `None`, so after `checkout = timed(checkout)` the name `checkout` now points at an object that introspects as `wrapper`. Anything that reads `__name__`/`__doc__` (documentation generators, logging, `repr`) sees the wrapper's metadata, and `inspect.signature` reports `(*args, **kwargs)` because that is literally the wrapper's signature.\n\n`functools.wraps(func)` is a decorator-for-the-wrapper that copies the standard metadata attributes from `func` onto `wrapper` and, importantly, sets `wrapper.__wrapped__ = func`. `inspect.signature` follows `__wrapped__` by default, so it recovers the original parameter list. The fix is a single line — `@functools.wraps(func)` on `wrapper` — and it is the line decorators most commonly forget.",
+  "root_cause_md": "A decorator replaces the original function with the wrapper it returns. That wrapper is an ordinary function whose `__name__` is `'wrapper'` and whose `__doc__` is `None`, so after `checkout = timed(checkout)` the name `checkout` now points at an object that introspects as `wrapper`. Anything that reads `__name__`/`__doc__` (documentation generators, logging, `repr`) sees the wrapper's metadata, and `inspect.signature` reports `(*args, **kwargs)` because that is literally the wrapper's signature.\n\n`functools.wraps(func)` is a decorator-for-the-wrapper that copies the standard metadata attributes from `func` onto `wrapper` and, importantly, sets `wrapper.__wrapped__ = func`. `inspect.signature` follows `__wrapped__` by default, so it recovers the original parameter list. The fix is a single line (`@functools.wraps(func)` on `wrapper`) and it is the line decorators most commonly forget.",
   "evaluation": {
     "strategy": "pytest",
     "pass_threshold": 1.0,
@@ -98,7 +98,7 @@
       "source_id": "python.pep318",
       "url": "https://peps.python.org/pep-0318/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "PEP 318 — Decorators for Functions and Methods"
+      "locator": "PEP 318: Decorators for Functions and Methods"
     }
   ],
   "provenance": {

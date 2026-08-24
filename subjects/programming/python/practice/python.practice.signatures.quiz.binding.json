@@ -24,14 +24,14 @@
         { "id": "d", "md": "`fetch(url=\"/x\", 2)`" }
       ],
       "answer": "a",
-      "explanation_md": "A bare `*` ends the positional section: everything after it must be passed by keyword. That is the point — `fetch(\"/x\", 2, 3)` at a call site tells the reader nothing, and once the parameters are keyword-only you are also free to reorder or insert them without breaking callers. Option (d) is a syntax error regardless: a positional argument cannot follow a keyword argument.",
+      "explanation_md": "A bare `*` ends the positional section: everything after it must be passed by keyword. That is the point: `fetch(\"/x\", 2, 3)` at a call site tells the reader nothing, and once the parameters are keyword-only you are also free to reorder or insert them without breaking callers. Option (d) is a syntax error regardless: a positional argument cannot follow a keyword argument.",
       "skills": ["python.skill.design-function-signatures"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Function definitions — keyword-only parameters"
+          "locator": "Function definitions: keyword-only parameters"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Function definitions — positional-only parameters"
+          "locator": "Function definitions: positional-only parameters"
         }
       ]
     },
@@ -69,9 +69,9 @@
       "weight": 1.0,
       "options": [
         { "id": "a", "md": "`TypeError: tag() got multiple values for argument 'value'`" },
-        { "id": "b", "md": "`(\"a\", 3, {})` — the keyword wins." },
-        { "id": "c", "md": "`(\"a\", 2, {\"value\": 3})` — the extra goes into `**extra`." },
-        { "id": "d", "md": "`(\"a\", 2, {})` — the duplicate is ignored." }
+        { "id": "b", "md": "`(\"a\", 3, {})`: the keyword wins." },
+        { "id": "c", "md": "`(\"a\", 2, {\"value\": 3})`: the extra goes into `**extra`." },
+        { "id": "d", "md": "`(\"a\", 2, {})`: the duplicate is ignored." }
       ],
       "answer": "a",
       "explanation_md": "Binding happens before `**extra` is populated: `2` fills `value` positionally, then `value=3` tries to fill the same slot and fails. A name is only swept into `**extra` if it does not match a declared parameter. Making `value` keyword-only (`def tag(name, *, value=1, **extra)`) removes the ambiguity entirely.",
@@ -81,7 +81,7 @@
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/expressions.html#calls",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Calls — argument binding"
+          "locator": "Calls: argument binding"
         }
       ]
     },
@@ -99,14 +99,14 @@
         { "id": "d", "md": "`TypeError`, because `c` has no default and follows `*rest`." }
       ],
       "answer": "a",
-      "explanation_md": "Positionals fill `a` then `b`, and the surplus `8, 7` goes to `rest`. `c` sits after `*rest`, so it is keyword-only — and having no default makes it *required*, which is a useful way to force an explicit choice at every call site. `d` keeps its default, and unmatched `e=5` lands in `kw`.",
+      "explanation_md": "Positionals fill `a` then `b`, and the surplus `8, 7` goes to `rest`. `c` sits after `*rest`, so it is keyword-only, and having no default makes it *required*, which is a useful way to force an explicit choice at every call site. `d` keeps its default, and unmatched `e=5` lands in `kw`.",
       "skills": ["python.skill.design-function-signatures"],
       "sources": [
         {
           "source_id": "python.docs.tutorial",
           "url": "https://docs.python.org/3/tutorial/controlflow.html#more-on-defining-functions",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "More on Defining Functions — arbitrary argument lists"
+          "locator": "More on Defining Functions: arbitrary argument lists"
         }
       ]
     },
@@ -151,7 +151,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) `fetch(\"/x\", timeout=2)`. (2) `distance(1, 2, unit=\"mi\")` is valid and `distance(x=1, y=2)` raises. (3) `TypeError: got multiple values for argument 'value'`. (4) `(1, 9, (8, 7), 6, 4, {'e': 5})`. (5) Readability of flags, transposition risk, and future signature evolution — not speed, and not the single obvious subject.",
+      "md": "Answers: (1) `fetch(\"/x\", timeout=2)`. (2) `distance(1, 2, unit=\"mi\")` is valid and `distance(x=1, y=2)` raises. (3) `TypeError: got multiple values for argument 'value'`. (4) `(1, 9, (8, 7), 6, 4, {'e': 5})`. (5) Readability of flags, transposition risk, and future signature evolution; not speed, and not the single obvious subject.",
       "reveals_solution": true
     }
   ],
@@ -172,7 +172,7 @@
       "source_id": "python.pep8",
       "url": "https://peps.python.org/pep-0008/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "PEP 8 — Style Guide for Python Code"
+      "locator": "PEP 8: Style Guide for Python Code"
     }
   ],
   "provenance": {

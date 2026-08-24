@@ -1,7 +1,7 @@
 """Adapter registry.
 
 One dict, keyed by ``AdapterKind``. A new adapter is one class plus one entry here,
-and ``for_source`` is the only way the pipeline constructs one — so there is no
+and ``for_source`` is the only way the pipeline constructs one, so there is no
 path by which a source runs without the licensing and robots checks in
 ``SourceAdapter.run``.
 """
@@ -40,7 +40,7 @@ def for_source(spec: SourceSpec, *, robots: RobotsCache | None = None, local_roo
     """Build the adapter for a source.
 
     ``spec.adapter`` is a plain string here rather than an enum member, because
-    ``SchemaModel`` sets ``use_enum_values=True`` — every enum on a validated model
+    ``SchemaModel`` sets ``use_enum_values=True``: every enum on a validated model
     is already coerced to its value. Indexing a dict keyed by ``.value`` is
     therefore correct; keying it by the enum member would silently miss.
     """

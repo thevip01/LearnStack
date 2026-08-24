@@ -8,7 +8,7 @@ models to keep in sync.
 
 The only Postgres-only structures are the search index's generated ``tsvector``
 columns and the optional ``pgvector`` column, which are added by DDL in
-``modules/knowledge/search.py`` rather than declared here — see the note there
+``modules/knowledge/search.py`` rather than declared here. See the note there
 about Alembic autogenerate not seeing them.
 """
 
@@ -39,8 +39,8 @@ class Base(DeclarativeBase):
 def uuid_pk() -> Mapped[uuid.UUID]:
     """UUID primary keys, generated client-side.
 
-    Client-side generation lets a caller reference a row it is about to insert —
-    an attempt id inside a submission, an execution id inside a submission row —
+    Client-side generation lets a caller reference a row it is about to insert
+    (an attempt id inside a submission, an execution id inside a submission row)
     without a round trip to read back a sequence.
     """
     return mapped_column(UuidType, primary_key=True, default=uuid.uuid4)

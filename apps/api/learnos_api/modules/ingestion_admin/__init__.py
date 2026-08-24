@@ -1,7 +1,7 @@
 """Admin-side ingestion: source registry, run ledger, review queue, provenance.
 
 Separate from the ingestion *pipeline* (``services/ingestion``) on purpose. This
-package reads and writes the five ingestion tables and nothing else — it never
+package reads and writes the five ingestion tables and nothing else: it never
 fetches a URL, never calls a model, never spends a request thread on a crawl. That
 split is what lets the pipeline hold outbound credentials and network egress while
 the process serving learner traffic holds neither.

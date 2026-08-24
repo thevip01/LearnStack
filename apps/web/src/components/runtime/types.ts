@@ -6,7 +6,7 @@ import type { LearningMode, Panel, SubjectRuntimeOut } from "@/lib/types";
  *
  * It is deliberately tiny and identical for all thirty panel types: the layout
  * knows nothing about what a panel does, and a panel receives the subject
- * runtime plus its own declaration. `panel.config` is handed over untouched —
+ * runtime plus its own declaration. `panel.config` is handed over untouched:
  * the layout never reads a key out of it.
  */
 export type PanelProps = {

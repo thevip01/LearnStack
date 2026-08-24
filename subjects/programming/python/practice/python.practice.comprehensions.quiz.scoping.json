@@ -18,20 +18,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`outer` — the comprehension's `x` lives in its own scope and does not leak." },
-        { "id": "b", "md": "`2` — the loop variable overwrites the outer `x`." },
+        { "id": "a", "md": "`outer`: the comprehension's `x` lives in its own scope and does not leak." },
+        { "id": "b", "md": "`2`: the loop variable overwrites the outer `x`." },
         { "id": "c", "md": "`[0, 1, 2]`." },
         { "id": "d", "md": "`NameError` after the comprehension." }
       ],
       "answer": "a",
-      "explanation_md": "In Python 3 a comprehension has its own scope, like a nested function, so its loop variable never escapes. This was deliberate: in Python 2 the equivalent list comprehension *did* leak `x` and clobber the outer name. A plain `for` loop still leaks its variable — the isolation is specific to comprehensions and generator expressions.",
+      "explanation_md": "In Python 3 a comprehension has its own scope, like a nested function, so its loop variable never escapes. This was deliberate: in Python 2 the equivalent list comprehension *did* leak `x` and clobber the outer name. A plain `for` loop still leaks its variable: the isolation is specific to comprehensions and generator expressions.",
       "skills": ["python.skill.write-comprehensions"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/expressions.html#displays-for-lists-sets-and-dictionaries",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Displays — comprehension scope"
+          "locator": "Displays: comprehension scope"
         }
       ]
     },
@@ -43,20 +43,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`[10, 20, 30]` — the *outermost iterable* is evaluated eagerly, capturing the original list." },
-        { "id": "b", "md": "`[40, 50, 60]` — the generator reads `nums` when consumed." },
+        { "id": "a", "md": "`[10, 20, 30]`: the *outermost iterable* is evaluated eagerly, capturing the original list." },
+        { "id": "b", "md": "`[40, 50, 60]`: the generator reads `nums` when consumed." },
         { "id": "c", "md": "`[10, 20, 30, 40, 50, 60]`." },
-        { "id": "d", "md": "`[]` — the generator was already exhausted." }
+        { "id": "d", "md": "`[]`: the generator was already exhausted." }
       ],
       "answer": "a",
-      "explanation_md": "A generator expression evaluates its outermost iterable (`nums`) immediately, at creation, but everything else lazily. So it captured the object the name `nums` referred to *then* — `[1, 2, 3]` — and the later rebinding of `nums` to a new list has no effect. Only the outermost `for`'s iterable is eager; inner `for`s and conditions are deferred.",
+      "explanation_md": "A generator expression evaluates its outermost iterable (`nums`) immediately, at creation, but everything else lazily. So it captured the object the name `nums` referred to *then* (`[1, 2, 3]`) and the later rebinding of `nums` to a new list has no effect. Only the outermost `for`'s iterable is eager; inner `for`s and conditions are deferred.",
       "skills": ["python.skill.write-comprehensions"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/expressions.html#generator-expressions",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Generator expressions — outermost iterable evaluated immediately"
+          "locator": "Generator expressions: outermost iterable evaluated immediately"
         }
       ]
     },
@@ -68,20 +68,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`[0, 1, 2] []` — a generator is consumed once and is then empty." },
-        { "id": "b", "md": "`[0, 1, 2] [0, 1, 2]` — each `list()` restarts it." },
+        { "id": "a", "md": "`[0, 1, 2] []`: a generator is consumed once and is then empty." },
+        { "id": "b", "md": "`[0, 1, 2] [0, 1, 2]`: each `list()` restarts it." },
         { "id": "c", "md": "`[] []`." },
         { "id": "d", "md": "`StopIteration` on the second `list()`." }
       ],
       "answer": "a",
-      "explanation_md": "Generators are single-pass iterators: once exhausted they yield nothing more, silently. This is the bug behind \"my data disappeared after I logged its length\" — `sum(gen)` then `list(gen)` gives the sum and then an empty list. If you need the values twice, materialise a `list`, or rebuild the generator.",
+      "explanation_md": "Generators are single-pass iterators: once exhausted they yield nothing more, silently. This is the bug behind \"my data disappeared after I logged its length\": `sum(gen)` then `list(gen)` gives the sum and then an empty list. If you need the values twice, materialise a `list`, or rebuild the generator.",
       "skills": ["python.skill.write-comprehensions"],
       "sources": [
         {
           "source_id": "python.docs.tutorial",
           "url": "https://docs.python.org/3/tutorial/classes.html#generators",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Generators — single iteration"
+          "locator": "Generators: single iteration"
         }
       ]
     },
@@ -94,14 +94,14 @@
       "weight": 1.0,
       "answer": ["9", "the value 9", "9 (the last square)"],
       "must_include": ["9"],
-      "explanation_md": "The comprehension's *loop* variable `n` stays private, but a walrus assignment (`:=`) inside a comprehension deliberately binds in the **enclosing** scope. So `y` leaks out holding the last value assigned, `3 * 3 == 9`. This is by design — it lets you capture a running result — but it is a surprise if you assumed comprehensions never touch the outer scope.",
+      "explanation_md": "The comprehension's *loop* variable `n` stays private, but a walrus assignment (`:=`) inside a comprehension deliberately binds in the **enclosing** scope. So `y` leaks out holding the last value assigned, `3 * 3 == 9`. This is by design (it lets you capture a running result), but it is a surprise if you assumed comprehensions never touch the outer scope.",
       "skills": ["python.skill.write-comprehensions"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/expressions.html#assignment-expressions",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Assignment expressions — scope in comprehensions"
+          "locator": "Assignment expressions: scope in comprehensions"
         }
       ]
     },
@@ -151,7 +151,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) `outer` — no leak. (2) `[10, 20, 30]` — the outermost iterable was captured eagerly. (3) `[0, 1, 2] []` — exhausted after one pass. (4) `y` is `9`. (5) generator / dict / set / list, in the order listed.",
+      "md": "Answers: (1) `outer`: no leak. (2) `[10, 20, 30]`: the outermost iterable was captured eagerly. (3) `[0, 1, 2] []`: exhausted after one pass. (4) `y` is `9`. (5) generator / dict / set / list, in the order listed.",
       "reveals_solution": true
     }
   ],
@@ -172,7 +172,7 @@
       "source_id": "python.pep289",
       "url": "https://peps.python.org/pep-0289/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "PEP 289 — Generator Expressions"
+      "locator": "PEP 289: Generator Expressions"
     }
   ],
   "provenance": {

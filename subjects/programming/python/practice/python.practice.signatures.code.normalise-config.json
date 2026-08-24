@@ -7,11 +7,11 @@
   "skills": ["python.skill.design-function-signatures", "python.skill.avoid-shared-mutable-defaults"],
   "difficulty": 6,
   "estimated_minutes": 25,
-  "prompt_md": "Write `normalise`, the function every service has and every service gets subtly wrong. It takes raw settings and returns a cleaned config, and its signature has to be safe against the two classic traps at once: a shared mutable default, and positional arguments that callers transpose.\n\n```python\ndef normalise(name, *, tags=None, limits=None, region=\"us-east-1\"):\n    ...\n```\n\nRules the tests enforce:\n\n- `name` is required and positional; everything else is keyword-only.\n- `tags` defaults to an empty list **per call** — two calls that each append must not see each other's tags.\n- `limits` defaults to `{\"cpu\": 1, \"mem\": 512}`, again fresh per call, and any keys the caller passes are merged over those defaults (not replaced wholesale).\n- The returned dict has exactly the keys `name`, `tags`, `limits`, `region`; `tags` is sorted and de-duplicated; `region` is lower-cased.\n- Calling `normalise(\"svc\", \"prod\")` must raise `TypeError` — a stray positional is a bug, not a tag.\n\nGetting the signature right is most of the exercise; the body is a few lines.",
+  "prompt_md": "Write `normalise`, the function every service has and every service gets subtly wrong. It takes raw settings and returns a cleaned config, and its signature has to be safe against the two classic traps at once: a shared mutable default, and positional arguments that callers transpose.\n\n```python\ndef normalise(name, *, tags=None, limits=None, region=\"us-east-1\"):\n    ...\n```\n\nRules the tests enforce:\n\n- `name` is required and positional; everything else is keyword-only.\n- `tags` defaults to an empty list **per call**: two calls that each append must not see each other's tags.\n- `limits` defaults to `{\"cpu\": 1, \"mem\": 512}`, again fresh per call, and any keys the caller passes are merged over those defaults (not replaced wholesale).\n- The returned dict has exactly the keys `name`, `tags`, `limits`, `region`; `tags` is sorted and de-duplicated; `region` is lower-cased.\n- Calling `normalise(\"svc\", \"prod\")` must raise `TypeError`: a stray positional is a bug, not a tag.\n\nGetting the signature right is most of the exercise; the body is a few lines.",
   "tags": ["signatures", "keyword-only", "mutable-default", "sentinel", "merge"],
   "requirements_md": [
     "`name` is positional; `tags`, `limits`, `region` are keyword-only (a bare `*` in the signature).",
-    "`tags` and `limits` default to fresh objects per call — use `None` sentinels, never a mutable literal default.",
+    "`tags` and `limits` default to fresh objects per call: use `None` sentinels, never a mutable literal default.",
     "`limits` merges caller keys over the defaults `{\"cpu\": 1, \"mem\": 512}`.",
     "Result keys are exactly `name`, `tags`, `limits`, `region`.",
     "`tags` in the result is sorted and de-duplicated; `region` is lower-cased.",
@@ -76,12 +76,12 @@
   "hints": [
     {
       "level": 1,
-      "md": "Two independent problems. The `*` after `name` already makes everything else keyword-only, which is what makes `normalise(\"svc\", \"prod\")` raise — so the signature as given is most of the safety. The rest is the body.",
+      "md": "Two independent problems. The `*` after `name` already makes everything else keyword-only, which is what makes `normalise(\"svc\", \"prod\")` raise, so the signature as given is most of the safety. The rest is the body.",
       "reveals_solution": false
     },
     {
       "level": 2,
-      "md": "Never write `tags=[]` or `limits={...}` as a default — those are created once and shared. Default them to `None` and build fresh values in the body: `tags = list(tags) if tags is not None else []`. For `limits`, merge with `{**DEFAULT_LIMITS, **(limits or {})}`, which also avoids mutating the caller's dict.",
+      "md": "Never write `tags=[]` or `limits={...}` as a default: those are created once and shared. Default them to `None` and build fresh values in the body: `tags = list(tags) if tags is not None else []`. For `limits`, merge with `{**DEFAULT_LIMITS, **(limits or {})}`, which also avoids mutating the caller's dict.",
       "reveals_solution": false
     },
     {
@@ -101,7 +101,7 @@
       "source_id": "python.docs.reference",
       "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Function definitions — keyword-only parameters"
+      "locator": "Function definitions: keyword-only parameters"
     },
     {
       "source_id": "python.docs.faq",

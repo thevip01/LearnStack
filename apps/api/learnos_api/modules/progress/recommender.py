@@ -8,7 +8,7 @@ most able to feel arbitrary if it is careless. Three rules keep it honest:
   in the client drifts from the reason the server actually had. An empty ``reason``
   is a bug, not a default.
 * **Prerequisites come before difficulty.** If a skill's prerequisite is weak, the
-  right recommendation is the prerequisite — not a harder task in the skill the
+  right recommendation is the prerequisite, not a harder task in the skill the
   learner is currently failing.
 * **Difficulty backs off after repeated failure.** Two consecutive failures means
   something upstream is missing; ``target_difficulty`` drops so the next task is
@@ -18,7 +18,7 @@ most able to feel arbitrary if it is careless. Three rules keep it honest:
 Nothing here writes. It reads mastery, skill state and attempt history, all passed
 in by the caller, and returns ranked candidates. That means it can be unit-tested
 over fixtures with no database, and it keeps this module free of any import from
-``practice`` (which imports the pipeline, which imports readiness — the cycle this
+``practice`` (which imports the pipeline, which imports readiness: the cycle this
 avoids).
 """
 
@@ -109,8 +109,8 @@ def _best_task(
 ) -> PracticeTask | None:
     """The unsolved task closest to the target difficulty.
 
-    Ties break toward the easier task. When the estimate is uncertain — and after
-    a failure it always is — the cheaper mistake is a task that is slightly too
+    Ties break toward the easier task. When the estimate is uncertain, and after
+    a failure it always is, the cheaper mistake is a task that is slightly too
     easy.
     """
     blocked = set(exclude)
@@ -204,7 +204,7 @@ def _practice_recommendations(
             )
         elif mastery and mastery.coverage < 0.5:
             reason = (
-                f"{title} is only partly measured — this is a "
+                f"{title} is only partly measured: this is a "
                 f"{enum_value(task.kind)} task, which fills in a dimension nothing has tested yet."
             )
         else:
@@ -248,7 +248,7 @@ def _concept_recommendations(
         if blocking:
             reason = (
                 f"Next in the curriculum, though {blocking[0].title} is still at "
-                f"{_pct(blocking[0].mastery)} — worth a look first, but nothing is stopping you."
+                f"{_pct(blocking[0].mastery)}, worth a look first, but nothing is stopping you."
             )
             score = SCORE_NEXT_IN_ORDER
         else:
@@ -412,7 +412,7 @@ def recommend(
                     kind="concept",
                     id=first,
                     title=package.concepts[first].title,
-                    reason="Start here — it is the first concept in this subject and nothing precedes it.",
+                    reason="Start here: it is the first concept in this subject and nothing precedes it.",
                     score=SCORE_UNREAD_CONCEPT,
                 )
             )

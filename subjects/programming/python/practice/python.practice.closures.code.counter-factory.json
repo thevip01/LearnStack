@@ -7,15 +7,15 @@
   "skills": ["python.skill.reason-about-closures"],
   "difficulty": 5,
   "estimated_minutes": 20,
-  "prompt_md": "Build `make_counter(start=0, step=1)`, a factory that returns a small bundle of functions sharing one private integer — the closure-as-object pattern.\n\nIt returns an object (a `types.SimpleNamespace` or any object) exposing three callables:\n\n- `increment()` — advance by `step` and return the new value.\n- `value()` — return the current value without changing it.\n- `reset()` — set the value back to `start` and return it.\n\nRequirements the tests enforce:\n\n- The three callables share the *same* internal counter (incrementing then reading reflects the change).\n- Two counters from two `make_counter` calls are fully independent.\n- There is no module-level or class-level state; the count lives only in the closure.\n- `increment` must correctly rebind the enclosing variable — this is where `nonlocal` is mandatory.\n\nThe interesting constraint: you may **not** use a class, and you may not store the count in a mutable container as a workaround. It must be a plain integer rebound via `nonlocal`, which is the whole point of the exercise.",
+  "prompt_md": "Build `make_counter(start=0, step=1)`, a factory that returns a small bundle of functions sharing one private integer: the closure-as-object pattern.\n\nIt returns an object (a `types.SimpleNamespace` or any object) exposing three callables:\n\n- `increment()`: advance by `step` and return the new value.\n- `value()`: return the current value without changing it.\n- `reset()`: set the value back to `start` and return it.\n\nRequirements the tests enforce:\n\n- The three callables share the *same* internal counter (incrementing then reading reflects the change).\n- Two counters from two `make_counter` calls are fully independent.\n- There is no module-level or class-level state; the count lives only in the closure.\n- `increment` must correctly rebind the enclosing variable: this is where `nonlocal` is mandatory.\n\nThe interesting constraint: you may **not** use a class, and you may not store the count in a mutable container as a workaround. It must be a plain integer rebound via `nonlocal`, which is the whole point of the exercise.",
   "tags": ["closures", "nonlocal", "factory", "private-state", "late-binding"],
   "requirements_md": [
     "`make_counter(start=0, step=1)` returns an object with `.increment()`, `.value()`, `.reset()` callables.",
-    "The three callables share one counter via a closure — no class, no global.",
+    "The three callables share one counter via a closure: no class, no global.",
     "`increment()` returns the value *after* advancing by `step`.",
     "`reset()` returns the counter to `start` and returns it.",
     "Counters from separate calls are independent.",
-    "The count is a plain `int` rebound with `nonlocal` — not stored in a list/dict to dodge the rebinding rule."
+    "The count is a plain `int` rebound with `nonlocal`, not stored in a list/dict to dodge the rebinding rule."
   ],
   "environment": {
     "runtime": "python",
@@ -80,7 +80,7 @@
     },
     {
       "level": 2,
-      "md": "`value()` only reads `count`, so it needs no declaration. But `increment()` and `reset()` *rebind* it (`count += step`, `count = start`), and assigning to a name makes it local unless you say otherwise — so both need `nonlocal count` as their first line. Without it you get `UnboundLocalError`.",
+      "md": "`value()` only reads `count`, so it needs no declaration. But `increment()` and `reset()` *rebind* it (`count += step`, `count = start`), and assigning to a name makes it local unless you say otherwise, so both need `nonlocal count` as their first line. Without it you get `UnboundLocalError`.",
       "reveals_solution": false
     },
     {
@@ -106,7 +106,7 @@
       "source_id": "python.docs.reference",
       "url": "https://docs.python.org/3/reference/executionmodel.html#binding-of-names",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Execution model — binding of names"
+      "locator": "Execution model: binding of names"
     }
   ],
   "provenance": {

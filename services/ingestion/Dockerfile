@@ -4,7 +4,7 @@
 # the layout below follows from that.
 #
 # Build context is the repo root: this service depends on two local path packages,
-# and one of them is the API — see storage/repository.py for why the SQLAlchemy
+# and one of them is the API. See storage/repository.py for why the SQLAlchemy
 # models are shared rather than duplicated.
 #
 # `learnos-api` is installed with --no-deps and that is load-bearing, not an
@@ -79,7 +79,7 @@ RUN apt-get update \
 
 COPY --from=builder /opt/venv /opt/venv
 
-# Non-root, and no Docker socket — unlike the API image, this container never
+# Non-root, and no Docker socket. Unlike the API image, this container never
 # launches a sandbox. /app/subjects is mounted read-write by compose because the
 # build stage writes into a package; /app/var/ingestion holds fetched bodies.
 RUN useradd --create-home --uid 10002 ingest \

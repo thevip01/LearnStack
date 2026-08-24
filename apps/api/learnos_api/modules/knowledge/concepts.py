@@ -7,7 +7,7 @@ point.
 
 This module is pure. It takes the learner's attempt stats and masteries as
 arguments rather than fetching them, which keeps the whole knowledge package free
-of any dependency on ``practice`` — the two would otherwise import each other,
+of any dependency on ``practice``: the two would otherwise import each other,
 since the submission pipeline needs readiness. The route owns the session and does
 both lookups.
 """

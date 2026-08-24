@@ -1,7 +1,7 @@
 """Concept envelope.
 
 ``ConceptOut`` subclasses ``learnos_schema.Concept`` so the payload is the concept
-flat, with the runtime's additions alongside it — which is what the contract's
+flat, with the runtime's additions alongside it, which is what the contract's
 ``Concept & {...}`` means. Subclassing rather than nesting also means a new field
 on ``Concept`` reaches the client without a change here.
 """

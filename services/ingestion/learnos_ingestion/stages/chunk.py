@@ -5,7 +5,7 @@ sentence is a chunk that cannot be cited, and citation is the entire point: ever
 concept the extractor produces carries a ``SourceRef`` pointing at the chunk it came
 from, and an admin following that link has to land on something readable.
 
-The embed stage is a stub by design — see ``run_embed``.
+The embed stage is a stub by design (see ``run_embed``).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ _HEADING = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 #: Paragraph boundary. Used as the fallback split when a section is over budget.
 _PARAGRAPH = re.compile(r"\n\s*\n")
 
-#: Fenced code. Never split across chunks — see ``_split_section``.
+#: Fenced code. Never split across chunks (see ``_split_section``).
 _FENCE = re.compile(r"```.*?```", re.DOTALL)
 
 
@@ -66,7 +66,7 @@ def _protect_fences(body: str) -> tuple[str, dict[str, str]]:
     A code fence split across two chunks produces two chunks of broken code, and a
     practice task generated from either is unrunnable. Protecting them means a
     section containing one enormous example stays whole and simply exceeds the
-    target — the right trade, since an oversized chunk is merely inefficient while a
+    target: the right trade, since an oversized chunk is merely inefficient while a
     bisected code sample is wrong.
     """
     placeholders: dict[str, str] = {}
@@ -140,7 +140,7 @@ def chunk_document(
             text = piece.strip()
             if len(text) < 80:
                 # Too small to teach anything and too small to cite usefully. These
-                # are section stubs — "See also", a lone image caption — and they
+                # are section stubs ("See also", a lone image caption), and they
                 # dilute retrieval by matching queries they cannot answer.
                 continue
             # The heading path is prepended to the chunk text, not just stored
@@ -203,7 +203,7 @@ async def run_embed(
     model: str | None = None,
     dry_run: bool = True,
 ) -> StageReport:
-    """Embedding stage — intentionally not wired to a provider.
+    """Embedding stage: intentionally not wired to a provider.
 
     Retrieval currently runs on Postgres full-text plus trigram similarity, which is
     what ``knowledge/search.py`` implements. That is genuinely sufficient for a
@@ -213,8 +213,8 @@ async def run_embed(
 
     The stage exists rather than being deleted because the schema already carries
     ``embedding_model`` and ``embedded_at`` on every chunk, and because the point at
-    which full-text stops being enough — cross-lingual retrieval, or "explain this
-    like the section on X" — is a content decision rather than a rewrite. When that
+    which full-text stops being enough (cross-lingual retrieval, or "explain this
+    like the section on X") is a content decision rather than a rewrite. When that
     day comes, this function fills those columns and ``search.py`` gains a vector
     branch; nothing else changes.
 

@@ -5,7 +5,7 @@ Wires the stages together, threads one database session through them, and record
 is in what it refuses to do.
 
 **A run defaults to a dry run.** ``dry_run=True`` means every stage computes its
-result and reports it, and nothing is written — no rows, no raw bodies, no package
+result and reports it, and nothing is written: no rows, no raw bodies, no package
 files. An operator can therefore always ask "what would a refresh of this source
 do?" and get a real answer with no consequences. The default is not a safety net
 bolted on; it is what makes the pipeline usable against sources nobody has audited
@@ -124,7 +124,7 @@ class Pipeline:
         extract needs chunks and chunks come from parse. Honouring the request
         literally would mean extracting from whatever stale chunks happened to be
         stored, which produces candidates that cite text the source no longer
-        contains — the exact failure this pipeline exists to avoid.
+        contains, the exact failure this pipeline exists to avoid.
         """
         indices = [STAGE_ORDER.index(stage) for stage in stages if stage in STAGE_ORDER]
         if not indices:
@@ -376,7 +376,7 @@ class Pipeline:
 
         A subject id is dotted (``programming.python``) and the directory layout is
         nested (``subjects/programming/python``), but the two are not required to
-        correspond — the manifest is the authority on which id a directory holds.
+        correspond: the manifest is the authority on which id a directory holds.
         Deriving the path from the id would break the first time someone reorganised
         the directory tree, and break silently, by building into a new directory
         nobody reads.

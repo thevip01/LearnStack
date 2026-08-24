@@ -2,7 +2,7 @@
 
 This module answers the question that makes incremental ingestion worth building:
 when a source changes, *which* concepts and practice tasks are now suspect? The
-naive answer — all of them — means every refresh regenerates the whole subject,
+naive answer (all of them) means every refresh regenerates the whole subject,
 which burns extractor budget and, far worse, replaces content that learners have
 mastery evidence attached to.
 
@@ -99,7 +99,7 @@ async def diff_for_source(
     if not invalidating:
         return diff
 
-    # The chunks currently stored for these documents are the *old* chunks — the
+    # The chunks currently stored for these documents are the *old* chunks: the
     # replace happens later in the chunk stage. That ordering is what makes this
     # work: after replacement the old chunk ids are gone and the link from a
     # published concept back to the text it was derived from is unrecoverable.

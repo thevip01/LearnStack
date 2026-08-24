@@ -36,7 +36,7 @@ SENTINEL = "__LEARNOS_SQL_V1__"
 
 #: The driver. Reads the learner's SQL from a file rather than being generated
 #: with it inlined, so a submission containing triple quotes or a null byte
-#: cannot break the driver's own syntax — which would otherwise be an injection
+#: cannot break the driver's own syntax, which would otherwise be an injection
 #: into the grader.
 _DRIVER = '''
 import json, sqlite3, sys
@@ -140,7 +140,7 @@ def compare_rows(
     if len(actual_rows) != len(expected_rows):
         return False, f"expected {len(expected_rows)} row(s), got {len(actual_rows)}"
     if sorted(actual_rows) == sorted(expected_rows) and ordered:
-        return False, "the right rows, in the wrong order — this query needs an explicit ORDER BY"
+        return False, "the right rows, in the wrong order: this query needs an explicit ORDER BY"
     if actual and expected and set(actual[0]) != set(expected[0]):
         missing = sorted(set(expected[0]) - set(actual[0]))
         extra = sorted(set(actual[0]) - set(expected[0]))
@@ -199,7 +199,7 @@ async def grade_sql(
         if stage == "setup":
             body = (
                 "**The task's own schema failed to load**, so your query never ran. "
-                "That is a content bug — please report it.\n\n```\n" + error + "\n```"
+                "That is a content bug. Please report it.\n\n```\n" + error + "\n```"
             )
         else:
             body = "**SQLite rejected the statement:**\n\n```\n" + error + "\n```"
@@ -214,7 +214,7 @@ async def grade_sql(
         feedback = f"**Correct.** {count} row(s) returned, matching the expected result."
     elif rows is None:
         feedback = (
-            "**No result set.** The statement ran but returned no rows to compare — "
+            "**No result set.** The statement ran but returned no rows to compare: "
             "this task expects a `SELECT` that produces rows."
         )
     else:

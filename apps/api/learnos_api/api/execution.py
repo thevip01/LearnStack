@@ -7,12 +7,12 @@ where the limits come from the authored task instead:
 
 1. **Authentication is required.** Anonymous code execution is a free compute
    endpoint on the public internet.
-2. **Rate limited per user**, not per IP — the cost is per account, and an IP is
+2. **Rate limited per user**, not per IP: the cost is per account, and an IP is
    shared by everyone behind one NAT.
 3. **The caller's limits are ignored.** The contract is explicit: an ad-hoc run
    always gets the tightest defaults. Memory, CPU, process count and network are
    not expressible in the request body at all, so a snippet in a lesson cannot ask
-   for the network — "the client asked nicely" is not a basis for granting it. Only
+   for the network: "the client asked nicely" is not a basis for granting it. Only
    the timeout is negotiable, and only up to a ceiling.
 
 Runs whose declared timeout is under ``INLINE_TIMEOUT_LIMIT_S`` are answered
@@ -67,8 +67,8 @@ class AdhocRunIn(BaseModel):
 
 
 #: The one limit a caller may raise. Time is the only ad-hoc knob that does not
-#: weaken isolation — memory, CPU, pids and network stay pinned at the defaults
-#: above — and a lesson that demonstrates a slow loop needs it. Raising it moves
+#: weaken isolation (memory, CPU, pids and network stay pinned at the defaults
+#: above), and a lesson that demonstrates a slow loop needs it. Raising it moves
 #: the run onto the queued path, so a long request never holds a worker open.
 ADHOC_TIMEOUT_CEILING_S = 60
 

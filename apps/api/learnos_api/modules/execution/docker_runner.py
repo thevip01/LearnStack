@@ -183,7 +183,7 @@ class DockerRunner:
             "TMPDIR": "/tmp",
             "LEARNOS_SANDBOX": "1",
         }
-        # Task-declared env last, but it can never grant capability — the
+        # Task-declared env last, but it can never grant capability, because the
         # container has none to grant. Secrets are explicitly not passed here.
         env.update({str(k): str(v) for k, v in (request.env or {}).items()})
 
@@ -353,9 +353,9 @@ class DockerRunner:
 
     @staticmethod
     def _error_note(status_value: ExecutionStatus) -> str | None:
-        if status_value is ExecutionStatus.TIMEOUT:
+        if status_value == ExecutionStatus.TIMEOUT:
             return "execution exceeded the time limit and was stopped"
-        if status_value is ExecutionStatus.OOM:
+        if status_value == ExecutionStatus.OOM:
             return "execution exceeded the memory limit and was stopped"
         return None
 

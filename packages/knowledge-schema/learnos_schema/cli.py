@@ -1,4 +1,4 @@
-"""``learnos-validate`` — validate subject packages and export JSON Schema.
+"""``learnos-validate``: validate subject packages and export JSON Schema.
 
 This is what CI runs. A package that does not pass this never reaches a learner.
 """

@@ -2,10 +2,10 @@
 
 Three flavours, because the contract needs three:
 
-* ``current_user`` — required. 401 otherwise.
-* ``current_user_optional`` — the *(auth optional)* endpoints. Returns ``None``
+* ``current_user``: required. 401 otherwise.
+* ``current_user_optional``: the *(auth optional)* endpoints. Returns ``None``
   anonymously so the catalogue and lesson bodies render without a signup wall.
-* ``current_admin`` — required and re-checked against the database row, so a
+* ``current_admin``: required and re-checked against the database row, so a
   demoted admin's unexpired token stops working immediately.
 
 Credentials come from the ``Authorization: Bearer`` header or the

@@ -1,8 +1,8 @@
 """Execution records.
 
 ``stdout_ref`` / ``stderr_ref`` are object-storage keys rather than inline text.
-Learner output is unbounded in practice — an accidental infinite print loop is a
-normal Tuesday — and a row that can grow to the output cap on every submission
+Learner output is unbounded in practice (an accidental infinite print loop is a
+normal Tuesday), and a row that can grow to the output cap on every submission
 makes the table unusable for analytics.
 """
 

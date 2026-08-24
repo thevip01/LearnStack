@@ -2,7 +2,7 @@
 
 This file exists so the seam is real rather than hypothetical. It is a complete
 implementation of the ``Extractor`` protocol whose one unwired part is the model
-call itself — everything around it (prompt construction, JSON extraction, id
+call itself. Everything around it (prompt construction, JSON extraction, id
 minting, provenance, confidence, citation back to chunk ids) is written, because
 those are the parts that decide whether generated content is auditable, and getting
 them right is not something to leave until the day someone adds a key.
@@ -40,7 +40,7 @@ from learnos_schema.ingestion import (
 from ..hashing import stable_id
 
 #: Highest confidence any generated candidate can carry. Under the 0.6 an operator
-#: would read as "probably fine" — generated content should never look pre-vetted.
+#: would read as "probably fine", because generated content should never look pre-vetted.
 MAX_CONFIDENCE = 0.75
 
 #: A fenced JSON block, or a bare object. Models wrap JSON in prose reliably enough
@@ -80,7 +80,7 @@ Return a JSON array of practice task objects. Each object:
   For multiple_choice: options (4 strings) and correct_index (0-3). Every distractor
   must be a mistake a learner could plausibly make; never use obviously absurd options.
   For short_answer: accepted (list of acceptable answers, lowercase).
-  For predict_output: code (python) and leave expected_output out entirely — it is
+  For predict_output: code (python) and leave expected_output out entirely. It is
   filled by running the code, not by you.
   hints       exactly 3, increasing in specificity; the third may not give the answer.
 """,
@@ -189,7 +189,7 @@ class LlmExtractor:
 
         Unknown keys are discarded rather than passed through. ``SchemaModel`` sets
         ``extra="forbid"``, so a hallucinated field would fail validation at the
-        promote step — long after a reviewer approved it, which is the worst moment
+        promote step, long after a reviewer approved it, which is the worst moment
         to discover it.
         """
         issues: list[ValidationIssue] = []

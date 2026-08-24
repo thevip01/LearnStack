@@ -66,13 +66,17 @@ class Evidence(SchemaModel):
         return RECENCY_FLOOR + (1.0 - RECENCY_FLOOR) * decay
 
 
-def apply_hint_penalty(score: float, hints_used: int, dimension: MasteryDimension) -> float:
+def apply_hint_penalty(score: float, hints_used: int, dimension: MasteryDimension | str) -> float:
     """Hints are free on the concept dimension and costly on the doing dimensions.
 
     Reading an explanation while learning a definition is fine. Being walked
     through a debugging session is not evidence you can debug.
+
+    ``dimension`` is typed loosely because that is the truth: every caller that
+    reaches here through an ``Evidence`` row passes a ``str``. Compared by value for
+    the reason spelled out on ``SchemaModel``.
     """
-    if hints_used <= 0 or dimension is MasteryDimension.CONCEPT:
+    if hints_used <= 0 or dimension == MasteryDimension.CONCEPT:
         return score
     factor = max(HINT_PENALTY_FLOOR, 1.0 - HINT_PENALTY_PER_LEVEL * hints_used)
     return score * factor

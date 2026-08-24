@@ -1,4 +1,4 @@
-"""``learnos-ingest`` — the operator interface to the pipeline.
+"""``learnos-ingest``: the operator interface to the pipeline.
 
 The pipeline is a CLI rather than a service, and that is a deliberate boundary. The
 one process in this system with outbound network access is the one an operator starts
@@ -9,7 +9,7 @@ fetching an internal one.
 Two properties matter more than the command list:
 
 **Nothing writes without ``--commit``.** Every command that could change state
-defaults to a dry run and prints what it would do. This is not timidity — a crawl is
+defaults to a dry run and prints what it would do. This is not timidity: a crawl is
 the one operation here that is visible to a third party and slow to undo.
 
 **``publish`` is not a command.** ``build`` writes files into a subject package;
@@ -46,8 +46,8 @@ def _echo(*lines: str) -> None:
 def infer_adapter(entry: dict) -> str:
     """Pick an adapter for a ``sources.json`` entry.
 
-    ``SourceRegistryEntry`` — what a content author writes and what a concept's
-    citations point at — has no adapter field, on purpose: an author is describing
+    ``SourceRegistryEntry`` (what a content author writes and what a concept's
+    citations point at) has no adapter field, on purpose: an author is describing
     *what they trust*, not *how to crawl it*. The mapping lives here so that adding a
     source to a package stays a content decision.
 
@@ -338,7 +338,7 @@ async def cmd_doctor(args: argparse.Namespace, settings: IngestionSettings) -> i
     ]
     if missing:
         ok = False
-        _echo(f"  parsers          MISSING: {', '.join(missing)} — HTML sources will be skipped")
+        _echo(f"  parsers          MISSING: {', '.join(missing)}; HTML sources will be skipped")
     else:
         _echo("  parsers          bs4 + lxml present")
 

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 /**
  * The "what am I looking at" rail: the skills a concept builds, whether its
  * prerequisites are met, and the failure modes worth knowing before the reading.
- * Everything is a projection of the ConceptOut — no local knowledge of the subject.
+ * Everything is a projection of the ConceptOut: no local knowledge of the subject.
  */
 export function ConceptMetaPanel({ runtime, nodeId }: PanelProps) {
   const navItem = useNavItem(runtime, nodeId);

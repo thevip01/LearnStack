@@ -21,12 +21,12 @@ plausible-looking-but-invalid payloads produces a review queue that is pure cost
 
 What it cannot do is judge. It will not notice that two headings describe the same
 idea, it cannot write a question whose distractors are plausible, and it has no view
-on whether a concept is worth teaching. Its confidence is capped at 0.55 to say so —
+on whether a concept is worth teaching. Its confidence is capped at 0.55 to say so:
 below the 0.6 an operator would reasonably treat as "probably fine", so nothing it
 produces looks like it has been vetted.
 
-The value of having it is that every stage boundary downstream — validation, review,
-build, the provenance trail — is exercised and testable without a model in the loop.
+The value of having it is that every stage boundary downstream (validation, review,
+build, the provenance trail) is exercised and testable without a model in the loop.
 When the LLM extractor lands, it slots in behind the same Protocol and the stages do
 not change.
 """
@@ -117,7 +117,7 @@ class StubExtractor:
             if concept_id in existing:
                 # Already published or already proposed. Emitting a duplicate_of
                 # candidate rather than skipping silently, so a reviewer can see the
-                # source now says something about a concept that already exists —
+                # source now says something about a concept that already exists,
                 # which is usually a signal the concept needs updating.
                 #
                 # The payload is a deliberately minimal pointer, not a second copy of
@@ -252,7 +252,7 @@ class StubExtractor:
         anything richer, because every other question type needs authored distractors,
         a hidden test suite or a real traceback, none of which can be derived from
         prose. A multiple-choice question with generated wrong answers is worse than
-        no question — a learner who can eliminate three obviously-wrong options learns
+        no question: a learner who can eliminate three obviously-wrong options learns
         nothing and scores as if they had.
         """
         out: list[ExtractionCandidate] = []
@@ -357,7 +357,7 @@ class StubExtractor:
 
     @staticmethod
     def _prose(body: str) -> str:
-        """Prose only — code fences removed.
+        """Prose only, code fences removed.
 
         The fences are captured separately as examples and code blocks, and leaving
         them inline would double every code sample in the rendered concept.
@@ -381,7 +381,7 @@ class StubExtractor:
 
         The citation goes on the prose block rather than only on the concept, because
         the UI renders per-block provenance and a block with no source is rendered as
-        unattributed — which for generated content is the wrong claim to make.
+        unattributed, which for generated content is the wrong claim to make.
 
         ``runnable`` is false and ``expected_output`` is unset: marking a scraped
         snippet runnable would offer a Run button on code that may not execute in

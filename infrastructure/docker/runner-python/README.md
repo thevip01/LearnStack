@@ -1,7 +1,7 @@
 # Sandbox runner images
 
-One image per runtime. Right now there is exactly one — `learnos/runner-python:3.12`
-— and adding a second should feel like a deliberate act, because each image is a
+One image per runtime. Right now there is exactly one (`learnos/runner-python:3.12`),
+and adding a second should feel like a deliberate act, because each image is a
 new attack surface that runs hostile code.
 
 The execution service picks an image from `DEFAULT_RUNTIME_IMAGES` in
@@ -32,7 +32,7 @@ Three separate reasons, and any one of them is sufficient:
 
 The base image uses the `python:3.12-slim` tag rather than a digest, which is a
 deliberate compromise: patch-level security updates land on rebuild, while the
-language version — the thing content is authored against — cannot move. Python
+language version, the thing content is authored against, cannot move. Python
 packages inside the image are pinned exactly, because those are the ones that
 decide pass or fail. If you need reproducibility down to the byte, pin the base
 by digest and accept that you now own the CVE cadence.

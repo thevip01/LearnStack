@@ -3,19 +3,19 @@
   "title": "Control flow and truthiness",
   "subject_id": "programming.python",
   "category": "Foundations",
-  "summary": "Every Python object is either truthy or falsy, and `if x:` asks the object that question rather than comparing it to anything. Knowing which values are falsy — and that `0`, `\"\"`, `[]` and `None` are all among them — is the difference between a guard that works and one that silently skips.",
+  "summary": "Every Python object is either truthy or falsy, and `if x:` asks the object that question rather than comparing it to anything. Knowing which values are falsy (and that `0`, `\"\"`, `[]` and `None` are all among them) is the difference between a guard that works and one that silently skips.",
   "definition": "Truthiness is the boolean value Python derives from an object when it is used in a condition: it calls `__bool__` if the type defines one, falls back to `len(obj) != 0` if the type defines `__len__`, and otherwise treats the object as true. `if`, `while`, `and`, `or`, `not`, comprehension filters and ternaries all go through this single rule.",
-  "purpose": "Conditions are where correctness usually leaks. `if not value:` reads like \"if the caller gave me nothing\", but it also fires on `0`, `0.0`, `\"\"`, `[]` and `False` — all of which are things a caller may legitimately mean. You learn truthiness so that you can write a guard that tests the thing you actually care about, and so that you can read someone else's guard and see which cases it swallows.",
+  "purpose": "Conditions are where correctness usually leaks. `if not value:` reads like \"if the caller gave me nothing\", but it also fires on `0`, `0.0`, `\"\"`, `[]` and `False`, all of which are things a caller may legitimately mean. You learn truthiness so that you can write a guard that tests the thing you actually care about, and so that you can read someone else's guard and see which cases it swallows.",
   "body": [
     {
       "type": "prose",
-      "md": "A condition in Python is not a comparison. `if x:` does not ask whether `x` equals `True`; it asks `x` to describe itself as true or false, using a rule that is fixed by the language and overridable by the type:\n\n1. If the type defines `__bool__`, that answer is used.\n2. Otherwise, if the type defines `__len__`, the object is false when its length is zero.\n3. Otherwise the object is true. Every user-defined class with neither method is therefore always truthy, including one whose every field is empty.\n\nThat third rule is why `if my_config:` on a plain object is not a check that the config was populated — it is a check that the object exists at all, and it will keep passing after you delete every field.",
+      "md": "A condition in Python is not a comparison. `if x:` does not ask whether `x` equals `True`; it asks `x` to describe itself as true or false, using a rule that is fixed by the language and overridable by the type:\n\n1. If the type defines `__bool__`, that answer is used.\n2. Otherwise, if the type defines `__len__`, the object is false when its length is zero.\n3. Otherwise the object is true. Every user-defined class with neither method is therefore always truthy, including one whose every field is empty.\n\nThat third rule is why `if my_config:` on a plain object is not a check that the config was populated: it is a check that the object exists at all, and it will keep passing after you delete every field.",
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/datamodel.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "3.3.1. Basic customization — object.__bool__"
+          "locator": "3.3.1. Basic customization: object.__bool__"
         },
         {
           "source_id": "python.docs.library",
@@ -34,7 +34,7 @@
         ["`\"\"`, `b\"\"`, `()`, `[]`, `{}`, `set()`", "false", "empty container: `__len__` returns 0"],
         ["`\"0\"`, `\" \"`, `\"False\"`", "**true**", "a non-empty string is true regardless of its text"],
         ["`[0]`, `[[]]`, `{None: None}`", "**true**", "length is 1; the contents are never inspected"],
-        ["`datetime.time(0, 0)`", "true (3.5+)", "midnight was falsy before 3.5 — a historical trap in old code"],
+        ["`datetime.time(0, 0)`", "true (3.5+)", "midnight was falsy before 3.5, a historical trap in old code"],
         ["`SomeClass()` with no `__bool__`/`__len__`", "true", "the fallback; always true, even when empty"]
       ]
     },
@@ -50,7 +50,7 @@
       "language": "python",
       "caption": "`and` and `or` return an operand, not a boolean",
       "runnable": true,
-      "code": "print(0 or \"fallback\")     # 'fallback' — or returns the first truthy operand\nprint(\"a\" or \"b\")          # 'a' — and stops as soon as it can decide\nprint([] and crash())      # [] — the right side is never evaluated\nprint(bool([] and 1))      # False\n\n# Chained comparisons evaluate the middle operand once.\nx = 5\nprint(1 < x < 10)          # True, and equivalent to 1 < x and x < 10",
+      "code": "print(0 or \"fallback\")     # 'fallback': or returns the first truthy operand\nprint(\"a\" or \"b\")          # 'a': and stops as soon as it can decide\nprint([] and crash())      # []: the right side is never evaluated\nprint(bool([] and 1))      # False\n\n# Chained comparisons evaluate the middle operand once.\nx = 5\nprint(1 < x < 10)          # True, and equivalent to 1 < x and x < 10",
       "expected_output": "fallback\na\n[]\nFalse\nTrue"
     },
     {
@@ -63,9 +63,9 @@
       "steps": [
         "Name the question precisely: absent, empty, zero, or false? These are four different things.",
         "If the question is \"absent\", write `is None`. Identity, not truthiness, and never `== None`.",
-        "If the question is \"empty\", `if not items:` is idiomatic and preferred over `len(items) == 0` — but only for real containers.",
+        "If the question is \"empty\", `if not items:` is idiomatic and preferred over `len(items) == 0`, but only for real containers.",
         "If the value could be `0` or `False` and that is meaningful, you must not use bare truthiness. Compare explicitly.",
-        "If the object is a custom class, check that it defines `__bool__` or `__len__` before relying on `if obj:` — otherwise you are testing nothing."
+        "If the object is a custom class, check that it defines `__bool__` or `__len__` before relying on `if obj:`, otherwise you are testing nothing."
       ]
     },
     {
@@ -82,7 +82,7 @@
       "type": "callout",
       "variant": "production",
       "title": "Where this bites in real systems",
-      "md": "Config loading and request validation, almost every time. A feature flag arrives as `False`, a `or` default flips it back to `True`, and the flag appears not to work — with no error and no log line. Retry counts of `0`, prices of `0.00`, empty-string names that the user deliberately cleared, and pagination cursors of `0` all fail the same way.\n\nThe defensive habit worth building: in any function that takes optional parameters, resolve defaults with `is None` unless you have consciously decided that empty and absent are the same thing."
+      "md": "Config loading and request validation, almost every time. A feature flag arrives as `False`, a `or` default flips it back to `True`, and the flag appears not to work, with no error and no log line. Retry counts of `0`, prices of `0.00`, empty-string names that the user deliberately cleared, and pagination cursors of `0` all fail the same way.\n\nThe defensive habit worth building: in any function that takes optional parameters, resolve defaults with `is None` unless you have consciously decided that empty and absent are the same thing."
     }
   ],
   "components": [
@@ -114,7 +114,7 @@
     {
       "error": "`if config:` keeps returning true after every field is emptied, so a \"has anything been set\" guard never fires.",
       "cause": "A user-defined class with neither `__bool__` nor `__len__` is unconditionally truthy.",
-      "fix": "Test the thing you mean — `if config.entries:` — or give the class a `__bool__`/`__len__` that says what emptiness means for it."
+      "fix": "Test the thing you mean (`if config.entries:`) or give the class a `__bool__`/`__len__` that says what emptiness means for it."
     },
     {
       "error": "`if x is True:` fails for a value of `1`, and `if flag == True:` succeeds for `1` and `1.0`.",
@@ -129,7 +129,7 @@
   ],
   "best_practices": [
     "Use `is None` for absence and bare truthiness for emptiness, and never let the two blur together in a defaults line.",
-    "Prefer `if not items:` to `if len(items) == 0:` for containers — but only when you know the value is a container and not possibly `None`.",
+    "Prefer `if not items:` to `if len(items) == 0:` for containers, but only when you know the value is a container and not possibly `None`.",
     "Let `and`/`or` short-circuit do your nil-guarding instead of nesting `if` statements; put the cheapest, most defensive test first.",
     "Give any class whose emptiness is meaningful an explicit `__bool__` or `__len__`, so `if obj:` means something to a reader.",
     "When a falsy value is legal input, say so in the signature (`limit: int | None = None`) so the `is None` check is obviously deliberate.",
@@ -139,11 +139,11 @@
     "Optional booleans in request payloads are the single most common source of this bug: `enabled=False` and `enabled` absent must be distinguished at the parsing boundary, not deep inside a handler.",
     "Falsy-default bugs do not raise, so they are invisible to error tracking. They surface as support tickets about a setting that 'does not save', which makes them expensive to diagnose.",
     "`if response:` on an HTTP client object depends entirely on that library's `__bool__`; some make a 404 falsy. Test the status code you care about instead of trusting the object.",
-    "In hot loops, truthiness on a large container is O(1) because `__len__` is O(1) for built-in types — but on a generator there is no length, so `if gen:` is always true and consumes nothing."
+    "In hot loops, truthiness on a large container is O(1) because `__len__` is O(1) for built-in types, but on a generator there is no length, so `if gen:` is always true and consumes nothing."
   ],
   "anti_patterns": [
     "`value = value or default` in any function that accepts numbers, booleans or strings that may legitimately be empty.",
-    "`if x == None`, `if x is True`, `if bool(x) == True` — three ways of writing `if x:` badly.",
+    "`if x == None`, `if x is True`, `if bool(x) == True`: three ways of writing `if x:` badly.",
     "`if len(x) > 0:` where `x` may be `None`, which trades a silent skip for an `AttributeError` without fixing the ambiguity.",
     "Relying on `if obj:` for a dataclass or plain class as a populated check, when no `__bool__` was ever defined."
   ],
@@ -188,7 +188,7 @@
       "source_id": "python.pep8",
       "url": "https://peps.python.org/pep-0008/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Programming Recommendations — comparisons to singletons"
+      "locator": "Programming Recommendations: comparisons to singletons"
     }
   ],
   "provenance": {

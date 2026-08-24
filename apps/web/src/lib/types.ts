@@ -91,7 +91,7 @@ export type Provenance = {
 };
 
 // ---------------------------------------------------------------------------
-// UI schema (ui.py) — the panel vocabulary
+// UI schema (ui.py): the panel vocabulary
 // ---------------------------------------------------------------------------
 
 export type PanelType =

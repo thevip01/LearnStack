@@ -7,12 +7,12 @@
   "skills": ["python.skill.choose-a-container", "python.skill.write-comprehensions"],
   "difficulty": 5,
   "estimated_minutes": 15,
-  "prompt_md": "Implement `dedupe`, which returns the items of an iterable with duplicates removed and **first-seen order preserved**.\n\nThe catch is the complexity bound: the tests include a 200 000-element input with a per-call operation budget. A solution that scans the output list to decide whether it has seen an item will pass the correctness tests and fail the budget one.\n\nAlso implement `dedupe_by(items, key)`, the same thing keyed on a derived value — the shape you actually need in production, where two records are \"the same\" because their ids match rather than because the whole object does.\n\nBoth functions must accept any iterable (including a generator that can only be consumed once) and must not require the items to be sortable.",
+  "prompt_md": "Implement `dedupe`, which returns the items of an iterable with duplicates removed and **first-seen order preserved**.\n\nThe catch is the complexity bound: the tests include a 200 000-element input with a per-call operation budget. A solution that scans the output list to decide whether it has seen an item will pass the correctness tests and fail the budget one.\n\nAlso implement `dedupe_by(items, key)`, the same thing keyed on a derived value: the shape you actually need in production, where two records are \"the same\" because their ids match rather than because the whole object does.\n\nBoth functions must accept any iterable (including a generator that can only be consumed once) and must not require the items to be sortable.",
   "tags": ["containers", "set", "dict", "comprehensions", "complexity"],
   "requirements_md": [
     "`dedupe(items)` returns a `list` in first-seen order with duplicates removed.",
     "`dedupe_by(items, key)` does the same, treating two items as duplicates when `key(item)` matches.",
-    "Both must be O(n) in the number of items — linear, not quadratic.",
+    "Both must be O(n) in the number of items: linear, not quadratic.",
     "Both must accept a one-shot iterable (a generator) and consume it exactly once.",
     "Items are hashable but not necessarily orderable; do not sort.",
     "Preserve the *first* occurrence of each duplicate, not the last."
@@ -99,7 +99,7 @@
     },
     {
       "level": 2,
-      "md": "For `dedupe`, there is a one-liner: dicts preserve insertion order and silently ignore a repeated key, so building a dict from the items and taking its keys *is* order-preserving deduplication. For `dedupe_by` you need the explicit `seen` set, because you are deduplicating on something other than the item itself — and note that a comprehension cannot do it cleanly, since `seen.add(...)` returns `None`.",
+      "md": "For `dedupe`, there is a one-liner: dicts preserve insertion order and silently ignore a repeated key, so building a dict from the items and taking its keys *is* order-preserving deduplication. For `dedupe_by` you need the explicit `seen` set, because you are deduplicating on something other than the item itself, and note that a comprehension cannot do it cleanly, since `seen.add(...)` returns `None`.",
       "reveals_solution": false
     },
     {
@@ -125,7 +125,7 @@
       "source_id": "python.wiki.time-complexity",
       "url": "https://wiki.python.org/moin/TimeComplexity",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "set — x in s is O(1) average"
+      "locator": "set: x in s is O(1) average"
     }
   ],
   "provenance": {

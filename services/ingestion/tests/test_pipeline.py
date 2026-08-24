@@ -1,6 +1,6 @@
 """The orchestrator's refusals.
 
-The pipeline's own logic is thin — it wires stages and records reports. What is worth
+The pipeline's own logic is thin: it wires stages and records reports. What is worth
 testing is the three things it will not do: run stages it was not asked for, write
 anything on a dry run, or treat ``publish`` as a step it can take.
 """
@@ -59,7 +59,7 @@ class TestSpan:
 
         Honouring the request literally would extract from whatever stale chunks
         happened to be stored, producing candidates that cite text the source no longer
-        contains — the exact failure this pipeline exists to prevent.
+        contains, the exact failure this pipeline exists to prevent.
         """
         pipeline, _ = pipeline_with(repo, settings)
         assert pipeline._span(("fetch", "extract")) == {"fetch", "parse", "clean", "chunk", "embed", "extract"}
@@ -151,7 +151,7 @@ class TestSubjectDir:
         """The manifest is the authority on which id a directory holds.
 
         Deriving ``subjects/programming/python`` from ``programming.python`` would break
-        the first time someone reorganised the tree — and break silently, by building
+        the first time someone reorganised the tree, and break silently, by building
         into a directory nobody reads.
         """
         directory = settings.subjects_dir / "anywhere" / "at" / "all"
@@ -211,7 +211,7 @@ class TestPipelineResult:
         assert not result.ok
 
     def test_a_run_with_no_stages_is_ok(self) -> None:
-        """Vacuously — and that is why ``run`` always records at least one report."""
+        """Vacuously, and that is why ``run`` always records at least one report."""
         assert PipelineResult(run_id="run.1", subject_id="s.x", dry_run=True).ok
 
     def test_the_summary_says_whether_it_was_live(self) -> None:

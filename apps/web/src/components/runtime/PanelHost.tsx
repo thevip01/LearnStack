@@ -8,7 +8,7 @@ import type { PanelProps } from "./types";
 
 /**
  * Renders one declared panel: registry lookup, then the component inside its own
- * error boundary. Nothing else — slot arrangement is the LayoutRenderer's job.
+ * error boundary. Nothing else: slot arrangement is the LayoutRenderer's job.
  */
 export function PanelHost(props: PanelProps) {
   const { panel } = props;
@@ -38,7 +38,7 @@ function UnknownPanel({ type, id }: { type: string; id: string }) {
         <>
           The layout asks for <span className="font-mono text-ink">{type}</span> in slot{" "}
           <span className="font-mono text-ink">{id}</span>. This build of the web app has no component registered for
-          it — the subject package is newer than the frontend.
+          it. The subject package is newer than the frontend.
         </>
       }
     />

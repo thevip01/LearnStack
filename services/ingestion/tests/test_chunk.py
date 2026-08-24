@@ -2,7 +2,7 @@
 
 Two invariants matter here and both are about citability. A chunk is what a concept
 points at, so a chunk that begins mid-sentence or contains half a code sample makes
-the citation useless — and a broken citation is worse than a missing one, because a
+the citation useless, and a broken citation is worse than a missing one, because a
 learner follows it and finds text that does not support the claim.
 """
 
@@ -74,7 +74,7 @@ class TestFenceProtection:
 
 class TestChunkDocument:
     def test_prepends_the_heading_path_into_the_text(self) -> None:
-        """Not merely stored alongside — *in* the text.
+        """Not merely stored alongside: *in* the text.
 
         Search runs over the text. A chunk about retry behaviour that never repeats
         the word "retry" because it sat under a "## Retries" heading is a chunk that

@@ -4,8 +4,8 @@ Every value has a default that makes ``docker compose up`` work with no ``.env``
 file, because the first thing a new contributor does is run the stack, and a
 stack that needs secrets before it will boot does not get run.
 
-The two defaults that are deliberately unsafe — ``JWT_SECRET`` and
-``DEMO_USER_PASSWORD`` — are checked at startup and refused outside development.
+The two defaults that are deliberately unsafe, ``JWT_SECRET`` and
+``DEMO_USER_PASSWORD``, are checked at startup and refused outside development.
 """
 
 from __future__ import annotations

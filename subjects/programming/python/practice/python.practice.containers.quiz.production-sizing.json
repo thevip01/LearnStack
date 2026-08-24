@@ -18,20 +18,20 @@
       "dimension": "production",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "About 2.5 hours — both `n` and `m` grow 10×, so a quadratic path costs roughly 100× more." },
-        { "id": "b", "md": "About 15 minutes — 10× the data is 10× the time." },
-        { "id": "c", "md": "About 20 minutes — sorting effects mean growth is n log n." },
-        { "id": "d", "md": "Unchanged — the job is I/O bound, so CPU complexity does not matter." }
+        { "id": "a", "md": "About 2.5 hours: both `n` and `m` grow 10×, so a quadratic path costs roughly 100× more." },
+        { "id": "b", "md": "About 15 minutes: 10× the data is 10× the time." },
+        { "id": "c", "md": "About 20 minutes: sorting effects mean growth is n log n." },
+        { "id": "d", "md": "Unchanged: the job is I/O bound, so CPU complexity does not matter." }
       ],
       "answer": "a",
-      "explanation_md": "Both loop bounds scale with order volume, so the cost is quadratic in a single growth factor: 90 s × 100 ≈ 150 minutes. This is the value of stating complexity in business terms — \"quadratic in orders per day\" turns a growth forecast directly into a batch-window breach, and the fix (`set(open_refs)` once) returns it to 15 minutes.",
+      "explanation_md": "Both loop bounds scale with order volume, so the cost is quadratic in a single growth factor: 90 s × 100 ≈ 150 minutes. This is the value of stating complexity in business terms: \"quadratic in orders per day\" turns a growth forecast directly into a batch-window breach, and the fix (`set(open_refs)` once) returns it to 15 minutes.",
       "skills": ["python.skill.analyse-complexity"],
       "sources": [
         {
           "source_id": "python.wiki.time-complexity",
           "url": "https://wiki.python.org/moin/TimeComplexity",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "list — x in s is O(n)"
+          "locator": "list: x in s is O(n)"
         }
       ]
     },
@@ -49,14 +49,14 @@
         { "id": "d", "md": "Call `gc.collect()` before building the list." }
       ],
       "answer": "a",
-      "explanation_md": "The list is O(n) in a tenant-controlled `n`, so any fixed memory limit is eventually exceeded — raising it buys time, not correctness. Replacing the accumulator with a generator makes peak memory independent of row count. `MemoryError` is rarely catchable usefully (the OOM killer sends SIGKILL, which no handler sees) and `gc.collect()` cannot free objects you are still holding.",
+      "explanation_md": "The list is O(n) in a tenant-controlled `n`, so any fixed memory limit is eventually exceeded: raising it buys time, not correctness. Replacing the accumulator with a generator makes peak memory independent of row count. `MemoryError` is rarely catchable usefully (the OOM killer sends SIGKILL, which no handler sees) and `gc.collect()` cannot free objects you are still holding.",
       "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/tracemalloc.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "tracemalloc — trace memory allocations"
+          "locator": "tracemalloc: trace memory allocations"
         }
       ]
     },
@@ -75,14 +75,14 @@
         { "id": "e", "md": "Results are returned in insertion order using `dict.fromkeys`." }
       ],
       "answer": ["a", "c", "d"],
-      "explanation_md": "Unbounded size, unbounded depth and super-linear regex behaviour are all attacker-controlled cost, and no amount of algorithmic tuning removes the class — the input must be bounded at the boundary (max body size, max item count, max nesting depth, a linear-time matcher). Building a `set` and preserving order with `dict.fromkeys` are both linear and harmless.",
+      "explanation_md": "Unbounded size, unbounded depth and super-linear regex behaviour are all attacker-controlled cost, and no amount of algorithmic tuning removes the class: the input must be bounded at the boundary (max body size, max item count, max nesting depth, a linear-time matcher). Building a `set` and preserving order with `dict.fromkeys` are both linear and harmless.",
       "skills": ["python.skill.choose-a-container", "python.skill.analyse-complexity"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/re.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "re — performance notes"
+          "locator": "re: performance notes"
         }
       ]
     },
@@ -94,20 +94,20 @@
       "dimension": "production",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`functools.cache` is unbounded, so the cache is O(distinct customers) — a time problem was traded for a memory leak." },
+        { "id": "a", "md": "`functools.cache` is unbounded, so the cache is O(distinct customers): a time problem was traded for a memory leak." },
         { "id": "b", "md": "The cache is thread-local, so each worker keeps a duplicate copy." },
         { "id": "c", "md": "Memoisation defeats the garbage collector's generational heuristics." },
         { "id": "d", "md": "Nothing changed; steady memory growth is normal for a long-running Python process." }
       ],
       "answer": "a",
-      "explanation_md": "`functools.cache` is `lru_cache(maxsize=None)` — it never evicts, so every distinct argument is retained for the process lifetime along with whatever the value references. Use `lru_cache(maxsize=N)` with an N you can multiply by the entry size and defend, and remember that a cache only improves complexity if the hit rate actually holds.",
+      "explanation_md": "`functools.cache` is `lru_cache(maxsize=None)`: it never evicts, so every distinct argument is retained for the process lifetime along with whatever the value references. Use `lru_cache(maxsize=N)` with an N you can multiply by the entry size and defend, and remember that a cache only improves complexity if the hit rate actually holds.",
       "skills": ["python.skill.choose-a-container"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/functools.html#functools.cache",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "functools.cache — equivalent to lru_cache(maxsize=None)"
+          "locator": "functools.cache: equivalent to lru_cache(maxsize=None)"
         }
       ]
     },
@@ -119,7 +119,7 @@
       "dimension": "production",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "A sampling profiler (py-spy) attached to the live process — near-zero overhead, no restart, no code change." },
+        { "id": "a", "md": "A sampling profiler (py-spy) attached to the live process: near-zero overhead, no restart, no code change." },
         { "id": "b", "md": "`cProfile` around the handler in production." },
         { "id": "c", "md": "`timeit` on the suspected function." },
         { "id": "d", "md": "`tracemalloc` snapshots on every request." }
@@ -132,7 +132,7 @@
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/profile.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "The Python Profilers — overhead caveats"
+          "locator": "The Python Profilers: overhead caveats"
         }
       ]
     }
@@ -151,7 +151,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) ~2.5 hours, because 10× on both bounds is ~100×. (2) Stream with a generator so peak memory is one row. (3) Unbounded body size, unbounded nesting depth, and the backtracking regex. (4) `functools.cache` never evicts, so the cache grows with distinct customers — use `lru_cache(maxsize=N)`. (5) A sampling profiler such as py-spy.",
+      "md": "Answers: (1) ~2.5 hours, because 10× on both bounds is ~100×. (2) Stream with a generator so peak memory is one row. (3) Unbounded body size, unbounded nesting depth, and the backtracking regex. (4) `functools.cache` never evicts, so the cache grows with distinct customers: use `lru_cache(maxsize=N)`. (5) A sampling profiler such as py-spy.",
       "reveals_solution": true
     }
   ],
@@ -166,7 +166,7 @@
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/functools.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "functools — cache, lru_cache"
+      "locator": "functools: cache, lru_cache"
     },
     {
       "source_id": "python.wiki.time-complexity",

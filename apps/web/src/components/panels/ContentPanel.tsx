@@ -15,7 +15,7 @@ import type { PanelProps } from "@/components/runtime/types";
 
 /**
  * The reading. Renders the concept named by the current nav node from its
- * authored content blocks — there is no subject-specific rendering here, only
+ * authored content blocks. There is no subject-specific rendering here, only
  * the generic block dispatch.
  */
 export function ContentPanel({ runtime, mode, nodeId }: PanelProps) {

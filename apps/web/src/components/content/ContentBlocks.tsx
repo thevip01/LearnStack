@@ -13,7 +13,7 @@ import { workspaceKey } from "@/lib/store";
 import type { ContentBlock, LearningMode } from "@/lib/types";
 
 /**
- * Renders a `ContentBlock[]` — the one place the block union is dispatched.
+ * Renders a `ContentBlock[]`: the one place the block union is dispatched.
  *
  * The switch is exhaustive by the discriminant, so a new block variant in the
  * schema surfaces as a TypeScript error here rather than a silently dropped

@@ -7,8 +7,8 @@ and returning ``(result, StageReport)``. The report is the operator-facing half 
 is persisted incrementally by the pipeline, so a run that dies in ``fetch`` still
 shows how far it got.
 
-``clean`` has no separate pass — it runs inside ``parse``, because you cannot find a
-heading path without having already decided the nav sidebar is not content — but it
+``clean`` has no separate pass (it runs inside ``parse``, because you cannot find a
+heading path without having already decided the nav sidebar is not content), but it
 reports separately, since the kept-bytes ratio is the best early warning that a
 source changed its template.
 """

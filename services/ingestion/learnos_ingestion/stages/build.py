@@ -6,7 +6,7 @@ all three exist because the alternative silently destroys authored work.
 
 **Only ``approved`` candidates are folded in.** Not ``draft``, not ``published``.
 Draft has not been reviewed. Published is already in the package, and re-folding it
-would overwrite whatever an author has edited by hand since — which is the normal
+would overwrite whatever an author has edited by hand since, which is the normal
 workflow, since a reviewer approves a rough concept and then improves it in the file.
 
 **Existing files are never silently overwritten.** A candidate whose id already
@@ -64,7 +64,7 @@ def next_version(current: str, *, today: datetime | None = None) -> str:
     """Bump a calendar version: ``2026.08.0`` -> ``2026.08.1``, or roll the month.
 
     Calendar versioning rather than semver because a subject package has no API to
-    break — what a consumer wants to know is how fresh the content is, which a date
+    break. What a consumer wants to know is how fresh the content is, which a date
     answers and ``1.4.2`` does not.
     """
     now = today or datetime.now(timezone.utc)
@@ -91,7 +91,7 @@ def _slug_for(payload_id: str) -> str:
 def build_package(
     *,
     subject_dir: Path,
-    candidates: list,  # list[CandidateRow] — untyped to avoid importing API models here
+    candidates: list,  # list[CandidateRow], untyped to avoid importing API models here
     dry_run: bool = True,
     bump_version: bool = True,
 ) -> tuple[BuildResult, StageReport]:
@@ -158,8 +158,8 @@ def build_package(
         return result, report
 
     # Validate what is now on disk before touching the version. A package that fails
-    # here has already had its files written, which is intentional — an author needs
-    # to see the broken file to fix it — but the version stays put so the API does
+    # here has already had its files written, which is intentional (an author needs
+    # to see the broken file to fix it), but the version stays put so the API does
     # not treat it as a new release.
     try:
         package = load_subject_package(subject_dir, validate=True)

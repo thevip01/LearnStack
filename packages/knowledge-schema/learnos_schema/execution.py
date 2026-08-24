@@ -77,7 +77,9 @@ class ExecutionResult(SchemaModel):
     @property
     def weighted_score(self) -> float:
         if not self.tests:
-            return 1.0 if self.status is ExecutionStatus.SUCCEEDED else 0.0
+            # By value, not identity: see ``SchemaModel``. As an identity check this
+            # was never true, so every task graded on "it ran" scored zero.
+            return 1.0 if self.status == ExecutionStatus.SUCCEEDED else 0.0
         total = sum(t.weight for t in self.tests)
         if total == 0:
             return 0.0

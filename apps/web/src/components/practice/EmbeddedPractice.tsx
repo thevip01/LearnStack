@@ -14,7 +14,7 @@ import type { LearningMode } from "@/lib/types";
  * It resolves to a link into `practice` mode rather than running the task in
  * place: an attempt has a lifecycle (hints, submissions, mastery deltas) that
  * belongs in the practice workspace, not spliced into scrolling prose. The card
- * still previews what the learner is walking into — kind, difficulty, hints.
+ * still previews what the learner is walking into: kind, difficulty, hints.
  */
 export function EmbeddedPractice({
   practiceId,

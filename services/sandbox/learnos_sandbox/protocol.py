@@ -15,8 +15,8 @@ never talks to Docker directly and never builds a tar by hand:
   sentinel means learner code printing JSON cannot forge a test report.
 
 The harness source is shipped as a *file in the workspace* rather than baked
-into the runner image. That keeps the image generic — one Python image for every
-subject — and means a harness bug is fixed by redeploying the API rather than by
+into the runner image. That keeps the image generic (one Python image for every
+subject) and means a harness bug is fixed by redeploying the API rather than by
 rebuilding and redistributing images.
 """
 
@@ -259,7 +259,7 @@ class RunOutcome:
     rather than on it, for two reasons that reinforce each other:
 
     * ``ExecutionResult`` is a ``SchemaModel`` with ``extra="forbid"``, so there
-      is no field for the report to occupy — and that is the point. The result is
+      is no field for the report to occupy, and that is the point. The result is
       the object serialised straight to the client; if the report were a field on
       it, keeping hidden test failure text out of HTTP responses would depend on
       somebody remembering to strip it.

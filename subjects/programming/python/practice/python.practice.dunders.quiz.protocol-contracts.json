@@ -7,7 +7,7 @@
   "skills": ["python.skill.implement-dunder-protocols"],
   "difficulty": 5,
   "estimated_minutes": 7,
-  "prompt_md": "Dunder methods are contracts the interpreter relies on. Getting one half-right — `__eq__` without `__hash__`, `__enter__` without `__exit__` — produces objects that look fine and misbehave in a container or a `with` block. Reason about the contracts, not just the syntax.",
+  "prompt_md": "Dunder methods are contracts the interpreter relies on. Getting one half-right (`__eq__` without `__hash__`, `__enter__` without `__exit__`) produces objects that look fine and misbehave in a container or a `with` block. Reason about the contracts, not just the syntax.",
   "tags": ["dunder", "protocols", "eq", "hash", "repr", "context-manager", "iterator"],
   "questions": [
     {
@@ -18,20 +18,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`TypeError: unhashable type` — defining `__eq__` sets `__hash__` to `None`." },
+        { "id": "a", "md": "`TypeError: unhashable type`, defining `__eq__` sets `__hash__` to `None`." },
         { "id": "b", "md": "It works, using identity-based hashing as before." },
         { "id": "c", "md": "It works, and equal points collapse to one entry automatically." },
         { "id": "d", "md": "`RecursionError`, because `__eq__` calls `__hash__`." }
       ],
       "answer": "a",
-      "explanation_md": "Defining `__eq__` makes the class unhashable unless you also define `__hash__` — Python sets `__hash__ = None` to enforce the invariant that equal objects must hash equally. Redefining equality without redefining hashing would break that, so the language removes hashing rather than let you ship the bug. Set `__hash__` explicitly (often over the same fields), or use `@dataclass(frozen=True)`, or `eq=True` with a hashable design.",
+      "explanation_md": "Defining `__eq__` makes the class unhashable unless you also define `__hash__`: Python sets `__hash__ = None` to enforce the invariant that equal objects must hash equally. Redefining equality without redefining hashing would break that, so the language removes hashing rather than let you ship the bug. Set `__hash__` explicitly (often over the same fields), or use `@dataclass(frozen=True)`, or `eq=True` with a hashable design.",
       "skills": ["python.skill.implement-dunder-protocols"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/datamodel.html#object.__hash__",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "object.__hash__ — set to None when __eq__ is defined"
+          "locator": "object.__hash__: set to None when __eq__ is defined"
         }
       ]
     },
@@ -43,13 +43,13 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`__repr__` — `__str__` falls back to it, so one method covers both `print()` and the debugger/`repr()`." },
-        { "id": "b", "md": "`__str__` — `__repr__` falls back to it." },
+        { "id": "a", "md": "`__repr__`: `__str__` falls back to it, so one method covers both `print()` and the debugger/`repr()`." },
+        { "id": "b", "md": "`__str__`: `__repr__` falls back to it." },
         { "id": "c", "md": "Either; they are aliases." },
         { "id": "d", "md": "`__str__`, because `__repr__` is only for subclasses." }
       ],
       "answer": "a",
-      "explanation_md": "`__str__` defaults to `__repr__`, not the other way round, so implementing `__repr__` alone gives you a sensible result everywhere — logs, tracebacks, the REPL, and `print()`. Aim for an unambiguous `__repr__` (ideally one that looks like the constructor call); add `__str__` only when end-user display should differ from the developer view.",
+      "explanation_md": "`__str__` defaults to `__repr__`, not the other way round, so implementing `__repr__` alone gives you a sensible result everywhere: logs, tracebacks, the REPL, and `print()`. Aim for an unambiguous `__repr__` (ideally one that looks like the constructor call); add `__str__` only when end-user display should differ from the developer view.",
       "skills": ["python.skill.implement-dunder-protocols"],
       "sources": [
         {
@@ -75,7 +75,7 @@
         { "id": "e", "md": "`__exit__` receives the exception type, value and traceback (or three `None`s)." }
       ],
       "answer": ["a", "b", "c", "e"],
-      "explanation_md": "`__enter__` and `__exit__` are a pair: cleanup runs on both the normal and the exceptional path, `as` binds `__enter__`'s return value, and `__exit__` sees the exception triple and can swallow it by returning truthy (usually a mistake — do it deliberately). Defining only `__enter__` raises `AttributeError` on the `with`; both are required. `contextlib.contextmanager` lets you write the pair as one generator with a `try/finally`.",
+      "explanation_md": "`__enter__` and `__exit__` are a pair: cleanup runs on both the normal and the exceptional path, `as` binds `__enter__`'s return value, and `__exit__` sees the exception triple and can swallow it by returning truthy (usually a mistake, so do it deliberately). Defining only `__enter__` raises `AttributeError` on the `with`; both are required. `contextlib.contextmanager` lets you write the pair as one generator with a `try/finally`.",
       "skills": ["python.skill.implement-dunder-protocols"],
       "sources": [
         {
@@ -94,20 +94,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "Yes — the old sequence protocol lets `for` call `__getitem__` with 0, 1, 2… until `IndexError`." },
-        { "id": "b", "md": "No — iteration strictly requires `__iter__`." },
+        { "id": "a", "md": "Yes, the old sequence protocol lets `for` call `__getitem__` with 0, 1, 2… until `IndexError`." },
+        { "id": "b", "md": "No, iteration strictly requires `__iter__`." },
         { "id": "c", "md": "Yes, but only if `__len__` is also defined." },
-        { "id": "d", "md": "No — `__getitem__` is only for `obj[i]`, never for `for`." }
+        { "id": "d", "md": "No, `__getitem__` is only for `obj[i]`, never for `for`." }
       ],
       "answer": "a",
-      "explanation_md": "If `__iter__` is absent, `for` falls back to the legacy sequence protocol: call `__getitem__(0)`, `__getitem__(1)`, … and stop on `IndexError`. It works, but `__iter__` is clearer and required for non-integer-indexable iterables, so prefer defining it. The point is that `for` is protocol-driven, not type-driven — several dunders can satisfy it.",
+      "explanation_md": "If `__iter__` is absent, `for` falls back to the legacy sequence protocol: call `__getitem__(0)`, `__getitem__(1)`, … and stop on `IndexError`. It works, but `__iter__` is clearer and required for non-integer-indexable iterables, so prefer defining it. The point is that `for` is protocol-driven, not type-driven: several dunders can satisfy it.",
       "skills": ["python.skill.implement-dunder-protocols"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/datamodel.html#object.__getitem__",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "object.__getitem__ — old-style iteration fallback"
+          "locator": "object.__getitem__: old-style iteration fallback"
         }
       ]
     },
@@ -125,14 +125,14 @@
         { "id": "d", "md": "`typing.NamedTuple` with the fields" }
       ],
       "answer": ["a", "c", "d"],
-      "explanation_md": "The invariant is that equal objects hash equally *and* the hash never changes while the object is a key. `frozen=True` and `NamedTuple` are immutable, so both fall out for free; hand-writing both over the same fields works only if you treat those fields as immutable. Option (b) is the trap: `eq=True` without `frozen=True` sets `__hash__ = None`, so the object is unhashable — and if you forced a hash over mutable fields, mutating one would strand the entry in the wrong bucket.",
+      "explanation_md": "The invariant is that equal objects hash equally *and* the hash never changes while the object is a key. `frozen=True` and `NamedTuple` are immutable, so both fall out for free; hand-writing both over the same fields works only if you treat those fields as immutable. Option (b) is the trap: `eq=True` without `frozen=True` sets `__hash__ = None`, so the object is unhashable, and if you forced a hash over mutable fields, mutating one would strand the entry in the wrong bucket.",
       "skills": ["python.skill.implement-dunder-protocols"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "dataclass — eq, frozen and __hash__"
+          "locator": "dataclass: eq, frozen and __hash__"
         }
       ]
     }
@@ -151,7 +151,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) `TypeError: unhashable` — `__eq__` alone nulls `__hash__`. (2) implement `__repr__`; `__str__` falls back to it. (3) true: exit-on-raise, truthy-suppresses, `as` binds enter's return, exit gets the exception triple — false: enter-only does not work. (4) yes, via the `__getitem__`/`IndexError` fallback. (5) `frozen=True`, hand-written-over-immutable-fields, and `NamedTuple`; not `eq=True` unfrozen.",
+      "md": "Answers: (1) `TypeError: unhashable`, `__eq__` alone nulls `__hash__`. (2) implement `__repr__`; `__str__` falls back to it. (3) true: exit-on-raise, truthy-suppresses, `as` binds enter's return, exit gets the exception triple; false: enter-only does not work. (4) yes, via the `__getitem__`/`IndexError` fallback. (5) `frozen=True`, hand-written-over-immutable-fields, and `NamedTuple`; not `eq=True` unfrozen.",
       "reveals_solution": true
     }
   ],
@@ -166,7 +166,7 @@
       "source_id": "python.docs.reference",
       "url": "https://docs.python.org/3/reference/datamodel.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Data model — special method names"
+      "locator": "Data model: special method names"
     },
     {
       "source_id": "python.docs.library",

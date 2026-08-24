@@ -285,9 +285,9 @@ class SubprocessRunner:
 
 
 def _error_note(status: ExecutionStatus) -> str | None:
-    if status is ExecutionStatus.TIMEOUT:
+    if status == ExecutionStatus.TIMEOUT:
         return "execution exceeded the time limit and was stopped"
-    if status is ExecutionStatus.OOM:
+    if status == ExecutionStatus.OOM:
         return "execution exceeded the memory limit and was stopped"
     return None
 

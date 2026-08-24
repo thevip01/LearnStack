@@ -1,4 +1,4 @@
-"""LearnOS API — the generic subject runtime.
+"""LearnOS API: the generic subject runtime.
 
 Nothing in this package knows what Python, AWS or options pricing are. Subjects
 arrive as validated ``learnos_schema.SubjectPackage`` data and every route is

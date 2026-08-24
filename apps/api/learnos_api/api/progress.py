@@ -1,6 +1,6 @@
 """Progress routes.
 
-All three require authentication — there is no anonymous progress to report — and
+All three require authentication (there is no anonymous progress to report), and
 all three recompute from evidence rather than reading ``user_skill_state``. That
 is the expensive choice on purpose: this is the page a learner uses to decide
 what to trust about their own ability, and a number served from a stale rollup is
@@ -129,7 +129,7 @@ async def history(
 
     There is no snapshot table. Each point is the rollup recomputed with a cutoff,
     so the curve reflects today's maths rather than whatever the maths was on the
-    day each row was written — and a change to the decay constant redraws history
+    day each row was written, and a change to the decay constant redraws history
     instead of leaving a discontinuity in it.
     """
     subject = resolve_subject(registry, subject_id)

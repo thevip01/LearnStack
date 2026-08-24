@@ -1,8 +1,8 @@
 """Admin surface: reload subjects, drive ingestion, read provenance.
 
 Everything here sits behind ``CurrentAdmin``. Two of these routes are genuinely
-dangerous — reload swaps the content every learner is reading, and a non-dry run
-rewrites a package — so the guard is not decoration.
+dangerous (reload swaps the content every learner is reading, and a non-dry run
+rewrites a package), so the guard is not decoration.
 
 The division of labour with the ingestion service is strict. This router *records*
 intent and *reads* results. It never fetches a URL, never calls a model, never
@@ -60,7 +60,7 @@ async def reload_subjects(
     Order matters: ``reload`` swaps the in-memory registry atomically, so the
     cache mirror and the search index are rebuilt from what actually loaded rather
     than from what was on disk a moment ago. A package that fails validation leaves
-    the previously loaded version serving traffic and comes back in ``failed`` —
+    the previously loaded version serving traffic and comes back in ``failed``:
     a bad edit must not be able to empty the catalog.
     """
     report = await registry.reload()
@@ -98,7 +98,7 @@ async def validate_subject(
     validator and the loader have drifted apart.
 
     Warnings are the interesting half. They are the checks that must not block a
-    package but do predict a broken learner experience — a skill nothing can
+    package but do predict a broken learner experience: a skill nothing can
     measure, a concept with no practice attached, a hint ladder that jumps straight
     to the answer. Enforcing them would make authoring a subject impossible; hiding
     them would let a subject ship where mastery can never be earned.
@@ -227,7 +227,7 @@ async def list_runs(
 
 @router.get("/ingestion/runs/{run_id}")
 async def get_run(run_id: str, session: SessionDep, _: CurrentAdmin) -> dict[str, Any]:
-    """One run with its full stage reports — the log an operator reads after a crawl."""
+    """One run with its full stage reports: the log an operator reads after a crawl."""
     return await ingestion_admin.get_run(session, run_id)
 
 
@@ -303,7 +303,7 @@ async def provenance(entity_id: str, session: SessionDep, _: CurrentAdmin) -> Pr
     Part of the MVP surface even though the extractor behind it is a stub, because
     the tables it walks have to be designed for this question from the start. A
     provenance trail retrofitted after a package has already been published cannot
-    be reconstructed — the chunks it would have cited are gone.
+    be reconstructed: the chunks it would have cited are gone.
 
     Hand-authored content 404s here, and that is the correct answer: it has no
     ingestion trail, and inventing an empty one would make the endpoint useless as

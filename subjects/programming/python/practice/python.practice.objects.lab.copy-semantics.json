@@ -7,14 +7,14 @@
   "skills": ["python.skill.reason-about-references"],
   "difficulty": 6,
   "estimated_minutes": 25,
-  "prompt_md": "You are given a `base` configuration (a nested dict) and a stream of per-request `overrides`. Requests must be able to tweak their own config without ever mutating `base` or each other — the classic place a shared reference leaks across requests.\n\nImplement `merged_config(base, overrides)`:\n\n- Return a **new** config that is `base` deep-updated by `overrides` (nested dicts merged key by key, not replaced wholesale).\n- `base` must be completely unchanged afterwards, including its nested lists and dicts.\n- Mutating the returned config's nested structures must not reach back into `base`.\n- Two calls with the same `base` must return independent results.\n\nThis is a lab: the tests probe object identity, not just equality, so a shallow copy that passes the value checks will still fail the aliasing checks. Reason about which copies need to be deep and which can be shallow.",
+  "prompt_md": "You are given a `base` configuration (a nested dict) and a stream of per-request `overrides`. Requests must be able to tweak their own config without ever mutating `base` or each other: the classic place a shared reference leaks across requests.\n\nImplement `merged_config(base, overrides)`:\n\n- Return a **new** config that is `base` deep-updated by `overrides` (nested dicts merged key by key, not replaced wholesale).\n- `base` must be completely unchanged afterwards, including its nested lists and dicts.\n- Mutating the returned config's nested structures must not reach back into `base`.\n- Two calls with the same `base` must return independent results.\n\nThis is a lab: the tests probe object identity, not just equality, so a shallow copy that passes the value checks will still fail the aliasing checks. Reason about which copies need to be deep and which can be shallow.",
   "tags": ["copy", "deepcopy", "aliasing", "identity", "nested-mutation"],
   "requirements_md": [
     "`merged_config(base, overrides)` returns a new dict; `base` is never mutated.",
     "Nested dicts are merged recursively; a key present in both whose values are both dicts is merged, not overwritten.",
     "Nested mutable values in the result must not be shared with `base` (mutating the result cannot change `base`).",
     "A non-dict override value replaces the base value at that key.",
-    "Repeated calls return independent objects — no shared state between results.",
+    "Repeated calls return independent objects: no shared state between results.",
     "Do not mutate `overrides` either."
   ],
   "environment": {
@@ -80,7 +80,7 @@
     },
     {
       "level": 2,
-      "md": "Start the result as `copy.deepcopy(base)` so nothing nested is shared, then merge `overrides` in. For the merge, recurse only where *both* sides hold a dict; otherwise take the override value — and deep-copy that value too, or the result ends up sharing structure with `overrides` instead.",
+      "md": "Start the result as `copy.deepcopy(base)` so nothing nested is shared, then merge `overrides` in. For the merge, recurse only where *both* sides hold a dict; otherwise take the override value, and deep-copy that value too, or the result ends up sharing structure with `overrides` instead.",
       "reveals_solution": false
     },
     {
@@ -100,7 +100,7 @@
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/copy.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "copy — shallow and deep copy operations"
+      "locator": "copy: shallow and deep copy operations"
     },
     {
       "source_id": "python.docs.faq",

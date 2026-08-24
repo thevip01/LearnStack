@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # The models live in the API package because the API owns the schema and the
 # Alembic history. Importing them here rather than redeclaring them is what
-# guarantees the two halves cannot disagree about a column name — a duplicated
+# guarantees the two halves cannot disagree about a column name: a duplicated
 # declaration drifts the first time someone widens a column and only one side
 # knows.
 #
@@ -43,7 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # or the Docker SDK. Worth knowing that `learnos_api.models` imports nothing but
 # SQLAlchemy, which is what makes that safe.
 #
-# The clean version of this is a third package — learnos-db — holding Base and the
+# The clean version of this is a third package (learnos-db) holding Base and the
 # models, depended on by both. Deferred rather than done because it would move
 # twelve files and the Alembic env to buy an import direction, and the --no-deps
 # install already removes the practical cost.
@@ -73,7 +73,7 @@ class IngestionRepository:
 
         Priority order is not cosmetic. When two sources describe the same API and
         their extracted concepts collide, the deduplicator keeps the one it saw
-        first — so first-party documentation has to be processed before a blog post
+        first, so first-party documentation has to be processed before a blog post
         about it, or the blog post wins and nobody notices until a learner reads it.
         """
         query = select(SourceRow).where(SourceRow.subject_id == subject_id, SourceRow.enabled.is_(True))
@@ -218,7 +218,7 @@ class IngestionRepository:
 
         Not an upsert. Chunk ids include their text, so an edit that shortens a
         document leaves orphaned high-ordinal chunks that an upsert would never
-        touch — they would sit in the index forever, citable and wrong. Replacing
+        touch: they would sit in the index forever, citable and wrong. Replacing
         wholesale costs one extra delete per changed document and removes an entire
         class of stale-content bug.
         """
@@ -338,7 +338,7 @@ class IngestionRepository:
     async def approved_candidates(self, subject_id: str) -> list[CandidateRow]:
         """Everything cleared for the build stage.
 
-        ``approved`` only — not ``published``. A published candidate is already in
+        ``approved`` only, not ``published``. A published candidate is already in
         the package on disk, and re-folding it in would overwrite whatever hand
         edits an author has made since.
         """
@@ -372,7 +372,7 @@ class IngestionRepository:
         """The review queue, worst-confidence last.
 
         Ordered by confidence descending so a reviewer works down from the candidates
-        most likely to be correct. The alternative — surfacing the shakiest first —
+        most likely to be correct. The alternative, surfacing the shakiest first,
         sounds more rigorous and in practice trains reviewers to skim, because the
         first ten things they see are all rejects.
         """
@@ -398,7 +398,7 @@ class IngestionRepository:
 
         ``reviewed_by`` is required rather than optional, and is stamped into
         provenance, because it is what stops a later extract run from resurrecting
-        the row — ``upsert_candidate`` refuses to touch anything with a reviewer on
+        the row: ``upsert_candidate`` refuses to touch anything with a reviewer on
         it. An anonymous approval would be silently undone by the next crawl.
 
         Approving is **not** publishing. This sets ``approved``; the content reaches
@@ -440,7 +440,7 @@ class IngestionRepository:
 
         Used by the diff to answer "what does this edit invalidate?". Filtering
         happens in Python because ``chunk_ids`` is a JSON array and the portable
-        containment predicate differs between Postgres and SQLite — and the
+        containment predicate differs between Postgres and SQLite, and the
         candidate count per subject is in the thousands, not the millions.
         """
         if not chunk_ids:

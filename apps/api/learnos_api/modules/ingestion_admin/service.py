@@ -1,7 +1,7 @@
 """The admin side of ingestion: sources, runs, candidates, provenance.
 
 This module is the HTTP-facing half of a pipeline that lives in
-``services/ingestion``. It owns none of the pipeline's semantics — it registers
+``services/ingestion``. It owns none of the pipeline's semantics: it registers
 sources, records runs, and moves candidates through review. The extractor behind
 it is a stub in this phase, which is exactly why the review and provenance surface
 exists now rather than later: the moment an LLM starts writing curriculum, the
@@ -52,7 +52,7 @@ RUNNABLE_STAGES = ("fetch", "parse", "clean", "chunk", "embed", "extract", "vali
 #: than a fourth state, so "needs work" and "not looked at yet" are the same queue
 #: and nothing gets stranded in a status with no owner. And ``reject`` maps to
 #: ``deprecated`` because ``LifecycleStatus`` is shared with published content,
-#: where "rejected" is meaningless — adding a synonym to an enum that governs
+#: where "rejected" is meaningless: adding a synonym to an enum that governs
 #: ``Provenance.is_learner_visible`` for one caller's vocabulary is a worse trade
 #: than reusing the terminal state. ``is_promotable`` already treats anything
 #: outside approved/published as unpublishable, so the behaviour is identical.
@@ -294,7 +294,7 @@ async def review_candidate(
 
     An edited ``payload`` replaces the extractor's, and the edit is *attributed*:
     ``generator`` becomes ``human-edited:<original>``. Silently accepting a
-    reviewer's rewrite as model output would make the provenance trail a fiction —
+    reviewer's rewrite as model output would make the provenance trail a fiction,
     and the trail is the whole reason this table stores provenance at all.
 
     The update goes through the ``Provenance`` model rather than mutating the JSON
@@ -360,7 +360,7 @@ async def provenance_trail(session: AsyncSession, entity_id: str) -> ProvenanceT
 
     Answers "where did this statement come from" in one request. Built by walking
     backwards from the candidate that produced the entity, because forward links
-    do not exist — a published concept records its provenance, not its children.
+    do not exist: a published concept records its provenance, not its children.
     """
     candidate = await _candidate_for_entity(session, entity_id)
     if candidate is None:
@@ -440,8 +440,8 @@ async def provenance_trail(session: AsyncSession, entity_id: str) -> ProvenanceT
         entity_id=entity_id,
         entity_kind=str(candidate.target),
         provenance=provenance,
-        # ``SourceRef`` has no licence field — licensing is a property of the source
-        # registry, not of a citation — so the reference carries the identity and
+        # ``SourceRef`` has no licence field (licensing is a property of the source
+        # registry, not of a citation), so the reference carries the identity and
         # the admin follows ``source_id`` back to the row for terms.
         sources=[
             SourceRef(

@@ -1,4 +1,4 @@
-"""learnos_schema — the single source of truth for LearnOS content contracts.
+"""learnos_schema: the single source of truth for LearnOS content contracts.
 
 Both the API and the ingestion service import from here. Nothing in this package
 imports from either, and nothing here touches a database or the network, so the

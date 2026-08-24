@@ -9,13 +9,13 @@
   "body": [
     {
       "type": "prose",
-      "md": "Start from what each container is *for*, not from its syntax:\n\n- **`list`** — an ordered, mutable, growable sequence. Reach for it when position matters or when you are accumulating results. Appending is amortised O(1); inserting at the front is O(n) because every element shifts.\n- **`tuple`** — an immutable sequence, and therefore hashable if its contents are. Reach for it for a fixed-shape record (`(lat, lon)`), for a dict key made of several parts, and for anything you want to be unable to modify.\n- **`dict`** — a mapping from hashable key to value with O(1) average lookup, insertion and deletion. Since 3.7 it preserves insertion order as a language guarantee, so it doubles as an ordered set of keys.\n- **`set`** / **`frozenset`** — unordered unique membership with O(1) average `in`, plus real set algebra (`|`, `&`, `-`, `^`). Reach for it the moment you find yourself asking \"have I seen this already?\"\n\nThe decision is rarely aesthetic. If your lookups are by identity or key, a list is the wrong container no matter how natural it feels to build one.",
+      "md": "Start from what each container is *for*, not from its syntax:\n\n- **`list`**: an ordered, mutable, growable sequence. Reach for it when position matters or when you are accumulating results. Appending is amortised O(1); inserting at the front is O(n) because every element shifts.\n- **`tuple`**: an immutable sequence, and therefore hashable if its contents are. Reach for it for a fixed-shape record (`(lat, lon)`), for a dict key made of several parts, and for anything you want to be unable to modify.\n- **`dict`**: a mapping from hashable key to value with O(1) average lookup, insertion and deletion. Since 3.7 it preserves insertion order as a language guarantee, so it doubles as an ordered set of keys.\n- **`set`** / **`frozenset`**: unordered unique membership with O(1) average `in`, plus real set algebra (`|`, `&`, `-`, `^`). Reach for it the moment you find yourself asking \"have I seen this already?\"\n\nThe decision is rarely aesthetic. If your lookups are by identity or key, a list is the wrong container no matter how natural it feels to build one.",
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/stdtypes.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Sequence Types — list, tuple, range"
+          "locator": "Sequence Types: list, tuple, range"
         },
         {
           "source_id": "python.docs.tutorial",
@@ -46,7 +46,7 @@
     },
     {
       "type": "prose",
-      "md": "Hashability is the rule that decides what may be a dict key or a set member. An object is hashable if it has a `__hash__` that stays constant for its lifetime and an `__eq__` consistent with it. Immutable built-ins qualify; `list`, `dict` and `set` deliberately do not, because a key whose hash changed after insertion would be unfindable — it would sit in the wrong bucket forever.\n\nThat is why `d[[1, 2]]` raises `TypeError: unhashable type: 'list'` and `d[(1, 2)]` works. It is also why a mutable class you give a `__hash__` to must not let the hashed fields change; the standard resolution is to hash a tuple of the fields and freeze them.",
+      "md": "Hashability is the rule that decides what may be a dict key or a set member. An object is hashable if it has a `__hash__` that stays constant for its lifetime and an `__eq__` consistent with it. Immutable built-ins qualify; `list`, `dict` and `set` deliberately do not, because a key whose hash changed after insertion would be unfindable: it would sit in the wrong bucket forever.\n\nThat is why `d[[1, 2]]` raises `TypeError: unhashable type: 'list'` and `d[(1, 2)]` works. It is also why a mutable class you give a `__hash__` to must not let the hashed fields change; the standard resolution is to hash a tuple of the fields and freeze them.",
       "sources": [
         {
           "source_id": "python.docs.glossary",
@@ -84,7 +84,7 @@
     {
       "type": "term",
       "term": "view object",
-      "definition_md": "`d.keys()`, `d.values()` and `d.items()` return dynamic views, not copies: they reflect later changes to the dict and support set operations (`d1.keys() & d2.keys()`). Because they are live, mutating a dict while iterating a view raises `RuntimeError: dictionary changed size during iteration` — iterate `list(d)` when you intend to delete.",
+      "definition_md": "`d.keys()`, `d.values()` and `d.items()` return dynamic views, not copies: they reflect later changes to the dict and support set operations (`d1.keys() & d2.keys()`). Because they are live, mutating a dict while iterating a view raises `RuntimeError: dictionary changed size during iteration`. Iterate `list(d)` when you intend to delete.",
       "aliases": ["dict view", "keys view"]
     },
     {
@@ -95,13 +95,13 @@
       "type": "callout",
       "variant": "production",
       "title": "Memory is part of the choice",
-      "md": "A dict costs roughly two to three times a list of the same number of items, because it stores hashes and keys alongside values. At a few thousand entries that is irrelevant; at ten million it decides whether the process fits in its container limit.\n\nWhen you are holding many small fixed-shape records, a list of tuples or `__slots__` objects is dramatically cheaper than a list of dicts — the per-record key strings are interned but the per-record table is not. Measure with `sys.getsizeof` plus the contents, or `tracemalloc`, before assuming."
+      "md": "A dict costs roughly two to three times a list of the same number of items, because it stores hashes and keys alongside values. At a few thousand entries that is irrelevant; at ten million it decides whether the process fits in its container limit.\n\nWhen you are holding many small fixed-shape records, a list of tuples or `__slots__` objects is dramatically cheaper than a list of dicts: the per-record key strings are interned but the per-record table is not. Measure with `sys.getsizeof` plus the contents, or `tracemalloc`, before assuming."
     }
   ],
   "components": [
     { "name": "hashable key", "role": "Immutable, consistent `__hash__`/`__eq__`. The entry requirement for dict keys and set members.", "required": true },
     { "name": "iteration protocol", "role": "`__iter__` is what makes all four containers interchangeable in a `for` loop and a comprehension.", "required": true },
-    { "name": "collections module", "role": "`defaultdict`, `Counter`, `deque`, `namedtuple` — the specialised containers that remove hand-rolled bookkeeping.", "required": false }
+    { "name": "collections module", "role": "`defaultdict`, `Counter`, `deque`, `namedtuple`: the specialised containers that remove hand-rolled bookkeeping.", "required": false }
   ],
   "prerequisites": ["python.objects-and-names"],
   "related": ["python.complexity", "python.comprehensions", "python.control-flow-truthiness"],
@@ -122,7 +122,7 @@
     {
       "error": "`RuntimeError: dictionary changed size during iteration`.",
       "cause": "`for k in d:` iterates a live view; deleting during the loop invalidates it.",
-      "fix": "Iterate a snapshot — `for k in list(d):` — or build the survivors with a comprehension and rebind."
+      "fix": "Iterate a snapshot (`for k in list(d):`) or build the survivors with a comprehension and rebind."
     },
     {
       "error": "A nested loop that was fast in testing takes minutes in production.",
@@ -141,13 +141,13 @@
     },
     {
       "error": "`d = dict.fromkeys(keys, [])` produces one list shared by every key.",
-      "cause": "The default value is evaluated once and the same object is stored under every key — the mutable-default problem in a different costume.",
+      "cause": "The default value is evaluated once and the same object is stored under every key, the mutable-default problem in a different costume.",
       "fix": "`defaultdict(list)`, or `{k: [] for k in keys}` which evaluates the literal per key."
     }
   ],
   "best_practices": [
     "Convert to a `set` before any membership test that runs inside a loop; do it once, outside the loop.",
-    "Use `tuple` for fixed-shape records and composite dict keys — immutability is what makes them hashable and safe to share.",
+    "Use `tuple` for fixed-shape records and composite dict keys: immutability is what makes them hashable and safe to share.",
     "Prefer `defaultdict` and `Counter` over hand-written 'if key not in d' bookkeeping; they are faster and remove a class of bug.",
     "Use `dict.fromkeys(items)` to dedupe while keeping first-seen order, rather than a set plus a manual order list.",
     "Reach for `collections.deque` for any queue; `list.pop(0)` is O(n) and silently degrades as the queue grows.",
@@ -156,9 +156,9 @@
   "production_considerations": [
     "Container choice is usually a bigger performance lever than algorithmic cleverness: one list-to-set change routinely beats a rewrite.",
     "Dicts cost 2-3x the memory of an equivalent list of tuples; at multi-million scale that is the difference between fitting in RAM and swapping.",
-    "Dict insertion order is guaranteed and is therefore safe to depend on for reproducible output — but relying on it in a public API silently forbids you from ever switching to a set.",
+    "Dict insertion order is guaranteed and is therefore safe to depend on for reproducible output, but relying on it in a public API silently forbids you from ever switching to a set.",
     "Sets and dicts have O(n) worst-case lookup under adversarial hash collisions. Python's string hash randomisation (`PYTHONHASHSEED`) exists to make that unreachable from untrusted input; never disable it in a service.",
-    "`in` on a generator consumes it. Testing membership twice against the same generator silently returns false the second time — materialise it first."
+    "`in` on a generator consumes it. Testing membership twice against the same generator silently returns false the second time: materialise it first."
   ],
   "anti_patterns": [
     "Building a list purely to answer membership questions against it.",
@@ -194,13 +194,13 @@
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/stdtypes.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Mapping Types — dict"
+      "locator": "Mapping Types: dict"
     },
     {
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/collections.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "collections — deque, defaultdict, Counter"
+      "locator": "collections: deque, defaultdict, Counter"
     },
     {
       "source_id": "python.docs.tutorial",
@@ -218,7 +218,7 @@
       "source_id": "python.pep234",
       "url": "https://peps.python.org/pep-0234/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Iterators — the protocol every container shares"
+      "locator": "Iterators: the protocol every container shares"
     }
   ],
   "provenance": {

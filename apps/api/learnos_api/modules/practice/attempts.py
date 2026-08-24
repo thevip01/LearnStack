@@ -1,7 +1,7 @@
 """Attempt and hint lifecycle.
 
 An attempt is the learner's open session on one task; a submission is one graded
-push against it. This module owns the transitions between those and nothing else —
+push against it. This module owns the transitions between those and nothing else:
 grading lives in the per-kind modules, evidence lives in ``progress``.
 
 Two decisions worth naming:
@@ -64,7 +64,7 @@ async def open_attempt(
     failed submissions and closes only on a pass. That is what makes the hint
     ledger tamper-proof. If a failed submission ended the attempt, a learner could
     take the solution-revealing hint, submit anything, and open a clean attempt
-    with ``hints_used`` back at zero — collecting full-weight evidence for work the
+    with ``hints_used`` back at zero, collecting full-weight evidence for work the
     platform had already handed them.
 
     A learner who has already passed gets a *new* attempt, because re-doing solved
@@ -309,7 +309,7 @@ async def record_submission(
     """Persist one graded push and advance the attempt.
 
     An attempt that has passed stays passed. Re-attempting a solved task is
-    encouraged — it is how retention evidence gets collected — but a later weaker
+    encouraged (it is how retention evidence gets collected), but a later weaker
     run must not downgrade the earlier result, or practice would become something
     a learner is afraid to revisit.
     """

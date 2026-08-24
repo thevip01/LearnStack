@@ -2,7 +2,7 @@
 
 Extraction batches chunks and asks an extractor for candidates. Validation then
 tries to build the real schema model out of each candidate payload and records what
-went wrong — without discarding anything.
+went wrong, without discarding anything.
 
 That last part is the important one. A candidate that fails validation is still
 written to the review queue, with the failure attached as a ``ValidationIssue``.
@@ -60,7 +60,7 @@ def _batches(chunks: list[Chunk], size: int) -> list[list[Chunk]]:
 
     Chunks arrive ordered by document then ordinal, so slicing preserves locality:
     a batch is usually one section of one page rather than eight unrelated snippets
-    from eight pages. That matters for extraction quality — an extractor shown
+    from eight pages. That matters for extraction quality: an extractor shown
     contiguous text can tell what the section is about.
     """
     return [chunks[index : index + size] for index in range(0, len(chunks), size)]

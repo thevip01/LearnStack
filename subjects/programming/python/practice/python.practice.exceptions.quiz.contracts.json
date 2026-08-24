@@ -7,7 +7,7 @@
   "skills": ["python.skill.define-error-contracts", "python.skill.debug-a-traceback"],
   "difficulty": 5,
   "estimated_minutes": 7,
-  "prompt_md": "An error contract is a promise about what a function raises and what those exceptions mean. Work through the choices that make a contract usable — and the reading skills that let you honour it under a traceback.",
+  "prompt_md": "An error contract is a promise about what a function raises and what those exceptions mean. Work through the choices that make a contract usable, and the reading skills that let you honour it under a traceback.",
   "tags": ["exceptions", "error-contract", "raise-from", "EAFP", "traceback"],
   "questions": [
     {
@@ -30,14 +30,14 @@
         { "id": "r4", "md": "a custom `InsufficientFunds(Exception)`" }
       ],
       "answer": { "l1": "r1", "l2": "r2", "l3": "r3", "l4": "r4" },
-      "explanation_md": "Right type, wrong value → `ValueError`; wrong type entirely → `TypeError`; missing key → `KeyError`. Domain rules deserve a *named* exception so callers can catch exactly that condition without catching unrelated errors — `except InsufficientFunds` is a contract; `except Exception` is a shrug.",
+      "explanation_md": "Right type, wrong value → `ValueError`; wrong type entirely → `TypeError`; missing key → `KeyError`. Domain rules deserve a *named* exception so callers can catch exactly that condition without catching unrelated errors: `except InsufficientFunds` is a contract; `except Exception` is a shrug.",
       "skills": ["python.skill.define-error-contracts"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/exceptions.html",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "Built-in Exceptions — ValueError, TypeError, LookupError"
+          "locator": "Built-in Exceptions: ValueError, TypeError, LookupError"
         }
       ]
     },
@@ -51,18 +51,18 @@
       "options": [
         { "id": "a", "md": "`raise UserNotFound(uid) from exc`" },
         { "id": "b", "md": "`raise UserNotFound(uid)` inside the `except` (implicit context is enough)." },
-        { "id": "c", "md": "`raise exc` — never translate exceptions." },
+        { "id": "c", "md": "`raise exc`: never translate exceptions." },
         { "id": "d", "md": "`raise UserNotFound(uid) from None`" }
       ],
       "answer": "a",
-      "explanation_md": "`raise ... from exc` sets `__cause__`, so the traceback shows \"The above exception was the direct cause of the following\" and keeps the original `KeyError` visible. Option (b) still chains implicitly (`__context__`) but reads as an accident; (d) *suppresses* the cause with `from None`, which is right only when the underlying error is noise. Translating errors at a boundary is good — hiding the cause while doing so is not.",
+      "explanation_md": "`raise ... from exc` sets `__cause__`, so the traceback shows \"The above exception was the direct cause of the following\" and keeps the original `KeyError` visible. Option (b) still chains implicitly (`__context__`) but reads as an accident; (d) *suppresses* the cause with `from None`, which is right only when the underlying error is noise. Translating errors at a boundary is good; hiding the cause while doing so is not.",
       "skills": ["python.skill.define-error-contracts", "python.skill.debug-a-traceback"],
       "sources": [
         {
           "source_id": "python.pep3134",
           "url": "https://peps.python.org/pep-3134/",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "PEP 3134 — Exception Chaining"
+          "locator": "PEP 3134: Exception Chaining"
         }
       ]
     },
@@ -81,7 +81,7 @@
         { "id": "e", "md": "Raising a specific subclass rather than bare `Exception`." }
       ],
       "answer": ["a", "c", "d", "e"],
-      "explanation_md": "A narrow `try` avoids catching failures from unrelated lines; documenting and using specific types tells callers what to expect and catch; letting the unhandleable propagate keeps failures loud. Catching `Exception` everywhere is the opposite of a contract — it converts every distinct failure into the same swallowed nothing, and hides bugs that should have surfaced.",
+      "explanation_md": "A narrow `try` avoids catching failures from unrelated lines; documenting and using specific types tells callers what to expect and catch; letting the unhandleable propagate keeps failures loud. Catching `Exception` everywhere is the opposite of a contract: it converts every distinct failure into the same swallowed nothing, and hides bugs that should have surfaced.",
       "skills": ["python.skill.define-error-contracts"],
       "sources": [
         {
@@ -100,20 +100,20 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`\"finally\"` — a `return` in `finally` replaces the one in `try` and swallows exceptions too." },
-        { "id": "b", "md": "`\"try\"` — the first return wins." },
-        { "id": "c", "md": "`SyntaxError` — two returns." },
+        { "id": "a", "md": "`\"finally\"`: a `return` in `finally` replaces the one in `try` and swallows exceptions too." },
+        { "id": "b", "md": "`\"try\"`: the first return wins." },
+        { "id": "c", "md": "`SyntaxError`: two returns." },
         { "id": "d", "md": "It returns `\"try\"` then `\"finally\"`." }
       ],
       "answer": "a",
-      "explanation_md": "`finally` always runs, and a `return` (or `break`) inside it overrides whatever the `try` was about to return — and worse, silently discards any in-flight exception. That is why `finally` should be reserved for cleanup and never contain a `return`. Reading this correctly under a traceback saves hours: the function \"can't fail\" because `finally` ate the error.",
+      "explanation_md": "`finally` always runs, and a `return` (or `break`) inside it overrides whatever the `try` was about to return, and worse, silently discards any in-flight exception. That is why `finally` should be reserved for cleanup and never contain a `return`. Reading this correctly under a traceback saves hours: the function \"can't fail\" because `finally` ate the error.",
       "skills": ["python.skill.debug-a-traceback"],
       "sources": [
         {
           "source_id": "python.docs.reference",
           "url": "https://docs.python.org/3/reference/compound_stmts.html#the-try-statement",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "The try statement — finally and return"
+          "locator": "The try statement: finally and return"
         }
       ]
     },
@@ -125,8 +125,8 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "`try: v = d[k]` / `except KeyError: ...` — no gap between the check and the use, so a concurrent delete cannot slip between them." },
-        { "id": "b", "md": "`if k in d: v = d[k]` — checking first is always safer." },
+        { "id": "a", "md": "`try: v = d[k]` / `except KeyError: ...`, no gap between the check and the use, so a concurrent delete cannot slip between them." },
+        { "id": "b", "md": "`if k in d: v = d[k]`, checking first is always safer." },
         { "id": "c", "md": "They are identical in every respect." },
         { "id": "d", "md": "`try/except` is discouraged in Python; prefer `in`." }
       ],
@@ -157,7 +157,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) ValueError / TypeError / KeyError / custom, in order. (2) `raise UserNotFound(uid) from exc`. (3) narrow `try`, documenting, letting the unhandleable propagate, and specific subclasses. (4) `\"finally\"` — it overrides and swallows. (5) the `try/except KeyError` form, which avoids the time-of-check/time-of-use race.",
+      "md": "Answers: (1) ValueError / TypeError / KeyError / custom, in order. (2) `raise UserNotFound(uid) from exc`. (3) narrow `try`, documenting, letting the unhandleable propagate, and specific subclasses. (4) `\"finally\"`: it overrides and swallows. (5) the `try/except KeyError` form, which avoids the time-of-check/time-of-use race.",
       "reveals_solution": true
     }
   ],
@@ -178,7 +178,7 @@
       "source_id": "python.pep3134",
       "url": "https://peps.python.org/pep-3134/",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "PEP 3134 — Exception Chaining and Embedded Tracebacks"
+      "locator": "PEP 3134: Exception Chaining and Embedded Tracebacks"
     }
   ],
   "provenance": {

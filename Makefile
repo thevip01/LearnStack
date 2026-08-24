@@ -22,6 +22,8 @@ up: runner ## Build the runner image, then bring the whole stack up
 	@echo
 	@echo "  waiting on /readyz ..."
 	@$(MAKE) --no-print-directory wait-ready
+	@echo
+	@echo "  then: make verify-loop"
 
 .PHONY: down
 down: ## Stop the stack, keep volumes
@@ -60,7 +62,7 @@ psql: ## Open psql against the dev database
 	$(COMPOSE) exec postgres psql -U learnos -d learnos
 
 # ---------------------------------------------------------------------------
-# Local (host) development — needs a virtualenv and node installed
+# Local (host) development, which needs a virtualenv and node installed
 # ---------------------------------------------------------------------------
 
 .PHONY: install
@@ -102,19 +104,23 @@ reload-subjects: ## Make the running API re-read subject packages from disk
 # ---------------------------------------------------------------------------
 
 .PHONY: test
-test: test-schema test-api test-ingestion ## Run every test suite
+test: test-schema test-api test-ingestion ## Run every test suite that exists
 
+# pytest exits 4 on a missing directory, which reads as "the tests failed" and
+# teaches everyone to stop running `make test`. Saying "no suite yet" out loud is
+# more honest and keeps the target usable while the gap gets closed. Only
+# apps/api/tests is still missing.
 .PHONY: test-schema
 test-schema:
-	pytest $(SCHEMA)/tests -q
+	@if [ -d $(SCHEMA)/tests ]; then pytest $(SCHEMA)/tests -q; else echo "no suite yet: $(SCHEMA)/tests"; fi
 
 .PHONY: test-api
 test-api:
-	pytest apps/api/tests -q
+	@if [ -d apps/api/tests ]; then pytest apps/api/tests -q; else echo "no suite yet: apps/api/tests"; fi
 
 .PHONY: test-ingestion
 test-ingestion:
-	pytest services/ingestion/tests -q
+	@if [ -d services/ingestion/tests ]; then pytest services/ingestion/tests -q; else echo "no suite yet: services/ingestion/tests"; fi
 
 .PHONY: test-web
 test-web: ## Typecheck and build the web app
@@ -129,13 +135,30 @@ compile: ## Syntax-check every Python file without installing anything
 check-imports: ## Resolve every intra-repo import and module attribute, stdlib only
 	python3 tools/check_imports.py
 
+.PHONY: check-web
+check-web: ## Frontend structural checks (imports, panel registry, routes, client boundary)
+	python3 tools/check_web.py
+
+.PHONY: check-contract
+check-contract: ## Every web API call has a route, and shared models agree field for field
+	python3 tools/check_contract.py
+
+.PHONY: check-enums
+check-enums: ## No `x is SomeEnum.MEMBER`, which use_enum_values makes silently never match
+	python3 tools/check_enum_identity.py
+
 .PHONY: check
-check: compile check-imports validate-nodeps ## Everything verifiable with no dependencies installed
+check: compile check-imports check-web check-contract check-enums validate-nodeps ## Everything verifiable with no dependencies installed
+
+.PHONY: verify-loop
+verify-loop: ## Walk learn -> practice -> grade against the running stack and assert the invariants
+	@bash tools/verify_loop.sh
 
 .PHONY: lint
 lint:
 	ruff check packages apps/api services
-	cd apps/web && npx eslint .
+	@if [ -x apps/web/node_modules/.bin/eslint ]; then cd apps/web && npx eslint .; \
+	else echo "skipping eslint: not in apps/web devDependencies yet"; fi
 
 .PHONY: fmt
 fmt:

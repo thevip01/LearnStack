@@ -1,7 +1,7 @@
 """Password hashing.
 
 bcrypt via passlib. bcrypt silently truncates at 72 bytes, so the input is capped
-explicitly rather than left to the library — a 200-character passphrase whose
+explicitly rather than left to the library: a 200-character passphrase whose
 first 72 bytes match another user's would otherwise authenticate.
 """
 

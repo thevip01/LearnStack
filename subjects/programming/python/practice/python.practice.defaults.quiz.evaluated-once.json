@@ -43,13 +43,13 @@
       "dimension": "concept",
       "weight": 1.0,
       "options": [
-        { "id": "a", "md": "The same value both times — the time the module was imported, over an hour ago." },
+        { "id": "a", "md": "The same value both times: the time the module was imported, over an hour ago." },
         { "id": "b", "md": "Two values a minute apart, each the current time." },
         { "id": "c", "md": "The time one hour after import, both times." },
         { "id": "d", "md": "`None`, because the default was never re-evaluated." }
       ],
       "answer": "a",
-      "explanation_md": "`time.time()` runs once, while the `def` statement executes at import — not on each call. Both calls return that frozen timestamp. Any default whose value should reflect call time (a timestamp, a fresh id, today's date) must be computed inside the body, with the parameter defaulting to `None`.",
+      "explanation_md": "`time.time()` runs once, while the `def` statement executes at import, not on each call. Both calls return that frozen timestamp. Any default whose value should reflect call time (a timestamp, a fresh id, today's date) must be computed inside the body, with the parameter defaulting to `None`.",
       "skills": ["python.skill.avoid-shared-mutable-defaults"],
       "sources": [
         {
@@ -74,7 +74,7 @@
         { "id": "d", "md": "```python\ndef add(item, bucket=[]):\n    return bucket + [item]\n```" }
       ],
       "answer": ["a", "b", "c", "d"],
-      "explanation_md": "All four avoid mutating the shared default. (a) and (c) are the idiomatic `None`-sentinel form. (b) copies the shared list before touching it. (d) never mutates at all — `bucket + [item]` builds a new list. (a) and (c) are preferred because they signal intent; (b) and (d) work but keep the misleading `[]` in the signature.",
+      "explanation_md": "All four avoid mutating the shared default. (a) and (c) are the idiomatic `None`-sentinel form. (b) copies the shared list before touching it. (d) never mutates at all: `bucket + [item]` builds a new list. (a) and (c) are preferred because they signal intent; (b) and (d) work but keep the misleading `[]` in the signature.",
       "skills": ["python.skill.avoid-shared-mutable-defaults"],
       "sources": [
         {
@@ -101,7 +101,7 @@
         { "id": "f", "md": "`def f(x=\"\"):`" }
       ],
       "answer": ["a", "c", "e"],
-      "explanation_md": "Only mutable objects are dangerous, because sharing is harmless if nothing can change the object. `[]`, `{}` and `set()` are mutable; a call that mutates them corrupts the default. Tuples, ints and strings are immutable, so the shared instance can never change — `x=()` is a perfectly safe empty-sequence default, which is exactly why it is idiomatic.",
+      "explanation_md": "Only mutable objects are dangerous, because sharing is harmless if nothing can change the object. `[]`, `{}` and `set()` are mutable; a call that mutates them corrupts the default. Tuples, ints and strings are immutable, so the shared instance can never change: `x=()` is a perfectly safe empty-sequence default, which is exactly why it is idiomatic.",
       "skills": ["python.skill.avoid-shared-mutable-defaults"],
       "sources": [
         {
@@ -126,14 +126,14 @@
         { "id": "d", "md": "It freezes the list so it cannot be mutated." }
       ],
       "answer": "a",
-      "explanation_md": "`dataclasses` refuses a mutable literal as a `default` precisely because it would be shared across instances — the same bug — and forces you to use `default_factory`, which it calls once per instance. It is the language building the `None`-sentinel discipline into the API so you cannot get it wrong.",
+      "explanation_md": "`dataclasses` refuses a mutable literal as a `default` precisely because it would be shared across instances (the same bug) and forces you to use `default_factory`, which it calls once per instance. It is the language building the `None`-sentinel discipline into the API so you cannot get it wrong.",
       "skills": ["python.skill.avoid-shared-mutable-defaults"],
       "sources": [
         {
           "source_id": "python.docs.library",
           "url": "https://docs.python.org/3/library/dataclasses.html#mutable-default-values",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "dataclasses — mutable default values"
+          "locator": "dataclasses: mutable default values"
         }
       ]
     }
@@ -152,7 +152,7 @@
     },
     {
       "level": 3,
-      "md": "Answers: (1) `[1]` then `[1, 2]` — the list is shared. (2) The same import-time value both times. (3) All four fixes are correct. (4) Risky: `[]`, `{}`, `set()`; safe: `()`, `0`, `\"\"`. (5) `default_factory` is the dataclass version of the same fix — one fresh object per instance.",
+      "md": "Answers: (1) `[1]` then `[1, 2]`: the list is shared. (2) The same import-time value both times. (3) All four fixes are correct. (4) Risky: `[]`, `{}`, `set()`; safe: `()`, `0`, `\"\"`. (5) `default_factory` is the dataclass version of the same fix, one fresh object per instance.",
       "reveals_solution": true
     }
   ],
@@ -173,7 +173,7 @@
       "source_id": "python.docs.reference",
       "url": "https://docs.python.org/3/reference/compound_stmts.html#function-definitions",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Function definitions — default values"
+      "locator": "Function definitions: default values"
     }
   ],
   "provenance": {

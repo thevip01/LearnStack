@@ -4,7 +4,7 @@
 Why this exists: the repo's third-party dependencies cannot always be installed
 (air-gapped checkouts, CI without a package index), and without them ``mypy`` and
 even ``import learnos_api`` are unavailable. But the defects that actually ship in
-a Python codebase this size are overwhelmingly *name* defects — a function renamed
+a Python codebase this size are overwhelmingly *name* defects: a function renamed
 in one module and still imported by three others, a helper that moved package, a
 symbol left in ``__all__`` after deletion. Those are decidable from the AST alone.
 
@@ -29,7 +29,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 
-#: Directories that are import roots — a package inside one of these is importable
+#: Directories that are import roots: a package inside one of these is importable
 #: by its bare name. Mirrors the ``pip install -e`` layout in the Makefile.
 IMPORT_ROOTS = (
     REPO / "apps" / "api",
@@ -149,7 +149,7 @@ def build_index(roots: tuple[Path, ...]) -> tuple[ModuleIndex, list[str]]:
         if not root.exists():
             # Hard error, not a skip. A silently-ignored root is worse than no
             # checker at all: it reports "ok" over a package it never opened.
-            # This exact defect shipped once — IMPORT_ROOTS said
+            # This exact defect shipped once. IMPORT_ROOTS said
             # ``packages/sandbox-runner`` while the package lived at
             # ``services/sandbox``, and every sandbox module went unverified
             # while the tool printed a clean bill of health.
@@ -221,7 +221,7 @@ def rebound_names(tree: ast.Module) -> set[str]:
     """Every name assigned or bound as a parameter anywhere in the file.
 
     Used to suppress module-attribute checks on an alias that is shadowed
-    somewhere — ``progress`` may be a module at the top of a file and a local
+    somewhere: ``progress`` may be a module at the top of a file and a local
     variable inside one of its functions, and chasing that would produce noise
     instead of findings.
     """

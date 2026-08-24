@@ -26,7 +26,7 @@ def enum_value(value: Any) -> Any:
     """Normalise an enum-or-string to its string value.
 
     ``learnos_schema.SchemaModel`` sets ``use_enum_values=True``, so a field typed
-    as an enum holds a plain string once validated — but a value constructed in
+    as an enum holds a plain string once validated, but a value constructed in
     Python before validation is still an enum member. Both shapes reach this layer,
     and dict keys have to be comparable, so everything is normalised on the way out.
     """

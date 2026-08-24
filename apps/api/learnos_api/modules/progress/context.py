@@ -4,7 +4,7 @@ Split out from ``recommender`` so that the ranking rules stay pure and testable
 over fixtures, and from ``rollup`` so that the progress payload does not pay for
 the extra queries a recommendation needs.
 
-The queries are deliberately coarse — one per signal, whole-subject — because the
+The queries are deliberately coarse (one per signal, whole-subject) because the
 recommender considers every skill anyway and the alternative is a per-skill fan-out
 on a request that already runs the mastery rollup.
 """

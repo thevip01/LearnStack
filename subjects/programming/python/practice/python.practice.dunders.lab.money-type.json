@@ -7,7 +7,7 @@
   "skills": ["python.skill.implement-dunder-protocols"],
   "difficulty": 7,
   "estimated_minutes": 40,
-  "prompt_md": "Implement a `Money` value type — the exercise that forces every dunder contract to be consistent at once. Store the amount in integer **minor units** (cents) to avoid float rounding, plus a 3-letter `currency`.\n\n```python\nMoney(1099, \"USD\")   # $10.99\n```\n\nImplement, and keep mutually consistent:\n\n- `__init__(self, minor_units: int, currency: str)` — reject a non-int amount with `TypeError` and a non-3-letter currency with `ValueError`.\n- `__repr__` returning something like `Money(1099, 'USD')`, and `__str__` like `10.99 USD`.\n- `__eq__` comparing amount **and** currency; unequal currencies are simply not equal (never raise).\n- `__hash__` consistent with `__eq__`, so `Money` works as a dict key and in a set.\n- `__lt__` (and enough ordering to sort) — but comparing **different currencies raises `TypeError`**, because ordering across currencies is meaningless.\n- `__add__` / `__sub__` returning a new `Money`; adding different currencies raises `ValueError`.\n- `__mul__` by a plain `int` scalar (e.g. `price * 3`), returning `Money`; multiplying two `Money` values raises `TypeError`.\n- `__bool__` that is `False` for a zero amount.\n\n`Money` must be **immutable** in spirit: operations return new instances and never mutate `self`. This is a lab — the tests probe the contracts against each other (equal objects hashing equally, sortability, arithmetic identity), not just individual methods.",
+  "prompt_md": "Implement a `Money` value type: the exercise that forces every dunder contract to be consistent at once. Store the amount in integer **minor units** (cents) to avoid float rounding, plus a 3-letter `currency`.\n\n```python\nMoney(1099, \"USD\")   # $10.99\n```\n\nImplement, and keep mutually consistent:\n\n- `__init__(self, minor_units: int, currency: str)`: reject a non-int amount with `TypeError` and a non-3-letter currency with `ValueError`.\n- `__repr__` returning something like `Money(1099, 'USD')`, and `__str__` like `10.99 USD`.\n- `__eq__` comparing amount **and** currency; unequal currencies are simply not equal (never raise).\n- `__hash__` consistent with `__eq__`, so `Money` works as a dict key and in a set.\n- `__lt__` (and enough ordering to sort), but comparing **different currencies raises `TypeError`**, because ordering across currencies is meaningless.\n- `__add__` / `__sub__` returning a new `Money`; adding different currencies raises `ValueError`.\n- `__mul__` by a plain `int` scalar (e.g. `price * 3`), returning `Money`; multiplying two `Money` values raises `TypeError`.\n- `__bool__` that is `False` for a zero amount.\n\n`Money` must be **immutable** in spirit: operations return new instances and never mutate `self`. This is a lab: the tests probe the contracts against each other (equal objects hashing equally, sortability, arithmetic identity), not just individual methods.",
   "tags": ["dunder", "value-type", "eq-hash", "ordering", "operator-overloading", "immutable"],
   "requirements_md": [
     "`__init__` validates: `minor_units` is an `int` (reject `bool` too), `currency` is a 3-letter string (store upper-cased).",
@@ -92,7 +92,7 @@
     },
     {
       "level": 2,
-      "md": "Make `__eq__` compare the `(minor_units, currency)` tuple and return `NotImplemented` for non-Money, then define `__hash__` over the *same* tuple so equal values hash equally. For ordering, use `@functools.total_ordering` and write only `__lt__`, raising `TypeError` when currencies differ. Arithmetic returns `Money(...)` — mixing currencies is a `ValueError`, and `__mul__` accepts only an `int` scalar. Add `__rmul__ = __mul__` so `3 * price` works.",
+      "md": "Make `__eq__` compare the `(minor_units, currency)` tuple and return `NotImplemented` for non-Money, then define `__hash__` over the *same* tuple so equal values hash equally. For ordering, use `@functools.total_ordering` and write only `__lt__`, raising `TypeError` when currencies differ. Arithmetic returns `Money(...)`: mixing currencies is a `ValueError`, and `__mul__` accepts only an `int` scalar. Add `__rmul__ = __mul__` so `3 * price` works.",
       "reveals_solution": false
     },
     {
@@ -112,7 +112,7 @@
       "source_id": "python.docs.reference",
       "url": "https://docs.python.org/3/reference/datamodel.html#basic-customization",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Basic customization — __eq__, __hash__, __lt__"
+      "locator": "Basic customization: __eq__, __hash__, __lt__"
     },
     {
       "source_id": "python.docs.library",

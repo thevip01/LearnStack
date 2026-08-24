@@ -11,7 +11,7 @@
         {
           "id": "python.module.foundations",
           "title": "Foundations",
-          "summary": "Names are bindings, not boxes. Everything downstream — aliasing bugs, mutable defaults, dict keys — falls out of that one fact.",
+          "summary": "Names are bindings, not boxes. Everything downstream (aliasing bugs, mutable defaults, dict keys) falls out of that one fact.",
           "concepts": [
             "python.objects-and-names",
             "python.control-flow-truthiness",

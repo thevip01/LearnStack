@@ -1,6 +1,6 @@
 """The search index table.
 
-Everything searchable — concepts, practice tasks, projects, skills, subjects — is
+Everything searchable (concepts, practice tasks, projects, skills, subjects) is
 denormalised into one row per entity so that a single query ranks across kinds.
 Rebuilt from scratch on package load; it is a projection, never a source.
 
@@ -9,7 +9,7 @@ Three text fields are indexed separately rather than concatenated:
 * ``title`` gets trigram similarity, so a typo or a partial word still matches.
 * ``search_text`` (title + keywords + summary + definition) gets a weighted
   ``tsvector``.
-* ``error_text`` — every ``CommonError.error`` string joined — gets its *own*
+* ``error_text`` (every ``CommonError.error`` string joined) gets its *own*
   ``tsvector``, because the highest-value search on a learning platform is a
   learner pasting a stack trace. Folding it into the body vector would bury it
   under prose.

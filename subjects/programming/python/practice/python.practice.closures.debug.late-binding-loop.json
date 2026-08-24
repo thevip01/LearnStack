@@ -7,7 +7,7 @@
   "skills": ["python.skill.reason-about-closures"],
   "difficulty": 6,
   "estimated_minutes": 20,
-  "prompt_md": "`make_handlers` builds one callback per button label. Each callback is supposed to remember *its own* index, so `handlers[0]()` returns `0`, `handlers[1]()` returns `1`, and so on.\n\nInstead every callback returns the same value — the last index. Find out why, and fix it so each callback captures its own value.\n\nDo not change the signature or the return type (`make_handlers(labels)` must still return a list of zero-argument callables, one per label). Do not restructure into a class.",
+  "prompt_md": "`make_handlers` builds one callback per button label. Each callback is supposed to remember *its own* index, so `handlers[0]()` returns `0`, `handlers[1]()` returns `1`, and so on.\n\nInstead every callback returns the same value: the last index. Find out why, and fix it so each callback captures its own value.\n\nDo not change the signature or the return type (`make_handlers(labels)` must still return a list of zero-argument callables, one per label). Do not restructure into a class.",
   "symptom_md": "```python\n>>> handlers = make_handlers([\"save\", \"load\", \"quit\"])\n>>> [h() for h in handlers]\n[2, 2, 2]        # expected [0, 1, 2]\n```\n\nEvery handler returns `2`, the final value of the loop variable. The handlers were created correctly *in number*, but they all seem to share one `i`.",
   "tags": ["closures", "late-binding", "loop-variable", "default-argument"],
   "requirements_md": [
@@ -76,11 +76,11 @@
     },
     {
       "level": 3,
-      "md": "```python\ndef make_handlers(labels):\n    handlers = []\n    for i in range(len(labels)):\n        def handler(i=i):   # default captures the current value\n            return i\n        handlers.append(handler)\n    return handlers\n```\nHere the exact behaviour that bites you in mutable defaults — defaults evaluated once at definition — is exactly what you want: each `def` snapshots the current `i`.",
+      "md": "```python\ndef make_handlers(labels):\n    handlers = []\n    for i in range(len(labels)):\n        def handler(i=i):   # default captures the current value\n            return i\n        handlers.append(handler)\n    return handlers\n```\nHere the exact behaviour that bites you in mutable defaults (defaults evaluated once at definition) is exactly what you want: each `def` snapshots the current `i`.",
       "reveals_solution": true
     }
   ],
-  "root_cause_md": "This is **late binding** of closures. A nested function that refers to `i` does not copy `i`'s value; it keeps a reference to the enclosing variable and looks it up **when the function is called**. Because all the `handler` functions are defined in the same call to `make_handlers`, they all close over the *same* `i`. The loop mutates that one `i` to 0, 1, 2 and then ends, so when you finally call the handlers they all read the final value, 2.\n\nThe fix is to bind the current value at definition time. `def handler(i=i)` uses a default argument, which is evaluated once when the `def` statement executes — so each handler gets its own snapshot of `i` as a parameter default. (Equivalently, a factory `def make(i): def h(): return i; return h` captures `i` as a fresh parameter per call.) Note the neat symmetry with the mutable-default bug: there, once-only default evaluation is a trap; here, it's precisely the tool that fixes the problem.",
+  "root_cause_md": "This is **late binding** of closures. A nested function that refers to `i` does not copy `i`'s value; it keeps a reference to the enclosing variable and looks it up **when the function is called**. Because all the `handler` functions are defined in the same call to `make_handlers`, they all close over the *same* `i`. The loop mutates that one `i` to 0, 1, 2 and then ends, so when you finally call the handlers they all read the final value, 2.\n\nThe fix is to bind the current value at definition time. `def handler(i=i)` uses a default argument, which is evaluated once when the `def` statement executes, so each handler gets its own snapshot of `i` as a parameter default. (Equivalently, a factory `def make(i): def h(): return i; return h` captures `i` as a fresh parameter per call.) Note the neat symmetry with the mutable-default bug: there, once-only default evaluation is a trap; here, it's precisely the tool that fixes the problem.",
   "evaluation": {
     "strategy": "pytest",
     "pass_threshold": 1.0,
@@ -98,7 +98,7 @@
       "source_id": "python.docs.reference",
       "url": "https://docs.python.org/3/reference/executionmodel.html#naming-and-binding",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "Execution model — naming and binding"
+      "locator": "Execution model: naming and binding"
     }
   ],
   "provenance": {

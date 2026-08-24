@@ -5,8 +5,8 @@ module builds its engine from ``learnos_api.config``, which refuses to construct
 without a JWT secret and a Docker socket path. This process needs neither and should
 not be able to read either.
 
-The engine is created per command rather than per process. Ingestion is a CLI — one
-crawl, one build, one exit — so a module-level pool would exist only to be torn down
+The engine is created per command rather than per process. Ingestion is a CLI (one
+crawl, one build, one exit), so a module-level pool would exist only to be torn down
 seconds later, and a pool that outlives a ``KeyboardInterrupt`` mid-crawl leaves
 connections open against a database an operator is about to inspect.
 """
@@ -27,7 +27,7 @@ async def session_scope(settings: IngestionSettings) -> AsyncIterator[AsyncSessi
 
     ``expire_on_commit=False`` because the pipeline commits between stages and then
     keeps reading the objects it just wrote. With expiry on, every attribute access
-    after a stage boundary would emit a lazy refresh — inside a sync attribute access,
+    after a stage boundary would emit a lazy refresh inside a sync attribute access,
     which under asyncio raises ``MissingGreenlet`` rather than doing anything useful.
 
     ``pool_size=1``: every stage shares this one session, and a larger pool would

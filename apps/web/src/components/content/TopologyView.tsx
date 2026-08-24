@@ -11,7 +11,7 @@ type TopologyNode = { id: string; type?: string; label?: string; group?: string;
 type Topology = { nodes: TopologyNode[]; edges: Array<{ source: string; target: string; label?: string }> };
 
 /**
- * `DiagramBlock.source` for a topology is "a topology JSON string" — the schema
+ * `DiagramBlock.source` for a topology is "a topology JSON string". The schema
  * does not pin its shape, so parsing is defensive and both edge spellings
  * (`[["a","b"]]` and `[{source,target}]`) are accepted. A malformed topology
  * shows the raw source rather than an empty canvas.

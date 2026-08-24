@@ -10,7 +10,7 @@ import { CollapsedRail, SlotView, slotCollapsible, slotDefaultCollapsed } from "
 /**
  * Baselines for a slot's initial size. `min_width`/`min_height` raise the floor;
  * `flex` scales it. The schema calls `flex` "share of the slot when several
- * panels stack in it" — panels in one slot are tabbed rather than stacked, so
+ * panels stack in it", but panels in one slot are tabbed rather than stacked, so
  * there is no share to divide and the declared share becomes the slot's own
  * weight against its siblings. A package asking for `flex: 3` on the main panel
  * therefore still gets a wide main area.

@@ -3,19 +3,19 @@
   "title": "Complexity and measurement",
   "subject_id": "programming.python",
   "category": "Correctness",
-  "summary": "Big-O tells you how a function's cost grows; a profiler tells you where the time actually went. You need both, in that order — and in Python the constant factors are large enough that the interpreter's own overhead is frequently the answer.",
+  "summary": "Big-O tells you how a function's cost grows; a profiler tells you where the time actually went. You need both, in that order, and in Python the constant factors are large enough that the interpreter's own overhead is frequently the answer.",
   "definition": "Time complexity describes how the number of operations grows as input size grows, ignoring constant factors: O(1) constant, O(log n) logarithmic, O(n) linear, O(n log n) sorting, O(n²) nested-loop, O(2ⁿ) exponential. Space complexity describes the same growth for memory. Amortised complexity averages an occasional expensive operation across the cheap ones, which is why `list.append` is called O(1) despite periodically reallocating.",
-  "purpose": "Code that is fast on a hundred rows and unusable on a hundred thousand is the most common performance failure, and it is invisible in review because both versions look the same length. Complexity analysis is what lets you predict that from reading the code. Measurement is what stops you from acting on the prediction when it is wrong — and it often is, because a `for` loop in Python costs perhaps fifty times what the equivalent C loop inside a built-in costs, which can make an O(n log n) built-in beat a hand-written O(n).",
+  "purpose": "Code that is fast on a hundred rows and unusable on a hundred thousand is the most common performance failure, and it is invisible in review because both versions look the same length. Complexity analysis is what lets you predict that from reading the code. Measurement is what stops you from acting on the prediction when it is wrong, and it often is, because a `for` loop in Python costs perhaps fifty times what the equivalent C loop inside a built-in costs, which can make an O(n log n) built-in beat a hand-written O(n).",
   "body": [
     {
       "type": "prose",
-      "md": "The practical skill is not reciting growth classes. It is reading a function and answering three questions:\n\n1. **What is `n`?** Rows, characters, files, nodes? A function can be linear in one input and quadratic in another.\n2. **What repeats?** Count the loops — including the ones hidden inside `in`, `index()`, `remove()`, `sorted()`, `min()`, string concatenation in a loop, and any comprehension.\n3. **What does each repetition cost?** A loop containing a list membership test is not O(n); it is O(n·m). This is where nearly every real quadratic comes from.\n\nThe hidden loop is the crux. `if x in some_list` is one token and one full scan. `result += chunk` on a string builds a new string each iteration. `data.pop(0)` shifts every remaining element. None of these look like loops, and all of them are.",
+      "md": "The practical skill is not reciting growth classes. It is reading a function and answering three questions:\n\n1. **What is `n`?** Rows, characters, files, nodes? A function can be linear in one input and quadratic in another.\n2. **What repeats?** Count the loops, including the ones hidden inside `in`, `index()`, `remove()`, `sorted()`, `min()`, string concatenation in a loop, and any comprehension.\n3. **What does each repetition cost?** A loop containing a list membership test is not O(n); it is O(n·m). This is where nearly every real quadratic comes from.\n\nThe hidden loop is the crux. `if x in some_list` is one token and one full scan. `result += chunk` on a string builds a new string each iteration. `data.pop(0)` shifts every remaining element. None of these look like loops, and all of them are.",
       "sources": [
         {
           "source_id": "python.wiki.time-complexity",
           "url": "https://wiki.python.org/moin/TimeComplexity",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "TimeComplexity — list, dict, set, deque"
+          "locator": "TimeComplexity: list, dict, set, deque"
         }
       ]
     },
@@ -55,19 +55,19 @@
         "Read for hidden loops first. A quadratic found by reading is cheaper to fix than one found by profiling.",
         "Profile the whole program with `cProfile` and sort by cumulative time to find *where*, not by total time.",
         "Confirm the hypothesis with `timeit` on the isolated operation, at two input sizes, and check that the ratio matches the class you predicted.",
-        "Fix the container or the algorithm. Only then consider micro-optimisation — and re-measure, because it frequently makes no difference.",
+        "Fix the container or the algorithm. Only then consider micro-optimisation, and re-measure, because it frequently makes no difference.",
         "Add a test that pins the improvement (a bounded operation count, or a `tracemalloc` ceiling) so the next refactor cannot silently reintroduce it."
       ]
     },
     {
       "type": "prose",
-      "md": "Amortised analysis is worth understanding rather than accepting. `list.append` sometimes has to allocate a bigger buffer and copy everything, which is O(n) — but CPython over-allocates geometrically, so those copies happen rarely enough that the average cost per append is constant. That is what \"amortised O(1)\" means: not that every call is cheap, but that any sequence of n calls costs O(n) in total.\n\nThe same reasoning explains why dict and set lookups are described as O(1) *average*. A pathological set of colliding keys degrades to O(n), which is why Python randomises string hashes by default — it removes the possibility of an attacker choosing keys that collide.\n\nAnd the reason to care about constants in Python specifically: interpreter dispatch dominates small operations. Pushing a loop into a built-in (`sum`, `join`, `sorted`, `map` over a C function) replaces per-iteration bytecode with a C loop, which is routinely a 10-50× constant-factor win with no change in complexity class at all.",
+      "md": "Amortised analysis is worth understanding rather than accepting. `list.append` sometimes has to allocate a bigger buffer and copy everything, which is O(n), but CPython over-allocates geometrically, so those copies happen rarely enough that the average cost per append is constant. That is what \"amortised O(1)\" means: not that every call is cheap, but that any sequence of n calls costs O(n) in total.\n\nThe same reasoning explains why dict and set lookups are described as O(1) *average*. A pathological set of colliding keys degrades to O(n), which is why Python randomises string hashes by default: it removes the possibility of an attacker choosing keys that collide.\n\nAnd the reason to care about constants in Python specifically: interpreter dispatch dominates small operations. Pushing a loop into a built-in (`sum`, `join`, `sorted`, `map` over a C function) replaces per-iteration bytecode with a C loop, which is routinely a 10-50× constant-factor win with no change in complexity class at all.",
       "sources": [
         {
           "source_id": "cpython.source",
           "url": "https://github.com/python/cpython/blob/main/Objects/listobject.c",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "list_resize — geometric over-allocation"
+          "locator": "list_resize: geometric over-allocation"
         }
       ]
     },
@@ -97,12 +97,12 @@
       "type": "callout",
       "variant": "production",
       "title": "Complexity is a capacity question, not a benchmark",
-      "md": "State the bound in terms the business has: \"linear in orders per day, so 10× growth is 10× the batch window\" is a sentence a capacity plan can use. \"It's O(n)\" is not.\n\nTwo failure modes to watch for. First, an O(n²) path whose `n` is attacker-controlled is a denial-of-service vector — a JSON endpoint that nests groups, or a regex with catastrophic backtracking, needs an input bound rather than a faster machine. Second, memory complexity ends a process abruptly: an O(n) list built from an unbounded stream is fine in staging and OOM-killed in production, and the fix is a generator, not a bigger instance.\n\nMeasure on production-shaped data. Sorted input, all-unique keys and small strings are the three ways a benchmark flatters code that will not hold up."
+      "md": "State the bound in terms the business has: \"linear in orders per day, so 10× growth is 10× the batch window\" is a sentence a capacity plan can use. \"It's O(n)\" is not.\n\nTwo failure modes to watch for. First, an O(n²) path whose `n` is attacker-controlled is a denial-of-service vector: a JSON endpoint that nests groups, or a regex with catastrophic backtracking, needs an input bound rather than a faster machine. Second, memory complexity ends a process abruptly: an O(n) list built from an unbounded stream is fine in staging and OOM-killed in production, and the fix is a generator, not a bigger instance.\n\nMeasure on production-shaped data. Sorted input, all-unique keys and small strings are the three ways a benchmark flatters code that will not hold up."
     }
   ],
   "components": [
     { "name": "n", "role": "The input dimension being scaled. Naming it precisely is most of the analysis.", "required": true },
-    { "name": "hidden loop", "role": "`in` on a sequence, `+=` on a string, `pop(0)`, `sorted` — cost that does not look like iteration.", "required": true },
+    { "name": "hidden loop", "role": "Cost that does not look like iteration: `in` on a sequence, `+=` on a string, `pop(0)`, `sorted`.", "required": true },
     { "name": "constant factor", "role": "Interpreter overhead per operation; why a C-implemented built-in beats an equivalent Python loop.", "required": false },
     { "name": "profiler", "role": "The evidence. Complexity predicts; only measurement confirms.", "required": true }
   ],
@@ -111,14 +111,14 @@
   "common_errors": [
     {
       "error": "A job that took two minutes on last month's data takes four hours on this month's.",
-      "cause": "A quadratic path — usually a list membership test inside a loop — that was invisible at small n.",
+      "cause": "A quadratic path (usually a list membership test inside a loop) that was invisible at small n.",
       "fix": "Hoist the inner container into a `set` or `dict` once, outside the loop. Verify by timing two input sizes and checking the ratio.",
       "sources": [
         {
           "source_id": "python.wiki.time-complexity",
           "url": "https://wiki.python.org/moin/TimeComplexity",
           "retrieved_at": "2026-08-17T00:00:00Z",
-          "locator": "list — x in s is O(n)"
+          "locator": "list: x in s is O(n)"
         }
       ]
     },
@@ -150,12 +150,12 @@
   ],
   "best_practices": [
     "Name `n` explicitly before analysing, and state complexity in terms of it in the docstring of any non-obvious function.",
-    "Scan for the three hidden loops — list membership, string `+=`, `pop(0)` — before reaching for a profiler.",
+    "Scan for the three hidden loops (list membership, string `+=`, `pop(0)`) before reaching for a profiler.",
     "Profile by cumulative time to find the region, then `timeit` the isolated operation to confirm the cause.",
     "Push loops into built-ins (`sum`, `''.join`, `sorted`, `any`) where you can; the constant-factor win is large and free.",
     "Analyse space alongside time. An unbounded accumulator is a crash, not a slowdown.",
     "Benchmark on production-shaped data: real cardinality, real string lengths, real sortedness.",
-    "Once fixed, add a test that would fail if the quadratic returned — an operation count or a memory ceiling."
+    "Once fixed, add a test that would fail if the quadratic returned: an operation count or a memory ceiling."
   ],
   "production_considerations": [
     "Express complexity as a capacity statement tied to a business quantity; that is the form a capacity plan and an SLO can consume.",
@@ -199,31 +199,31 @@
       "source_id": "python.wiki.time-complexity",
       "url": "https://wiki.python.org/moin/TimeComplexity",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "TimeComplexity — operation costs by container"
+      "locator": "TimeComplexity: operation costs by container"
     },
     {
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/profile.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "The Python Profilers — cProfile, pstats"
+      "locator": "The Python Profilers: cProfile, pstats"
     },
     {
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/timeit.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "timeit — measure execution time of small code snippets"
+      "locator": "timeit: measure execution time of small code snippets"
     },
     {
       "source_id": "python.docs.library",
       "url": "https://docs.python.org/3/library/tracemalloc.html",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "tracemalloc — trace memory allocations"
+      "locator": "tracemalloc: trace memory allocations"
     },
     {
       "source_id": "cpython.source",
       "url": "https://github.com/python/cpython/blob/main/Objects/listobject.c",
       "retrieved_at": "2026-08-17T00:00:00Z",
-      "locator": "list_resize — why append is amortised O(1)"
+      "locator": "list_resize: why append is amortised O(1)"
     }
   ],
   "provenance": {

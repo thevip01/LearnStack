@@ -28,7 +28,7 @@ next-env.d.ts
 var/
 docs/schemas/
 
-# Ingestion working data — raw fetched documents are content-addressed cache,
+# Ingestion working data: raw fetched documents are content-addressed cache,
 # never source of truth, and can be large.
 services/ingestion/var/
 **/ingestion-cache/

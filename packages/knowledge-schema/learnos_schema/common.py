@@ -49,6 +49,21 @@ class SchemaModel(BaseModel):
     ``extra="forbid"`` is deliberate: authored content and LLM-extracted content
     both flow through these models, and silently dropping an unknown key is how
     you end up shipping a subject package where half the hints are missing.
+
+    ``use_enum_values=True`` means ``model_dump()`` yields JSON-ready strings and
+    nothing downstream has to remember ``.value``. **It also means an enum-typed
+    field does not hold an enum after validation, it holds a plain ``str``.** So
+    never compare one with ``is``:
+
+        if manifest.status is LifecycleStatus.PUBLISHED:   # always False
+        if manifest.status == LifecycleStatus.PUBLISHED:   # correct
+
+    Because the enums below subclass ``str``, ``==``, dict lookups and f-strings all
+    keep working, so an identity check reads fine, type-checks fine, and silently
+    never fires. Four guards in this package were dead that way until the schema
+    tests caught them; ``tools/check_enum_identity.py`` now fails the build on it.
+    An ``is`` check is still fine on a value you constructed yourself, or inside a
+    method on the enum class where ``self`` really is a member.
     """
 
     model_config = ConfigDict(extra="forbid", use_enum_values=True, populate_by_name=True)

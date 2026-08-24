@@ -71,7 +71,7 @@ class FetchRefused(Exception):
 
 
 class AdapterUnavailable(Exception):
-    """The adapter cannot run here — missing optional dependency, or a stub."""
+    """The adapter cannot run here: missing optional dependency, or a stub."""
 
 
 def license_gate(spec: SourceSpec) -> None:
@@ -120,7 +120,7 @@ class RobotsCache:
     """robots.txt per origin, fetched once per run.
 
     Failure to fetch robots.txt is treated as *allowed*. That is the conventional
-    reading — an absent robots.txt means no restrictions — but it is worth being
+    reading (an absent robots.txt means no restrictions), but it is worth being
     explicit that a 500 from the robots endpoint is also treated this way, because
     the alternative is a docs site with a flaky robots handler silently producing
     empty crawls that look like a content bug.
@@ -188,7 +188,7 @@ class SourceAdapter(ABC):
     # -- template -----------------------------------------------------------
 
     async def run(self, client: "httpx.AsyncClient") -> AsyncIterator[RawDocument]:
-        """Discover, gate, and fetch — the only entry point the fetch stage uses."""
+        """Discover, gate, and fetch: the only entry point the fetch stage uses."""
         license_gate(self.spec)
         fetched = 0
         async for locator in self.discover(client):

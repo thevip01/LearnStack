@@ -27,7 +27,7 @@ hostile and competent. What they must not be able to do:
 
 What is explicitly *out* of scope: a container escape through a kernel bug. The
 defence there is that a sandbox host runs nothing else valuable, and in
-production the sandbox is a separate machine — not the box holding the database.
+production the sandbox is a separate machine, not the box holding the database.
 
 ## What each Docker flag defends against
 
@@ -41,7 +41,7 @@ optional and none of them are decoration.
   a few kilobytes of source.
 - **`network_disabled=True`** unless the task's `SandboxLimits.network` opts in.
   Removes exfiltration, dependency installation at runtime, and any route to
-  Postgres/Redis/the API — which are all reachable by hostname from a container
+  Postgres/Redis/the API, which are all reachable by hostname from a container
   on the compose network. This is the single highest-value flag.
 - **`read_only=True`** on the root filesystem, plus a small `tmpfs` at
   `/workspace`. The learner can write where they are supposed to and nowhere
@@ -61,7 +61,7 @@ optional and none of them are decoration.
   speed bump.
 - **`mem_limit`** with swap pinned to the same value, so the container cannot
   swap its way past the limit. Exceeding it is an OOM kill, which the runner
-  reports as `oom` rather than a mysterious failure — telling a learner "your
+  reports as `oom` rather than a mysterious failure. Telling a learner "your
   solution used too much memory" is a real lesson.
 - **`nano_cpus`** caps CPU share. A busy loop then costs a fraction of a core
   instead of starving the API's event loop.
@@ -92,9 +92,9 @@ test. Hence `harness/pytest_harness.py`:
    behind the `__LEARNOS_RESULT_V1__` sentinel.
 2. When a test manifest is present (i.e. there are authored tests, some possibly
    hidden), the captured terminal output is **not included in the payload at
-   all** — not truncated, not redacted, absent.
+   all**: not truncated, not redacted, absent.
 3. The API's code grader then builds `TestResult` objects and, for any test whose
-   `TestCase.visible` is false, keeps only the test's *name* — never the body,
+   `TestCase.visible` is false, keeps only the test's *name*, never the body,
    the assertion text, the traceback, or the expected value.
 4. `learnos_sandbox.protocol.unpack_result` strips every sentinel line from the
    stdout it returns, so a learner who prints the sentinel themselves cannot
