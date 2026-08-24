@@ -173,9 +173,14 @@ check "exactly the two answered are correct" "$GRADED" \
   "sum(1 for q in d['question_results'] if q['correct']) == 2"
 check "explanations are revealed only now, after grading" "$GRADED" \
   "any(q.get('explanation_md') for q in d['question_results'])"
-check "mastery moves on concept for the closures skill" "$GRADED" \
-  "any(m['skill_id'] == '$SKILL' and m['dimension'] == 'concept' and m['after'] > m['before'] for m in d['mastery_deltas'])"
-printf '       concept delta: %s (hints_used=1; the concept dimension is not discounted by design)\n' \
+check "a concept delta lands on the closures skill" "$GRADED" \
+  "any(m['skill_id'] == '$SKILL' and m['dimension'] == 'concept' for m in d['mastery_deltas'])"
+# A delta's before/after are the skill's *overall* mastery, not the score of the
+# dimension named beside them, so "after > before" is not an invariant and must
+# not be asserted as one: evidence that lands below the running overall correctly
+# pulls it down. What this submission actually claims about the dimension is
+# checked against /progress below.
+printf '       concept delta (skill overall): %s (hints_used=1; concept is not discounted by design)\n' \
   "$(value "$GRADED" "next((f\"{m['before']:.4f} -> {m['after']:.4f}\" for m in d['mastery_deltas'] if m['dimension'] == 'concept'), 'none')")"
 
 section "Progress: measured versus unmeasured"
@@ -186,6 +191,10 @@ check "no unmeasured dimension carries a nonzero score" "$PROGRESS" \
   "all(dim['score'] == 0.0 for s in d['skills'] for dim in s['dimensions'].values() if dim['measured'] is False)"
 check "something is still unmeasured, so the dash path is actually exercised" "$PROGRESS" \
   "any(dim['measured'] is False for s in d['skills'] for dim in s['dimensions'].values())"
+# The hint asymmetry, from the learner's side: one hint was taken on the quiz and
+# it must not have cost anything, so 0.4 raw evidence is still worth 0.4.
+check "the hint cost nothing on concept, so 0.4 raw evidence is still worth 0.4" "$PROGRESS" \
+  "[s for s in d['skills'] if s['skill_id'] == '$SKILL'][0]['dimensions']['concept']['score'] >= 0.4 - 1e-9"
 
 section "Quiz: a clean pass"
 PERFECT="$(request POST "$V/practice/$QUIZ/attempts/$ATTEMPT/submit" "$ALL_CORRECT")"
@@ -218,8 +227,15 @@ else
     check "$kind: evidence lands on the $dimension dimension" "$OUT" "d['dimension'] == '$dimension'"
     check "$kind: the run reports back with tests" "$OUT" \
       "d['execution'] is not None and (d['execution'].get('tests') or d['execution'].get('status') == 'succeeded')"
-    check "$kind: mastery moves on $dimension" "$OUT" \
-      "any(m['dimension'] == '$dimension' and m['after'] > m['before'] for m in d['mastery_deltas'])"
+    check "$kind: a delta row lands on $dimension for the closures skill" "$OUT" \
+      "any(m['skill_id'] == '$SKILL' and m['dimension'] == '$dimension' for m in d['mastery_deltas'])"
+    # The claim worth pinning is where the evidence landed and what the hint
+    # penalty did to it, not which way the skill's overall drifted. Recomputing
+    # from /progress also proves the two endpoints agree.
+    EXPECTED="$(value "$OUT" "round(d['score'] * (1.0 if '$dimension' == 'concept' or d['hints_used'] == 0 else max(0.40, 1.0 - 0.15 * d['hints_used'])), 4)")"
+    AFTER="$(request GET "$V/progress/$SUBJECT")"
+    check "$kind: $dimension evidence is worth $EXPECTED once hints are charged" "$AFTER" \
+      "abs([s for s in d['skills'] if s['skill_id'] == '$SKILL'][0]['dimensions']['$dimension']['score'] - $EXPECTED) < 1e-4"
     if [ "$kind" = "debug" ]; then
       check "debug: both hints are charged to the attempt" "$OUT" "d['hints_used'] == 2"
       printf '       two hints on a doing dimension discount the evidence to 0.70x its raw score\n'

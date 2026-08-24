@@ -64,7 +64,10 @@ class TestLicenseGate:
         license_gate(spec(license="  Apache-2.0  "))
 
     def test_first_party_needs_no_acknowledgement(self) -> None:
-        license_gate(spec(license=None, is_first_party=True))
+        # priority 80 because `SourceSpec` refuses a first-party source below it: a
+        # blog must not be able to outrank our own docs. Not the property under test,
+        # but the model will not build the object without it.
+        license_gate(spec(license=None, is_first_party=True, priority=80))
 
     def test_an_acknowledgement_unblocks_a_reviewed_source(self) -> None:
         license_gate(

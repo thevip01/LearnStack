@@ -15,14 +15,31 @@ fails loudly here rather than passing against a permissive mock.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import pytest
-from learnos_schema.ingestion import Chunk, ExtractionCandidate, ParsedDocument, SourceSpec
+# Importable without `pip install -e`, for the same reason the schema suite does this:
+# `make test` runs `pytest services/ingestion/tests` from the repo root, and without
+# these inserts it fails at import on a fresh clone rather than running. The inserts
+# are no-ops once the editable installs exist. `apps/api` is on the list because
+# `storage/repository.py` imports `learnos_api.models.ingestion`: the ingestion
+# service reuses the API's tables rather than declaring its own copies of them.
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = SERVICE_ROOT.parents[1]
+for _path in (
+    SERVICE_ROOT,
+    REPO_ROOT / "packages" / "knowledge-schema",
+    REPO_ROOT / "apps" / "api",
+):
+    if _path.is_dir() and str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
-from learnos_ingestion.config import IngestionSettings
-from learnos_ingestion.hashing import chunk_id_for, content_hash
+import pytest  # noqa: E402  (after the path inserts, on purpose)
+from learnos_schema.ingestion import Chunk, ExtractionCandidate, ParsedDocument, SourceSpec  # noqa: E402
+
+from learnos_ingestion.config import IngestionSettings  # noqa: E402
+from learnos_ingestion.hashing import chunk_id_for, content_hash  # noqa: E402
 
 
 @dataclass

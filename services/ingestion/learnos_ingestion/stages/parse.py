@@ -81,6 +81,33 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
+#: Class prefixes that carry the language, as emitted by highlight.js, Prism, Rouge
+#: and most static site generators.
+_LANGUAGE_CLASS_PREFIXES = ("language-", "lang-", "highlight-")
+
+
+def _language_hint(nodes: list) -> str | None:
+    """The first language hint found on any of ``nodes``, or None.
+
+    Two conventions are in the wild. The prefixed form, ``class="language-python"``,
+    and pandoc's, which writes ``class="sourceCode python"`` with the language as a
+    bare class of its own. Anything else is left as None rather than guessed at: a
+    wrong language sends a sample to the wrong runtime, which is worse than no
+    language at all, because the extractor can ask a human about the second one.
+    """
+    for node in nodes:
+        classes = [str(name).lower() for name in (node.get("class") or [])]
+        for token in classes:
+            for prefix in _LANGUAGE_CLASS_PREFIXES:
+                if token.startswith(prefix) and len(token) > len(prefix):
+                    return token[len(prefix) :].strip("-") or None
+        if "sourcecode" in classes:
+            for token in classes:
+                if token != "sourcecode":
+                    return token
+    return None
+
+
 def parse_html(body: bytes, *, url: str | None) -> tuple[str, str | None, list[str], list[dict], list[dict], str | None]:
     """HTML to ``(text, title, heading_path, code_blocks, tables, canonical_url)``.
 
@@ -116,15 +143,15 @@ def parse_html(body: bytes, *, url: str | None) -> tuple[str, str | None, list[s
         source = node.get_text()
         if not source.strip():
             continue
-        classes = " ".join(node.get("class") or [])
-        language = None
-        for token in classes.split():
-            for prefix in ("language-", "lang-", "highlight-", "sourceCode "):
-                if token.startswith(prefix.strip()):
-                    language = token[len(prefix.strip()) :].strip("-")
-                    break
-            if language:
-                break
+        # The language hint is usually on the inner <code>, not on the <pre> we kept:
+        # `<pre><code class="language-python">` is what highlight.js, Prism, GitHub,
+        # MDN and the Python docs all emit. Reading only the outer element's classes
+        # loses the language on essentially every real documentation page, and a code
+        # block with no language is one the extractor cannot route to a runtime.
+        carriers = [node]
+        if node.name == "pre":
+            carriers.extend(node.find_all("code", recursive=True))
+        language = _language_hint(carriers)
         code_blocks.append({"ordinal": index, "language": language, "source": source})
 
     tables: list[dict] = []
