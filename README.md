@@ -111,13 +111,15 @@ development `ENV` for that reason.
 
 ```
 compile           every Python file parses
-check-imports     132 modules, every intra-repo import resolves to a real symbol
+check-imports     139 modules, every intra-repo import resolves to a real symbol
 check-web         111 files, imports and named exports resolve, panel registry exhaustive,
                   every route in lib/routes.ts has a page, server/client boundary clean,
                   no subject-specific branching anywhere
 check-contract    29 web call sites all map to real API routes; 64 shared models agree
                   field-for-field, with renames and subsets declared explicitly
 check-enums       121 modules, no `x is SomeEnum.MEMBER` identity comparisons
+check-shell       no bare `exec` silencing the script's own stderr, no EXIT trap that
+                  reports success on failure, no bash 4 syntax that only breaks on macOS
 validate-nodeps   subject packages validate against the schema
 ```
 

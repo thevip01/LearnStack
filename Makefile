@@ -160,8 +160,12 @@ check-contract: ## Every web API call has a route, and shared models agree field
 check-enums: ## No `x is SomeEnum.MEMBER`, which use_enum_values makes silently never match
 	python3 tools/check_enum_identity.py
 
+.PHONY: check-shell
+check-shell: ## Silenced streams, lying EXIT traps, and bash 4 syntax that only fails on a Mac
+	python3 tools/check_shell.py
+
 .PHONY: check
-check: compile check-imports check-web check-contract check-enums validate-nodeps ## Everything verifiable with no dependencies installed
+check: compile check-imports check-web check-contract check-enums check-shell validate-nodeps ## Everything verifiable with no dependencies installed
 
 .PHONY: verify-loop
 verify-loop: ## Walk learn -> practice -> grade against the running stack and assert the invariants
