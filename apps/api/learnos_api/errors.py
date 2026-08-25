@@ -133,6 +133,60 @@ def error_body(code: str, message: str, detail: Any = None) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "detail": detail}}
 
 
+#: Where a validation error came from. The first element of pydantic's ``loc`` is the
+#: request part, which is worth saying out loud for anything that is not the body:
+#: "limit" alone is ambiguous, "query parameter limit" is not.
+_LOCATIONS = {"body": "", "query": "query parameter ", "path": "path parameter ", "header": "header ", "cookie": "cookie "}
+
+
+def _describe_validation_error(err: dict[str, Any]) -> str:
+    """One pydantic error as a sentence a person can act on.
+
+    The generic "request body failed validation" that used to be the whole message
+    is true and useless. Registration rejects a password under ten characters, and
+    a learner typing eight got a 422 whose message named neither the field nor the
+    rule, while the form that produced it showed only that message. The information
+    was already in ``detail`` and nothing surfaced it.
+    """
+    location = [str(part) for part in err.get("loc", ())]
+    prefix = _LOCATIONS.get(location[0], "") if location else ""
+    path = ".".join(location[1:] if location and location[0] in _LOCATIONS else location)
+    field = f"{prefix}{path}" or "the request"
+    context = err.get("ctx") or {}
+    kind = err.get("type", "")
+    message = str(err.get("msg") or "is invalid")
+
+    if kind == "missing":
+        return f"{field} is required"
+    if kind == "string_too_short" and isinstance(context.get("min_length"), int):
+        return f"{field} must be at least {context['min_length']} characters"
+    if kind == "string_too_long" and isinstance(context.get("max_length"), int):
+        return f"{field} must be at most {context['max_length']} characters"
+    if kind == "value_error":
+        # Pydantic prefixes messages raised by a validator, and the prefix is noise
+        # to anyone who did not write the validator.
+        return f"{field}: {message.removeprefix('Value error, ')}"
+    # Pydantic's own wording is already field-relative ("Input should be a valid
+    # integer"), so it reads correctly once the field is named.
+    return f"{field}: {message[0].lower()}{message[1:]}" if message else f"{field} is invalid"
+
+
+def validation_message(errors: list[dict[str, Any]]) -> str:
+    """A message naming what is actually wrong, for up to two errors.
+
+    Capped rather than exhaustive. Two problems is a person mis-filling a form and
+    both are worth stating; twelve is a client sending the wrong shape entirely, and
+    the full list is in ``detail`` for whoever is debugging that.
+    """
+    described = [_describe_validation_error(err) for err in errors]
+    if not described:
+        return "request failed validation"
+    if len(described) <= 2:
+        return "; ".join(described)
+    rest = len(described) - 2
+    return f"{described[0]}; {described[1]}; and {rest} more problem{'' if rest == 1 else 's'}"
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
@@ -144,13 +198,14 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        raw = exc.errors()
         detail = [
             {"loc": [str(part) for part in err.get("loc", [])], "msg": err.get("msg"), "type": err.get("type")}
-            for err in exc.errors()
+            for err in raw
         ]
         return JSONResponse(
             status_code=422,
-            content=error_body("unprocessable", "request body failed validation", detail),
+            content=error_body("unprocessable", validation_message(list(raw)), detail),
         )
 
     @app.exception_handler(StarletteHTTPException)

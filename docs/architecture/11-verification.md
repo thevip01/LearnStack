@@ -71,11 +71,13 @@ root-level `pytest` raises `ImportPathMismatchError` before it collects anything
 `check-imports` prints the collision on every run for the same reason.
 
 All three suites are written now: 65 in `packages/knowledge-schema`, 144 in
-`services/ingestion`, and 31 in `apps/api`, for 240. `test-api` used to print
+`services/ingestion`, and 41 in `apps/api`, for 250. `test-api` used to print
 `no suite yet` and pass, on the argument that a target failing on a directory nobody
 has created trains people to stop running it. The argument was sound and the gap it
 excused was real: the first thing the API suite did when it finally existed was fail,
-on a concept detail route that returned 500 for all ten concepts.`packages/knowledge-schema/tests` is 65 tests over the arithmetic, and it needs
+on a concept detail route that returned 500 for all ten concepts.
+
+`packages/knowledge-schema/tests` is 65 tests over the arithmetic, and it needs
 only `pytest` and `pydantic`: no database, no network, no fixtures on disk except
 the one subject package the repo ships. It pins the hint penalty factors and their
 `0.40` floor, hints being free on `concept` and costly everywhere else, the 90-day
@@ -290,19 +292,28 @@ something the UI can paper over.
 
 These are deliberate, and a reviewer should not read them as breakage:
 
-- **The API suite covers reads and auth, not writes.** `apps/api/tests` is 31 tests
-  from 20 functions: the liveness and readiness contract including which sandbox is
-  in use, the request-id and version headers on every response, eleven on auth (the
-  httponly cookie and the bearer token each authenticating alone, a wrong password
-  and an unknown email being the same refusal, a taken email, a new account not being
-  an admin, logout clearing the cookie, and the bcrypt cost factor), and a walk over
-  every registered GET route asserting none of them 500s, with concept and practice
-  detail rendered for all ten concepts and all three practice kinds. What is still
-  missing is the write path: attempt idempotency and submit-to-evidence-to-rollup
-  have no unit coverage, and neither does concurrent submission of the same attempt.
-  `tools/verify_loop.sh` drives that ground against a running stack with 31
-  assertions, so it is a stand-in rather than a replacement, and it needs Docker and
-  a seeded database to say anything at all.
+- **The API suite covers reads, auth and error wording, not the write path.**
+  `apps/api/tests` is 41 tests from 30 functions: the liveness and readiness contract
+  including which sandbox is in use, the request-id and version headers on every
+  response, eleven on auth (the httponly cookie and the bearer token each
+  authenticating alone, a wrong password and an unknown email being the same refusal,
+  a taken email, a new account not being an admin, logout clearing the cookie, and the
+  bcrypt cost factor), a walk over every registered GET route asserting none of them
+  500s with concept and practice detail rendered for all ten concepts and all three
+  practice kinds, and ten in `test_validation_errors.py` on what a 422 actually says.
+  That last file is unusual on purpose: it asserts on wording, because the two defects
+  that came back from a real local run were both messages rather than behaviour. A
+  learner registering with an eight character password was told "request body failed
+  validation" and nothing else, and the readiness banner blamed practice submissions
+  for a cache outage that cannot touch them. It also holds the only test in the repo
+  that drives an attempt through submission to a graded score with Redis unreachable,
+  which is the fact the banner's copy now rests on.
+  What is still missing is the rest of the write path: attempt idempotency and
+  submit-to-evidence-to-rollup have no coverage beyond that single happy path, and
+  neither does concurrent submission of the same attempt. `tools/verify_loop.sh`
+  drives that ground against a running stack with 31 assertions, so it is a stand-in
+  rather than a replacement, and it needs Docker and a seeded database to say anything
+  at all.
 - Five API routes have no caller in the web app yet: `GET
   /admin/ingestion/runs/{id}`, `POST /admin/ingestion/sources`, `GET
   /admin/subjects/{id}/validate`, `POST /admin/subjects/reload`, and `GET
