@@ -12,6 +12,22 @@ import { cn } from "@/lib/utils";
 type Intent = "signin" | "register";
 
 /**
+ * Mirrors `MIN_PASSWORD_LENGTH` in `apps/api/learnos_api/schemas/auth.py`.
+ *
+ * Duplicated rather than fetched, because a form that cannot state its own rule
+ * until a network round trip completes is worse than one number in two files. The
+ * two are pinned together by `test_the_register_form_states_the_password_rule` in
+ * the API suite, which reads this file and fails if the numbers drift.
+ *
+ * Stating it at all is the actual fix: registering with an eight character
+ * password used to return a 422 whose message was "request body failed
+ * validation", so the form showed a rejection that named neither the field nor
+ * the rule. The API now says which field and why, and this stops the learner
+ * reaching that error in the first place.
+ */
+const PASSWORD_MIN_LENGTH = 10;
+
+/**
  * Sign in / create account.
  *
  * Reading is anonymous by design, so this page is only reached when a learner
@@ -107,6 +123,8 @@ export function LoginView({ next }: { next: string | null }) {
                 onChange={setPassword}
                 autoComplete={intent === "signin" ? "current-password" : "new-password"}
                 required
+                minLength={intent === "register" ? PASSWORD_MIN_LENGTH : undefined}
+                hint={intent === "register" ? `At least ${PASSWORD_MIN_LENGTH} characters.` : undefined}
               />
 
               {described ? (
@@ -121,7 +139,7 @@ export function LoginView({ next }: { next: string | null }) {
                 size="md"
                 className="w-full"
                 loading={active.isPending}
-                disabled={!email.trim() || !password}
+                disabled={!email.trim() || !password || (intent === "register" && password.length < PASSWORD_MIN_LENGTH)}
               >
                 {intent === "signin" ? "Sign in" : "Create account"}
               </Button>
@@ -145,6 +163,8 @@ function LabelledInput({
   autoComplete,
   required,
   placeholder,
+  minLength,
+  hint,
 }: {
   label: string;
   value: string;
@@ -153,6 +173,8 @@ function LabelledInput({
   autoComplete?: string;
   required?: boolean;
   placeholder?: string;
+  minLength?: number;
+  hint?: string;
 }) {
   return (
     <label className="block">
@@ -161,11 +183,13 @@ function LabelledInput({
         type={type}
         value={value}
         required={required}
+        minLength={minLength}
         placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(event) => onChange(event.target.value)}
         className="h-9 w-full rounded-md border border-line bg-canvas px-2.5 text-sm text-ink placeholder:text-faint focus:border-accent/50"
       />
+      {hint ? <span className="mt-1 block text-2xs text-faint">{hint}</span> : null}
     </label>
   );
 }

@@ -111,8 +111,8 @@ development `ENV` for that reason.
 
 ```
 compile           every Python file parses
-check-imports     139 modules, every intra-repo import resolves to a real symbol
-check-web         111 files, imports and named exports resolve, panel registry exhaustive,
+check-imports     140 modules, every intra-repo import resolves to a real symbol
+check-web         112 files, imports and named exports resolve, panel registry exhaustive,
                   every route in lib/routes.ts has a page, server/client boundary clean,
                   no subject-specific branching anywhere
 check-contract    29 web call sites all map to real API routes; 64 shared models agree
@@ -159,7 +159,7 @@ than pattern-matching a fix.
 
 The frontend and the API are feature complete and verified offline, typechecked, and building.
 Tier 3 of the runbook, the full `learn -> practice -> grade -> mastery` loop, passes 37 of 37
-assertions against a live stack. The test suites are 225 tests: 65 schema, 16 API, 144 ingestion.
+assertions against a live stack. The test suites are 250 tests: 65 schema, 41 API, 144 ingestion.
 The ingestion pipeline ships with `EXTRACTOR=stub` as the default and no LLM client wired, so
 the whole pipeline is runnable and testable on a fresh checkout with no API key. That is not a
 placeholder for something missing; it is what makes the pipeline testable at all.
