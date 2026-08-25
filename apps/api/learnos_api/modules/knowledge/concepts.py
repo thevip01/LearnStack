@@ -85,8 +85,12 @@ def concept_out(
 ) -> ConceptOut:
     package = subject.package
     prev_id, next_id = neighbours(subject.concept_order, concept.id)
+    # ``ConceptOut`` narrows ``practice`` from a list of task ids to a list of
+    # summaries, so the authored value has to be dropped from the spread. Passing
+    # both raises TypeError for a duplicate keyword, which is a 500 on a route
+    # that no field-name check can see.
     return ConceptOut(
-        **concept.model_dump(),
+        **concept.model_dump(exclude={"practice"}),
         practice=attached_practice(package, concept, stats=stats),
         prerequisite_status=concept_prerequisite_status(package, concept, masteries),
         next_concept_id=next_id,
