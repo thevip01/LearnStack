@@ -12,7 +12,7 @@
 #
 #   Postgres  -> SQLite via aiosqlite. Every query in the API goes through
 #                SQLAlchemy Core with no Postgres-only constructs on the learner
-#                paths, so the app is genuinely exercised. What you lose is the
+#                paths, so the app is really exercised. What you lose is the
 #                pgvector hybrid search: `search_index_built hybrid=False` in the
 #                log means the lexical index is live and the vector half is not.
 #   Redis     -> nothing. The cache layer already degrades to a no-op and logs
@@ -32,11 +32,20 @@
 #   tools/dev_local.sh --api-only   # skip the web app
 #   API_PORT=8100 WEB_PORT=3100 tools/dev_local.sh
 #
+# A busy default port is stepped past rather than treated as an error, and the new
+# one is printed. A port named explicitly in the environment is honoured or refused,
+# never moved, because a caller who chose 8100 has something else pointed at it.
+#
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+#: Whether the port came from the environment or from the default below. A port the
+#: caller asked for by name is honoured or refused, never quietly moved; a default is
+#: a suggestion and gets stepped past when something else is already there.
+API_PORT_PINNED="${API_PORT:+yes}"
+WEB_PORT_PINNED="${WEB_PORT:+yes}"
 API_PORT="${API_PORT:-8000}"
 WEB_PORT="${WEB_PORT:-3000}"
 API_ONLY=0
@@ -49,6 +58,24 @@ mkdir -p "$STATE"
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 dim()  { printf '\033[2m%s\033[0m\n' "$*"; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# `set -e` exits with no explanation, and this script installs an EXIT trap that
+# prints "stopped." on the way out. Together those made an unguarded failure
+# indistinguishable from a clean shutdown: a blank line, "stopped.", and make
+# reporting Error 1, with nothing saying which command died or where. That happened
+# on a real machine and diagnosing it took longer than any actual bug in here.
+#
+# ERR only fires for failures nothing handled, because it follows the same rules as
+# errexit: an `if` condition and the left side of `||` are exempt. So every
+# `something || die "..."` below stays quiet and keeps its own better message.
+#
+# Statuses at or above 128 are skipped. Ctrl-C is the documented way to stop this
+# script, and it lands as SIGINT on whatever `sleep` the watch loop is sitting in,
+# so reporting it would mean printing "failed: sleep 1" every single normal exit.
+trap 'code=$?; if (( code < 128 )); then
+  printf "\033[31mfailed\033[0m %s:%s: %s (exit %s)\n" \
+    "${BASH_SOURCE[0]##*/}" "$LINENO" "$BASH_COMMAND" "$code" >&2
+fi' ERR
 
 # ---------------------------------------------------------------------------
 # Refuse to be used as a deployment
@@ -129,6 +156,88 @@ fi
   "$VENV/bin/pip" install --quiet aiosqlite
 
 # ---------------------------------------------------------------------------
+# Ports
+# ---------------------------------------------------------------------------
+# Chosen here, before anything is exported, because the API URL the web app is told
+# to call and the CORS origins the API is told to allow are both built out of these
+# numbers. Picking ports after computing those is how you get an app pointed at a
+# port nothing is listening on.
+
+# `/dev/tcp` rather than lsof or nc, neither of which is guaranteed to be present.
+#
+# The connect runs in a subshell so the descriptor dies with it. Nothing closes fd 3
+# afterwards, and that omission is the point. This function used to end with
+#
+#     exec 3>&- 2>/dev/null || true
+#
+# which looks like tidying up and is actually the bug that started all of this.
+# `exec` with no command applies its redirections to the *current shell*, so that
+# line did not silence one cleanup step: it pointed this script's stderr at
+# /dev/null permanently, from the first busy port onwards. Every message after it,
+# `die` included, went nowhere. What the user saw was a blank line, "stopped.", and
+# `make: *** [dev-local] Error 1`, with no cause anywhere, which is a far worse
+# failure than the port conflict it was reporting. The close was also unnecessary:
+# the parent never opened fd 3 in the first place.
+port_free() {
+  if (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; then
+    return 1
+  fi
+  return 0
+}
+
+# Best effort, and only ever used to make an error message better. lsof is on macOS
+# by default and on most Linux boxes; when it is missing the caller still gets a
+# correct message, just a vaguer one.
+port_owner() {
+  local owner=""
+  if command -v lsof >/dev/null 2>&1; then
+    owner="$(lsof -nP -iTCP:"$1" -sTCP:LISTEN -Fcp 2>/dev/null \
+      | awk '/^p/{pid=substr($0,2)} /^c/{print substr($0,2) " pid " pid}' | head -1)"
+  fi
+  printf '%s' "${owner:-something}"
+}
+
+# The next free port at or after $1. A busy default port is the single most common
+# reason this script used to refuse to start, and "another program is using 8000" is
+# not a problem the reader of this script asked to have: they asked to see the app.
+next_free_port() {
+  local port="$1" limit=$(( $1 + 20 ))
+  while (( port < limit )); do
+    port_free "$port" && { printf '%s' "$port"; return 0; }
+    port=$(( port + 1 ))
+  done
+  return 1
+}
+
+# $1=label $2=wanted port $3=pinned flag. Sets CHOSEN_PORT.
+#
+# A global rather than an echoed value on purpose. In `PORT="$(choose_port ...)"` the
+# helper runs in a subshell, so `die` would exit only that subshell and `dim` would
+# be captured into the variable instead of shown. Both failure modes are silent,
+# which is the exact class of bug this file just had.
+CHOSEN_PORT=""
+choose_port() {
+  local label="$1" want="$2" pinned="$3" upper=""
+  CHOSEN_PORT="$want"
+  port_free "$want" && return 0
+  if [[ -n "$pinned" ]]; then
+    upper="$(printf '%s' "$label" | tr '[:lower:]' '[:upper:]')"
+    die "$label port $want is in use by $(port_owner "$want").
+    Free it, or choose another:  ${upper}_PORT=$(( want + 1 )) tools/dev_local.sh"
+  fi
+  CHOSEN_PORT="$(next_free_port "$want")" \
+    || die "no free $label port between $want and $(( want + 20 )). Something is very busy."
+  dim "  $label port $want is in use by $(port_owner "$want"), using $CHOSEN_PORT instead"
+}
+
+choose_port api "$API_PORT" "$API_PORT_PINNED"
+API_PORT="$CHOSEN_PORT"
+if [[ "$API_ONLY" == "0" ]]; then
+  choose_port web "$WEB_PORT" "$WEB_PORT_PINNED"
+  WEB_PORT="$CHOSEN_PORT"
+fi
+
+# ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
 export ENV=development
@@ -153,28 +262,36 @@ export CORS_ORIGINS="http://localhost:$WEB_PORT,http://127.0.0.1:$WEB_PORT"
 
 PIDS=()
 SERVICE_PIDS=()
+#: Set once a server has actually been launched. `cleanup` needs to know whether
+#: there are logs worth reading, and the presence of api.log does not answer that:
+#: a log left behind by an earlier run would send someone off to read output that
+#: has nothing to do with the failure they just hit.
+LAUNCHED=0
 cleanup() {
+  # First line, before anything can overwrite it. This status is the difference
+  # between "the user pressed Ctrl-C" and "something failed", and it is printed on
+  # stdout deliberately: a failure message on stderr can be lost to buffering,
+  # trimming, or a pipeline, and the report that started this said only "stopped."
+  local code=$?
   trap - INT TERM EXIT
   for pid in "${PIDS[@]:-}"; do
     [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
   done
   wait 2>/dev/null || true
-  printf '\nstopped.\n'
+  # 130 is SIGINT and 143 is SIGTERM: Ctrl-C and `kill` are both documented ways to
+  # stop this, so neither is a failure worth annotating.
+  if (( code == 0 || code == 130 || code == 143 )); then
+    printf '\nstopped.\n'
+  elif (( LAUNCHED )); then
+    printf '\nstopped: exit %s. Logs are in %s\n' "$code" "${STATE#"$ROOT"/}"
+  else
+    # Nothing was ever started, so there is nothing to read. Saying so is worth a
+    # line: the alternative is someone tailing an empty file looking for a cause.
+    printf '\nstopped: exit %s, before anything started. Re-run as `bash -x %s` for a trace.\n' \
+      "$code" "tools/${BASH_SOURCE[0]##*/}"
+  fi
 }
 trap cleanup INT TERM EXIT
-
-# `/dev/tcp` rather than lsof or nc, neither of which is guaranteed to be present.
-# The fd is closed explicitly because a successful connect leaves it open, and a
-# dangling descriptor on the port we are about to bind is a confusing thing to
-# debug later.
-port_free() {
-  if (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; then
-    exec 3>&- 2>/dev/null || true
-    return 1
-  fi
-  return 0
-}
-port_free "$API_PORT" || die "port $API_PORT is already in use (another API? 'lsof -ti:$API_PORT' to find it)"
 
 # ---------------------------------------------------------------------------
 # API
@@ -185,6 +302,7 @@ bold "starting the API on http://127.0.0.1:$API_PORT"
 API_PID=$!
 PIDS+=("$API_PID")
 SERVICE_PIDS+=("$API_PID")
+LAUNCHED=1
 
 for _ in $(seq 1 60); do
   if curl -fsS "http://127.0.0.1:$API_PORT/readyz" >/dev/null 2>&1; then break; fi
@@ -208,8 +326,6 @@ if [[ "$API_ONLY" == "0" ]]; then
     bold "installing web dependencies (first run only)"
     ( cd "$ROOT/apps/web" && npm install )
   }
-
-  port_free "$WEB_PORT" || die "port $WEB_PORT is already in use"
 
   # Both variables, deliberately. `apps/web/src/lib/api.ts` picks a different
   # base depending on whether the call is running in the browser or in the Next
