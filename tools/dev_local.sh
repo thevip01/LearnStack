@@ -144,7 +144,12 @@ export SANDBOX_MODE=subprocess
 export AUTO_CREATE_SCHEMA=true
 export SEED_DEMO_USER=true
 export JWT_SECRET="${JWT_SECRET:-dev-only-secret-not-for-anything-real}"
-export CORS_ORIGINS="http://localhost:$WEB_PORT"
+# Both spellings of the same host. A browser treats http://localhost:3000 and
+# http://127.0.0.1:3000 as different origins, so allowing only one means opening
+# the other gets every fetch rejected by CORS. What that looks like is not a CORS
+# error in the UI: the readiness probe fails too, so the app decides the API is
+# down and shows "The API is unreachable" over a page that is otherwise fine.
+export CORS_ORIGINS="http://localhost:$WEB_PORT,http://127.0.0.1:$WEB_PORT"
 
 PIDS=()
 SERVICE_PIDS=()
