@@ -136,7 +136,12 @@ async def history(
     points = await rollup.history(session, user_id=user.id, package=subject.package, days=days)
     return HistoryOut(
         points=[
-            HistoryPointOut(date=date, overall=overall, skills_mastered=mastered)
-            for date, overall, mastered in points
+            HistoryPointOut(
+                date=date,
+                overall=overall,
+                skills_mastered=mastered,
+                dimensions=dimensions,  # type: ignore[arg-type]
+            )
+            for date, overall, mastered, dimensions in points
         ]
     )

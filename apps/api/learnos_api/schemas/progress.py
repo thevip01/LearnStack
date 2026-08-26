@@ -78,6 +78,11 @@ class HistoryPointOut(ApiModel):
     date: str
     overall: float
     skills_mastered: int
+    #: The same six axes as ``SubjectProgressOut.dimensions``, recomputed at this
+    #: day's cutoff. Carries ``measured`` for the usual reason: a day before a
+    #: learner ever ran a lab has no lab score, which is not the same as a zero and
+    #: must not be drawn as a point on the floor.
+    dimensions: dict[MasteryDimension, DimensionOut] = Field(default_factory=dict)
 
 
 class HistoryOut(ApiModel):

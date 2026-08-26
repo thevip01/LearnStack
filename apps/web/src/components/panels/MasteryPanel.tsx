@@ -58,10 +58,7 @@ export function MasteryPanel({ runtime }: PanelProps) {
             tone={summary.skills_at_risk > 0 ? "danger" : "neutral"}
           />
           <Stat label="Practice passed" value={String(summary.practice_passed)} />
-          <Stat
-            label="Streak"
-            value={summary.streak_days > 0 ? `${summary.streak_days} d` : DASH}
-          />
+          <Stat label="Streak" value={summary.streak_days > 0 ? `${summary.streak_days}d` : DASH} />
         </section>
 
         <section>
@@ -84,13 +81,13 @@ export function MasteryPanel({ runtime }: PanelProps) {
                   <li
                     key={skill.skill_id}
                     className="flex items-center gap-2 rounded border border-line bg-surface px-2 py-1 text-xs"
+                    // The relative time lives here rather than in the row. In a
+                    // 290px panel it was the element that pushed the title out:
+                    // three shrink-0 siblings against one truncating span left the
+                    // most practised skill rendering as the single letter "S".
+                    title={skill.last_practiced_at ? `${skill.title}, last practised ${relativeTime(skill.last_practiced_at)}` : skill.title}
                   >
                     <span className="min-w-0 flex-1 truncate text-ink">{skill.title}</span>
-                    {skill.last_practiced_at ? (
-                      <span className="hidden shrink-0 text-2xs text-faint sm:inline">
-                        {relativeTime(skill.last_practiced_at)}
-                      </span>
-                    ) : null}
                     <span className="shrink-0 font-mono text-2xs text-muted">{formatPercent(skill.overall)}</span>
                     <span className={`shrink-0 rounded border px-1 text-2xs ${tone.className}`} title={label}>
                       <span aria-hidden>{tone.glyph} </span>

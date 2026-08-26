@@ -809,7 +809,9 @@ export type SkillDetailOut = {
   recommended_practice: PracticeSummary[];
 };
 
-export type HistoryOut = { points: Array<{ date: string; overall: number; skills_mastered: number }> };
+export type HistoryOut = {
+  points: Array<{ date: string; overall: number; skills_mastered: number; dimensions: DimensionMap }>;
+};
 
 export type SearchResult = {
   id: string;

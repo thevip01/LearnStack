@@ -397,19 +397,26 @@ async def history(
     user_id,
     package: SubjectPackage,
     days: int = 30,
-) -> list[tuple[str, float, int]]:
+) -> list[tuple[str, float, int, dict[str, DimensionOut]]]:
     """Replay evidence day by day to get an honest history curve.
 
     No historical snapshot table: the evidence rows *are* the history, and
     recomputing at each cutoff means the curve reflects today's maths rather than
     whatever the maths was on the day the row was written.
+
+    Each point carries the per-dimension breakdown as well as the overall, because
+    the interesting question is usually which axis moved. Retention decaying while
+    concept holds steady is a different story from both sliding together, and one
+    number a day cannot tell them apart. The dimensions come from the same
+    :func:`aggregate_dimensions` the live rollup uses, so a point in the curve and
+    today's dashboard cannot disagree.
     """
     days = min(max(days, 1), 365)
     now = datetime.now(timezone.utc)
     start = now - timedelta(days=days - 1)
     evidence_by_skill = await evidence_mod.load_evidence(session, user_id=user_id, subject_id=package.id)
 
-    points: list[tuple[str, float, int]] = []
+    points: list[tuple[str, float, int, dict[str, DimensionOut]]] = []
     for offset in range(days):
         cutoff_day = (start + timedelta(days=offset)).date()
         cutoff = datetime.combine(cutoff_day, datetime.max.time()).replace(tzinfo=timezone.utc)
@@ -419,7 +426,7 @@ async def history(
         masteries = masteries_from_evidence(package, truncated, now=cutoff)
         overall, _ = overall_from_masteries(masteries.values())
         mastered = sum(1 for m in masteries.values() if m.evidence_count > 0 and m.overall >= MASTERY_THRESHOLD)
-        points.append((cutoff_day.isoformat(), overall, mastered))
+        points.append((cutoff_day.isoformat(), overall, mastered, aggregate_dimensions(masteries.values())))
     return points
 
 
