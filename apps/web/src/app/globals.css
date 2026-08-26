@@ -72,6 +72,43 @@
   kbd {
     @apply rounded border border-line bg-raised px-1 font-mono text-2xs text-muted;
   }
+
+  /*
+   * Anything that answers a click says so under the pointer.
+   *
+   * Browsers give `button` `cursor: default`, not a pointer, and Tailwind's
+   * preflight does not override it: only `a[href]` gets a hand for free. So in an
+   * app whose controls are mostly buttons, almost nothing looked clickable, which
+   * is exactly how it was reported. Stated once here rather than as a
+   * `cursor-pointer` class on several dozen components, because "it responds to a
+   * click" is a property of the element's role, not a per-component decision
+   * someone has to remember to repeat.
+   *
+   * Disabled is the other half of the same idea, and it has to lose: a disabled
+   * button matches neither the `:not(:disabled)` above nor `[aria-disabled]`, and
+   * a control that is off should not invite the click.
+   */
+  button:not(:disabled):not([aria-disabled='true']),
+  summary,
+  select:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* A label wired to a control forwards the click, so it should forward the cursor. */
+  label:has(> input[type='checkbox']),
+  label:has(> input[type='radio']) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
 }
 
 @layer components {

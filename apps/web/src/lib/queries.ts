@@ -83,15 +83,43 @@ export function useMe(): UseQueryResult<UserOut | null> {
   });
 }
 
+/**
+ * Everything cached was an answer about somebody else, including the anonymous
+ * somebody.
+ *
+ * Nothing in a query key names the account, so a session change makes every cached
+ * entry wrong at once, in both directions: a visitor who browsed and then signed in
+ * has a cache full of anonymous zeros and cached 401s, and the person who signs out
+ * leaves their progress sitting in memory for whoever signs in next. Reported as
+ * "even after login it show unauthorized": the login itself had worked, and the page
+ * was rendering the refusal it had cached a moment earlier.
+ *
+ * The order is the whole trick. `setQueryData` first, because it writes into the
+ * existing `me` query and therefore *notifies* everything already watching it: the
+ * shell, and every gate that decides whether to render a console or a locked state.
+ * Then `resetQueries` puts the rest back to pending, which drops what was cached for
+ * the previous identity and refetches whatever is currently on screen under the new
+ * one.
+ *
+ * `clear()` was the first attempt and it is a trap. It removes queries out from
+ * under their observers without telling them, so a mounted view with no other reason
+ * to re-render keeps painting the old session's data: signing out of the ingestion
+ * console left the console on screen, tabs and all, next to a header that had already
+ * flipped to "Sign in". `resetQueries` is the one that notifies. `me` is excluded from
+ * it because it was just answered by the login response, and resetting it would throw
+ * that away to ask a question we know the answer to.
+ */
+function adoptSession(client: ReturnType<typeof useQueryClient>, user: UserOut | null): void {
+  client.setQueryData(qk.me, user);
+  void client.resetQueries({ predicate: (query) => query.queryKey[0] !== qk.me[0] });
+}
+
 export function useLogin() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: { email: string; password: string }) =>
       apiFetch<AuthOut>("/auth/login", { method: "POST", body: input }),
-    onSuccess: (data) => {
-      client.setQueryData(qk.me, data.user);
-      client.invalidateQueries({ queryKey: qk.catalog });
-    },
+    onSuccess: (data) => adoptSession(client, data.user),
   });
 }
 
@@ -100,7 +128,7 @@ export function useRegister() {
   return useMutation({
     mutationFn: (input: { email: string; password: string; display_name?: string }) =>
       apiFetch<AuthOut>("/auth/register", { method: "POST", body: input }),
-    onSuccess: (data) => client.setQueryData(qk.me, data.user),
+    onSuccess: (data) => adoptSession(client, data.user),
   });
 }
 
@@ -108,10 +136,7 @@ export function useLogout() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () => apiFetch<void>("/auth/logout", { method: "POST" }),
-    onSuccess: () => {
-      client.setQueryData(qk.me, null);
-      client.clear();
-    },
+    onSuccess: () => adoptSession(client, null),
   });
 }
 
