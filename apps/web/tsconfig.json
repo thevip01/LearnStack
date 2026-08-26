@@ -7,6 +7,10 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
+    // The unit tests import `./apiTarget.ts` with the extension, because node's
+    // built-in type stripping runs them as ESM and ESM resolution has no extension
+    // search. Allowed here only because `noEmit` is set, which is what tsc requires.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

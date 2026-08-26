@@ -4,6 +4,7 @@ import { Library } from "lucide-react";
 import { SubjectCard } from "@/components/catalog/SubjectCard";
 import { PageHeader, PageShell } from "@/components/shell/Page";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GlyphTile } from "@/components/ui/GlyphTile";
 import { SkeletonCards } from "@/components/ui/Skeleton";
 import { describeError } from "@/lib/api";
 import { useCatalog } from "@/lib/queries";
@@ -68,7 +69,10 @@ export function CatalogView() {
       <div className="space-y-7">
         {domains.map((domain) => (
           <section key={domain.id}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{domain.title}</h2>
+            <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              <GlyphTile icon={domain.icon} title={domain.title} size="xs" />
+              {domain.title}
+            </h2>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {domain.subjects.map((subject) => (
                 <SubjectCard key={subject.id} subject={subject} />

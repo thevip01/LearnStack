@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { GlyphTile } from "@/components/ui/GlyphTile";
 import { formatMinutes, formatScore } from "@/lib/format";
 import { routes } from "@/lib/routes";
 import { themeCssVars } from "@/lib/theme";
@@ -16,6 +17,13 @@ const MAX_TAGS = 3;
  * The subject's own ThemeSpec is applied as CSS custom properties on the card,
  * so the accent on the progress bar and the hover border come from the subject
  * package rather than from any per-subject rule in this file.
+ *
+ * The whole card is the click target, via an overlay span inside the one anchor
+ * rather than an anchor wrapped around everything. That keeps a single link per
+ * card, so the accessible name stays the subject's title and the version badge
+ * and tags do not become part of the link text. The overlay has to be a sibling
+ * of the truncating span rather than its child: `truncate` is `overflow: hidden`,
+ * which would clip an absolutely positioned child back to the width of the title.
  */
 export function SubjectCard({ subject }: { subject: CatalogSubject }) {
   const { progress } = subject;
@@ -26,15 +34,17 @@ export function SubjectCard({ subject }: { subject: CatalogSubject }) {
     <Card
       as="li"
       style={themeCssVars(subject.theme)}
-      className="flex flex-col gap-2 p-pad transition-colors hover:border-accent/50"
+      className="group relative flex flex-col gap-2 p-pad transition-colors hover:border-accent/50 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/40"
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start gap-2">
+        <GlyphTile icon={subject.theme?.icon} title={subject.title} size="sm" />
         <Link
           href={routes.subject(subject.id)}
-          className="truncate text-sm font-semibold text-ink hover:text-accent"
+          className="min-w-0 flex-1 text-sm font-semibold text-ink outline-none group-hover:text-accent"
           title={subject.title}
         >
-          {subject.title}
+          <span className="block truncate">{subject.title}</span>
+          <span className="absolute inset-0 rounded-panel" aria-hidden />
         </Link>
         <Badge tone="neutral" title={`Package version ${subject.version}`}>
           v{subject.version}

@@ -112,7 +112,7 @@ reload-subjects: ## Make the running API re-read subject packages from disk
 # ---------------------------------------------------------------------------
 
 .PHONY: test
-test: test-schema test-api test-ingestion ## Run every test suite that exists
+test: test-schema test-api test-ingestion test-web-unit ## Run every test suite that exists
 
 # pytest exits 4 on a missing directory, which reads as "the tests failed" and
 # teaches everyone to stop running `make test`. Saying "no suite yet" out loud is
@@ -138,6 +138,27 @@ test-ingestion:
 .PHONY: test-web
 test-web: ## Typecheck and build the web app
 	cd apps/web && npx tsc --noEmit && npm run build
+
+# The web app's unit tests, and the reason they can exist at all: node 22.6 and
+# later strip TypeScript types on the fly, and node has had a test runner built in
+# since 18. So these run with no jest, no ts-node, no transform config, and no
+# `npm install` at all, which is the same argument the tier 0 gates make. The cost
+# is that pure logic has to live in its own module rather than inside a component,
+# which is a fair price and better structure anyway.
+#
+# Older node skips rather than fails. A target that explodes on a supported node
+# version is a target people stop running.
+.PHONY: test-web-unit
+test-web-unit: ## Run the web app's unit tests (needs node 22.6+, no npm install)
+	@cd apps/web && \
+	if node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=6)?0:1)'; then \
+		files=$$(find src -name '*.test.ts' -o -name '*.test.tsx' | sort); \
+		if [ -n "$$files" ]; then \
+			node --experimental-strip-types --test $$files; \
+		else echo "no web unit tests yet"; fi; \
+	else \
+		echo "skipped: node $$(node -v) cannot strip TypeScript types, needs 22.6 or newer"; \
+	fi
 
 .PHONY: compile
 compile: ## Syntax-check every Python file without installing anything

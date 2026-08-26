@@ -38,3 +38,7 @@ services/ingestion/var/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local exam prep material: personal working notes that happen to live in the
+# tree, not part of the product and not something anyone else needs.
+exam-prep/

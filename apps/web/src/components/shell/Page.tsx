@@ -21,11 +21,14 @@ export function PageHeader({
   subtitle,
   actions,
   back,
+  glyph,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
   back?: { href: string; label: string };
+  /** Identity mark for the thing this page is about, drawn from its package icon. */
+  glyph?: ReactNode;
 }) {
   return (
     <div className="mb-5">
@@ -36,9 +39,12 @@ export function PageHeader({
         </Link>
       ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold text-ink">{title}</h1>
-          {subtitle ? <div className="mt-0.5 text-xs text-muted">{subtitle}</div> : null}
+        <div className="flex min-w-0 items-center gap-2.5">
+          {glyph}
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold text-ink">{title}</h1>
+            {subtitle ? <div className="mt-0.5 text-xs text-muted">{subtitle}</div> : null}
+          </div>
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>
