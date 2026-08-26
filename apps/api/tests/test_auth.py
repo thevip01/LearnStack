@@ -11,10 +11,11 @@ from __future__ import annotations
 import httpx
 import pytest
 
+from learnos_api.config import Settings
 from learnos_api.modules.auth import passwords
 from learnos_api.modules.auth.tokens import COOKIE_NAME
 
-from .conftest import DEMO_EMAIL, DEMO_PASSWORD
+from .conftest import DEMO_EMAIL, DEMO_PASSWORD, REPO_ROOT
 
 
 async def test_login_sets_an_httponly_cookie_and_also_returns_the_token(api: httpx.AsyncClient):
@@ -139,3 +140,30 @@ def test_password_hashing_uses_a_real_cost_factor():
 
     source = inspect.getsource(passwords)
     assert "bcrypt__rounds=12" in source, "the shipped cost factor changed"
+
+
+def test_the_sign_in_form_offers_the_seeded_demo_account():
+    """The credentials that exist in two languages, pinned like the password rule.
+
+    ``seed.py`` makes this account an admin and nothing in the product can promote
+    another one, so on a fresh checkout it is the only way into the ingestion console
+    and the subject reload. The sign-in form says so in development builds, which
+    means it also hardcodes the pair, which means it can rot: a hint offering a
+    password the API no longer accepts is worse than no hint, because the reader
+    concludes the login is broken rather than that the note is stale.
+
+    Read from the field defaults rather than a constructed ``Settings`` on purpose,
+    since this suite's environment overrides several of them.
+    """
+    view = REPO_ROOT / "apps" / "web" / "src" / "components" / "auth" / "LoginView.tsx"
+    if not view.is_file():
+        pytest.skip("no web app in this checkout")
+    source = view.read_text(encoding="utf-8")
+
+    email = Settings.model_fields["DEMO_USER_EMAIL"].default
+    password = Settings.model_fields["DEMO_USER_PASSWORD"].default
+    assert f'{{ email: "{email}", password: "{password}" }}' in source
+
+    # And only in development, because production has no such account to advertise.
+    assert 'const IS_DEV = process.env.NODE_ENV !== "production";' in source
+    assert "{IS_DEV ? (" in source

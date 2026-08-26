@@ -889,6 +889,29 @@ export type StageReport = {
   messages: string[];
 };
 
+/**
+ * What a reload did, per package.
+ *
+ * `failed` is the field that matters: a package that does not validate leaves the
+ * previously loaded version serving traffic and comes back here with its problems,
+ * so a bad edit cannot empty the catalogue. An id in neither list was not on disk.
+ */
+export type SubjectLoadFailureOut = {
+  id: string;
+  problems: string[];
+};
+
+export type SubjectReloadOut = {
+  loaded: string[];
+  failed: SubjectLoadFailureOut[];
+};
+
+/** Problems would have refused the package at load. Warnings never block it. */
+export type SubjectValidateOut = {
+  problems: string[];
+  warnings: string[];
+};
+
 export type IngestionRun = {
   id: string;
   subject_id: string;

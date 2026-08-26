@@ -3,6 +3,7 @@
 import { Play, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { CandidateReview } from "@/components/admin/CandidateReview";
+import { SubjectPackages } from "@/components/admin/SubjectPackages";
 import { PageHeader, PageShell } from "@/components/shell/Page";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -34,7 +35,7 @@ const STAGE_ORDER: readonly IngestionStage[] = [
   "publish",
 ] as const;
 
-type Panel = "runs" | "sources" | "candidates";
+type Panel = "runs" | "sources" | "candidates" | "packages";
 
 /**
  * The ingestion console.
@@ -82,6 +83,7 @@ export function IngestionView() {
     { id: "runs", label: "Runs" },
     { id: "candidates", label: "Review queue" },
     { id: "sources", label: "Sources" },
+    { id: "packages", label: "Packages" },
   ];
 
   return (
@@ -90,19 +92,23 @@ export function IngestionView() {
         title="Ingestion"
         subtitle="Fetch, extract, review and publish subject content."
         actions={
-          <select
-            value={subjectId ?? ""}
-            onChange={(event) => setSubjectId(event.target.value || null)}
-            aria-label="Filter by subject"
-            className="h-7 rounded-md border border-line bg-raised px-2 text-xs text-ink focus:border-accent/50"
-          >
-            <option value="">All subjects</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.title}
-              </option>
-            ))}
-          </select>
+          // The packages tab reads every package by definition, so the filter would
+          // be a control that changes nothing on the panel below it.
+          panel === "packages" ? null : (
+            <select
+              value={subjectId ?? ""}
+              onChange={(event) => setSubjectId(event.target.value || null)}
+              aria-label="Filter by subject"
+              className="h-7 rounded-md border border-line bg-raised px-2 text-xs text-ink focus:border-accent/50"
+            >
+              <option value="">All subjects</option>
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.title}
+                </option>
+              ))}
+            </select>
+          )
         }
       />
 
@@ -118,6 +124,8 @@ export function IngestionView() {
         <RunsPanel subjectId={subjectId} />
       ) : panel === "candidates" ? (
         <CandidateReview subjectId={subjectId} />
+      ) : panel === "packages" ? (
+        <SubjectPackages />
       ) : (
         <SourcesPanel subjectId={subjectId} />
       )}

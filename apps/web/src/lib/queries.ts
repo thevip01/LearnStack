@@ -21,7 +21,9 @@ import type {
   SkillDetailOut,
   SourceSpec,
   SubjectProgressOut,
+  SubjectReloadOut,
   SubjectRuntimeOut,
+  SubjectValidateOut,
   UserOut,
 } from "./types";
 
@@ -321,5 +323,38 @@ export function useReviewCandidate() {
         body: { decision: input.decision, notes: input.notes },
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["admin", "candidates"] }),
+  });
+}
+
+/**
+ * Re-read every subject package from disk.
+ *
+ * This is how a subject enters a running install: the package is a directory, the
+ * registry loads it, and nothing about that needs a deploy. Which is why the whole
+ * cache goes on success rather than a named key. A reload can change a subject's
+ * content hash, its skills, its layouts and its search rows all at once, so every
+ * cached answer about every subject is suspect, including the catalogue the picker
+ * on this page is built from.
+ */
+export function useReloadSubjects() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<SubjectReloadOut>("/admin/subjects/reload", { method: "POST" }),
+    onSuccess: () => client.invalidateQueries(),
+  });
+}
+
+/**
+ * The soft checks a package passed load without having to satisfy.
+ *
+ * A loaded subject should report no problems, since problems are what would have
+ * refused it. Warnings are the useful half: the things worth fixing that were
+ * never worth blocking on. Kept out of the reload response deliberately, because
+ * asking "is this package healthy" is a different question from "load it", and a
+ * validate that ran on every reload would make the reload slow and noisy.
+ */
+export function useValidateSubject() {
+  return useMutation({
+    mutationFn: (subjectId: string) => apiFetch<SubjectValidateOut>(`/admin/subjects/${subjectId}/validate`),
   });
 }

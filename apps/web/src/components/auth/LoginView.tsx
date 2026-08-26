@@ -28,6 +28,23 @@ type Intent = "signin" | "register";
 const PASSWORD_MIN_LENGTH = 10;
 
 /**
+ * The account a fresh checkout already has, and the only admin on it.
+ *
+ * Mirrors `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` in `apps/api/learnos_api/config.py`,
+ * pinned by `test_the_sign_in_form_offers_the_seeded_demo_account` so the hint cannot
+ * start naming a password that no longer works.
+ *
+ * Shown only in a development build, and safe to show there for the same reason the
+ * account exists there: `Settings.insecure_defaults()` refuses `SEED_DEMO_USER`
+ * outside development, so in production there is no such account to leak. Worth
+ * showing because `seed.py` makes this user `is_admin`, and nothing else in the app
+ * can promote one, so without it the ingestion console and the subject reload are
+ * documented but unreachable.
+ */
+const DEMO = { email: "demo@learnos.dev", password: "learnos-demo-2026" } as const;
+const IS_DEV = process.env.NODE_ENV !== "production";
+
+/**
  * Sign in / create account.
  *
  * Reading is anonymous by design, so this page is only reached when a learner
@@ -146,6 +163,36 @@ export function LoginView({ next }: { next: string | null }) {
             </form>
           </CardBody>
         </Card>
+
+        {IS_DEV ? (
+          <Card className="mt-3">
+            <CardBody className="py-pad-sm">
+              <p className="text-2xs text-muted">
+                Development build. The API seeds one account at startup and makes it an admin, so it is the way into{" "}
+                <code className="font-mono text-faint">/admin/ingestion</code>, where subject packages are reloaded and
+                extraction candidates are reviewed.
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <code className="font-mono text-2xs text-faint">
+                  {DEMO.email} · {DEMO.password}
+                </code>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  className="ml-auto"
+                  onClick={() => {
+                    setIntent("signin");
+                    setEmail(DEMO.email);
+                    setPassword(DEMO.password);
+                  }}
+                >
+                  Use demo admin
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        ) : null}
 
         <p className="mt-3 text-center text-2xs text-faint">
           The catalogue and every concept stay readable without an account.
