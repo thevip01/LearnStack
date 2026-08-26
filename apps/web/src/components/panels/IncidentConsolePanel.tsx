@@ -4,6 +4,7 @@ import { Activity, Bell, CheckSquare, FileCog, GitBranch, Network, Rocket, Scrol
 import { useEffect, useState, type ReactNode } from "react";
 import { Markdown } from "@/components/content/Markdown";
 import { PanelBody, PanelError, PanelHint, PanelLoading, PanelToolbar, SectionTitle } from "@/components/panels/shared/PanelShell";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { SubmissionResult } from "@/components/practice/SubmissionResult";
 import type { PanelProps } from "@/components/runtime/types";
 import { Badge } from "@/components/ui/Badge";
@@ -37,6 +38,7 @@ export function IncidentConsolePanel({ runtime, mode, nodeId, panel }: PanelProp
   const { task, workspace, isLoading, error } = useActiveTask({ runtime, mode, nodeId, panel, accept: ["incident"] });
   const submit = useSubmitAttempt(task?.id ?? null, workspace);
   const result = useWorkspaceStore((state) => (task ? state.results[task.id] : undefined));
+  const gate = useSessionGate();
 
   const [inspected, setInspected] = useState<Set<string>>(new Set());
   const [chosen, setChosen] = useState<Set<string>>(new Set());
@@ -216,16 +218,20 @@ export function IncidentConsolePanel({ runtime, mode, nodeId, panel }: PanelProp
         ) : null}
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={onSubmit}
-            loading={submit.isPending}
-            disabled={submit.isPending || chosen.size === 0}
-          >
-            <Send className="size-3" aria-hidden />
-            Submit diagnosis
-          </Button>
+          {gate.locked ? (
+            <SignInToAct action="act on this incident" size="sm" />
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onSubmit}
+              loading={submit.isPending}
+              disabled={submit.isPending || chosen.size === 0}
+            >
+              <Send className="size-3" aria-hidden />
+              Submit diagnosis
+            </Button>
+          )}
           {chosen.size === 0 ? <span className="text-2xs text-faint">Pick at least one remediation.</span> : null}
         </div>
 

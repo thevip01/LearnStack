@@ -19,6 +19,7 @@ import { Plus, RotateCcw, Send } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { Markdown } from "@/components/content/Markdown";
 import { PanelError, PanelHint, PanelLoading, PanelToolbar } from "@/components/panels/shared/PanelShell";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { SubmissionResult } from "@/components/practice/SubmissionResult";
 import type { PanelProps } from "@/components/runtime/types";
 import { Badge } from "@/components/ui/Badge";
@@ -82,6 +83,7 @@ export function ArchitectureCanvasPanel({ runtime, mode, nodeId, panel }: PanelP
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const submit = useSubmitAttempt(task?.id ?? null, workspace);
+  const gate = useSessionGate();
   const result = useWorkspaceStore((state) => (task ? state.results[task.id] : undefined));
 
   // A monotonic id source for palette-added nodes, and a guard so we seed the
@@ -168,10 +170,14 @@ export function ArchitectureCanvasPanel({ runtime, mode, nodeId, panel }: PanelP
             <RotateCcw className="size-3" aria-hidden />
             Reset
           </Button>
-          <Button size="xs" variant="primary" onClick={onSubmit} loading={submit.isPending} disabled={submit.isPending}>
-            <Send className="size-3" aria-hidden />
-            Submit
-          </Button>
+          {gate.locked ? (
+            <SignInToAct action="save this design" />
+          ) : (
+            <Button size="xs" variant="primary" onClick={onSubmit} loading={submit.isPending} disabled={submit.isPending}>
+              <Send className="size-3" aria-hidden />
+              Submit
+            </Button>
+          )}
         </div>
       </PanelToolbar>
 

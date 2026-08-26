@@ -1,13 +1,16 @@
 "use client";
 
-import { ArrowRight, LineChart, Sparkles } from "lucide-react";
+import { ArrowRight, LineChart, Lock, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { LockedHint, useSessionGate } from "@/components/practice/SignInToAct";
 import { PageHeader, PageShell } from "@/components/shell/Page";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GlyphTile } from "@/components/ui/GlyphTile";
 import { SkeletonText } from "@/components/ui/Skeleton";
 import { describeError } from "@/lib/api";
+import { needsSession } from "@/lib/authGate";
 import { formatMinutes, formatScore, titleCase } from "@/lib/format";
 import { useRecommendations, useSubjectRuntime } from "@/lib/queries";
 import { routes, targetRoute } from "@/lib/routes";
@@ -20,6 +23,10 @@ import type { LearningMode, SubjectRuntimeOut } from "@/lib/types";
  * Modes are listed from `runtime.modes`, not from a hardcoded list, and each one
  * links at the workspace URL for that mode. A mode the package declares but has
  * not laid out is shown as unavailable instead of being quietly dropped.
+ *
+ * A signed-out visitor sees which ways in will ask them to sign in, marked from
+ * the layout's own panels rather than from a list of mode names, and the links
+ * still work: reading a practice set is open, recording an attempt is not.
  */
 export function SubjectOverview({ subjectId }: { subjectId: string }) {
   const { data: runtime, isLoading, isError, error } = useSubjectRuntime(subjectId);
@@ -57,6 +64,7 @@ export function SubjectOverview({ subjectId }: { subjectId: string }) {
           title={runtime.title}
           subtitle={runtime.subtitle ?? runtime.domain.title}
           back={{ href: routes.subjects, label: "All subjects" }}
+          glyph={<GlyphTile icon={runtime.theme?.icon} title={runtime.title} size="lg" />}
           actions={
             <>
               <Link
@@ -104,6 +112,7 @@ function preferredMode(runtime: SubjectRuntimeOut): LearningMode {
 }
 
 function ModeGrid({ runtime }: { runtime: SubjectRuntimeOut }) {
+  const { locked } = useSessionGate();
   return (
     <section className="mb-6">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Ways in</h2>
@@ -118,16 +127,28 @@ function ModeGrid({ runtime }: { runtime: SubjectRuntimeOut }) {
               </Card>
             );
           }
+          // Marked from the panels this layout actually ships, so a package that
+          // lays out practice with nothing but a brief is not called gated.
+          const gated = locked && needsSession(layout.panels);
           return (
             <Card as="li" key={mode} className="transition-colors hover:border-accent/50">
               <Link href={routes.workspace(runtime.id, mode)} className="block p-pad">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-ink">{layout.label ?? titleCase(mode)}</span>
-                  <ArrowRight className="size-3.5 text-faint" aria-hidden />
+                  {gated ? (
+                    <Lock className="size-3.5 text-warn" aria-hidden />
+                  ) : (
+                    <ArrowRight className="size-3.5 text-faint" aria-hidden />
+                  )}
                 </div>
                 <p className="mt-1 text-2xs text-faint">
                   {layout.panels.length} {layout.panels.length === 1 ? "panel" : "panels"} · primary {layout.primary_slot}
                 </p>
+                {gated ? (
+                  <p className="mt-1.5">
+                    <LockedHint label="Open to read, sign in to attempt" />
+                  </p>
+                ) : null}
               </Link>
             </Card>
           );
@@ -183,7 +204,10 @@ function Curriculum({ runtime }: { runtime: SubjectRuntimeOut }) {
               <ul className="divide-y divide-line">
                 {track.modules.map((module) => (
                   <li key={module.id} className="flex items-center justify-between gap-3 py-1.5">
-                    <span className="min-w-0 truncate text-xs text-ink">{module.title}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <GlyphTile icon={module.icon} title={module.title} size="xs" />
+                      <span className="min-w-0 truncate text-xs text-ink">{module.title}</span>
+                    </span>
                     <span className="shrink-0 text-2xs text-faint">
                       {module.concepts.length} concepts
                       {module.labs.length > 0 ? ` · ${module.labs.length} labs` : ""}

@@ -2,6 +2,7 @@
 
 import { Lightbulb, TriangleAlert } from "lucide-react";
 import { Markdown } from "@/components/content/Markdown";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,6 +31,7 @@ export function HintLadder({
 }) {
   const { hints, request, pending, error } = useRequestHint(taskId);
   const toast = useToast();
+  const gate = useSessionGate();
 
   if (hintCount === 0) {
     return (
@@ -88,12 +90,16 @@ export function HintLadder({
               This is the last rung of the ladder. On most tasks it gives the answer away.
             </p>
           ) : null}
-          <Button variant="outline" size="sm" onClick={take} loading={pending} disabled={!taskId}>
-            Reveal hint {nextLevel}
-            <span className="text-faint">
-              {cost > 0 ? `· costs ${formatPercent(cost, 0)} of the score` : "· free on this dimension"}
-            </span>
-          </Button>
+          {gate.locked ? (
+            <SignInToAct action="take a hint" size="sm" />
+          ) : (
+            <Button variant="outline" size="sm" onClick={take} loading={pending} disabled={!taskId}>
+              Reveal hint {nextLevel}
+              <span className="text-faint">
+                {cost > 0 ? `· costs ${formatPercent(cost, 0)} of the score` : "· free on this dimension"}
+              </span>
+            </Button>
+          )}
           <p className="mt-1.5 text-2xs text-faint">
             {remaining} hint{remaining === 1 ? "" : "s"} left.{" "}
             {cost > 0

@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { CodeSnippet } from "@/components/content/CodeSnippet";
 import { Markdown } from "@/components/content/Markdown";
 import { PanelError, PanelHint, PanelLoading, PanelToolbar } from "@/components/panels/shared/PanelShell";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { SubmissionResult } from "@/components/practice/SubmissionResult";
 import type { PanelProps } from "@/components/runtime/types";
 import { Badge } from "@/components/ui/Badge";
@@ -33,6 +34,7 @@ export function SqlConsolePanel({ runtime, mode, nodeId, panel }: PanelProps) {
   const buffers = useWorkspaceStore((state) => (task ? state.buffers[task.id] : undefined));
   const result = useWorkspaceStore((state) => (task ? state.results[task.id] : undefined));
   const submit = useSubmitAttempt(task?.id ?? null, workspace);
+  const gate = useSessionGate();
 
   useEffect(() => {
     if (!task || task.kind !== "sql") return;
@@ -58,17 +60,21 @@ export function SqlConsolePanel({ runtime, mode, nodeId, panel }: PanelProps) {
           {task.title}
         </span>
         <Badge tone={task.ordered ? "warn" : "neutral"}>{task.ordered ? "order matters" : "any order"}</Badge>
-        <Button
-          size="xs"
-          variant="primary"
-          className="ml-auto"
-          onClick={onSubmit}
-          loading={submit.isPending}
-          disabled={submit.isPending}
-        >
-          <Send className="size-3" aria-hidden />
-          Submit
-        </Button>
+        {gate.locked ? (
+          <SignInToAct action="run the query" className="ml-auto" />
+        ) : (
+          <Button
+            size="xs"
+            variant="primary"
+            className="ml-auto"
+            onClick={onSubmit}
+            loading={submit.isPending}
+            disabled={submit.isPending}
+          >
+            <Send className="size-3" aria-hidden />
+            Submit
+          </Button>
+        )}
       </PanelToolbar>
 
       <div className="max-h-32 shrink-0 overflow-auto border-b border-line px-pad py-2">

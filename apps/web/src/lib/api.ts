@@ -1,3 +1,5 @@
+import { resolveApiTarget } from "./apiTarget";
+import { redirectsOn401 } from "./authGate";
 import type { ApiErrorCode, ApiErrorEnvelope } from "./types";
 
 const API_VERSION_PATH = "/api/v1";
@@ -18,13 +20,29 @@ export function apiBaseUrl(): string {
 
 /** /healthz and /readyz sit outside the versioned surface. */
 export function apiOrigin(): string {
-  // Server components run inside the compose network and use the service name;
-  // the browser cannot resolve `api`, so it gets the public URL instead.
-  const raw =
-    typeof window === "undefined"
-      ? process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://api:8000"
-      : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  return normaliseBase(raw).slice(0, -API_VERSION_PATH.length);
+  // Where this resolves to, and the SameSite rule that decides it, is in
+  // `apiTarget.ts`. The short version: in the browser the API is reached through
+  // this origin so the session cookie stays first-party, and `next.config.ts`
+  // rewrites it onward. Server components have no cookie jar and use the
+  // internal hostname directly.
+  const target = resolveApiTarget(
+    { internal: process.env.API_INTERNAL_URL, public: process.env.NEXT_PUBLIC_API_URL },
+    typeof window === "undefined" ? null : window.location.origin,
+  );
+  warnOnce(target.warning);
+  return normaliseBase(target.base).slice(0, -API_VERSION_PATH.length);
+}
+
+const warned = new Set<string>();
+
+/**
+ * A misconfiguration that costs a whole session is worth one console line. Once
+ * per message, because `apiOrigin()` is called on every request.
+ */
+function warnOnce(message: string | null): void {
+  if (!message || warned.has(message)) return;
+  warned.add(message);
+  console.warn(`[learnos] ${message}`);
 }
 
 export class ApiError extends Error {
@@ -78,12 +96,12 @@ export async function fetchReadiness<T>(path: "/healthz" | "/readyz"): Promise<T
 }
 
 /**
- * Auth endpoints are exempt from the redirect: /auth/me is how the shell probes
- * for a session, and bouncing an anonymous visitor off the public catalogue
- * would reintroduce the signup wall the contract explicitly removes.
+ * Which 401 interrupts the reader lives in `authGate.ts`, next to the rest of the
+ * "what needs an account" policy. The browser check stays here because that half
+ * is about this module's environment, not about the rule.
  */
-function shouldRedirectOn401(path: string): boolean {
-  return typeof window !== "undefined" && !path.startsWith("/auth/");
+function shouldRedirectOn401(path: string, method: ApiRequest["method"]): boolean {
+  return typeof window !== "undefined" && redirectsOn401(path, method);
 }
 
 export function loginUrlForCurrentLocation(): string {
@@ -128,7 +146,7 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
 
   if (!response.ok) {
     const error = await readError(response);
-    if (error.isUnauthorized && shouldRedirectOn401(path)) {
+    if (error.isUnauthorized && shouldRedirectOn401(path, method)) {
       window.location.assign(loginUrlForCurrentLocation());
     }
     throw error;

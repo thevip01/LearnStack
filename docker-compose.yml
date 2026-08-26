@@ -93,10 +93,16 @@ services:
     build:
       context: apps/web
     environment:
-      # NEXT_PUBLIC_* is baked into the browser bundle and must be the URL the
-      # browser can reach. API_INTERNAL_URL is for server-side fetches inside
-      # the compose network.
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      # API_INTERNAL_URL is the only one needed, and it does two jobs: server-side
+      # rendering, and the /api/v1 rewrite the browser's own requests go through.
+      #
+      # NEXT_PUBLIC_API_URL is deliberately absent. Two reasons. It is baked into
+      # the browser bundle at *build* time, so setting it here never reached the
+      # bundle anyway and the value above was decorative. And pointing the browser
+      # at a different hostname than the page it is on makes every call cross-site,
+      # which a SameSite=Lax session cookie does not survive: sign-in appears to
+      # work and the next request is anonymous. Leaving it unset means the app works
+      # on localhost, on 127.0.0.1 and on a LAN address without being rebuilt.
       API_INTERNAL_URL: http://api:8000
       NODE_ENV: production
     ports:

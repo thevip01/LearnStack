@@ -327,13 +327,17 @@ if [[ "$API_ONLY" == "0" ]]; then
     ( cd "$ROOT/apps/web" && npm install )
   }
 
-  # Both variables, deliberately. `apps/web/src/lib/api.ts` picks a different
-  # base depending on whether the call is running in the browser or in the Next
-  # server, and the server-side default is the compose hostname `http://api:8000`
-  # which does not exist outside Docker. Set only the public one and every page
-  # renders server-side against a host that is not there, which shows up as an
-  # empty dashboard rather than as an error.
-  export NEXT_PUBLIC_API_URL="http://127.0.0.1:$API_PORT"
+  # One variable, deliberately. `API_INTERNAL_URL` is what the Next server can
+  # reach, and it serves two callers: server-side rendering, and the /api/v1
+  # rewrite in `apps/web/next.config.ts` that the browser goes through.
+  #
+  # `NEXT_PUBLIC_API_URL` is left unset on purpose, and unset here in case it is
+  # exported in the shell that launched this. Setting it points the browser
+  # straight at the API on a different hostname than the page, and the session
+  # cookie is SameSite=Lax: the browser accepts it once and then never sends it,
+  # so signing in appears to succeed and the next request is anonymous. That was a
+  # real afternoon. See `apps/web/src/lib/apiTarget.ts`.
+  unset NEXT_PUBLIC_API_URL
   export API_INTERNAL_URL="http://127.0.0.1:$API_PORT"
 
   bold "starting the web app on http://localhost:$WEB_PORT"

@@ -8,6 +8,7 @@ import { MatchingQuestion } from "@/components/practice/questions/MatchingQuesti
 import { OrderingQuestion } from "@/components/practice/questions/OrderingQuestion";
 import { QuestionFrame } from "@/components/practice/questions/QuestionFrame";
 import { ShortAnswerQuestion } from "@/components/practice/questions/ShortAnswerQuestion";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { SubmissionResult } from "@/components/practice/SubmissionResult";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -100,6 +101,7 @@ export function QuizRunner({
   const submit = useSubmitAttempt(task.id, workspace);
   const toast = useToast();
   const formRef = useRef<HTMLDivElement>(null);
+  const gate = useSessionGate();
 
   const result = stored && stored.attempt_id !== dismissed ? stored : null;
   const graded = result !== null;
@@ -205,9 +207,13 @@ export function QuizRunner({
               Try again
             </Button>
           ) : null}
-          <Button size="xs" variant="primary" onClick={send} loading={submit.isPending} disabled={graded}>
-            Submit <kbd className="ml-1">⌘↵</kbd>
-          </Button>
+          {gate.locked ? (
+            <SignInToAct action="submit" />
+          ) : (
+            <Button size="xs" variant="primary" onClick={send} loading={submit.isPending} disabled={graded}>
+              Submit <kbd className="ml-1">⌘↵</kbd>
+            </Button>
+          )}
         </div>
       </PanelToolbar>
 

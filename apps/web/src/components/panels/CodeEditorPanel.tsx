@@ -3,6 +3,7 @@
 import Editor from "@monaco-editor/react";
 import { Lock, Play, Send } from "lucide-react";
 import { useEffect } from "react";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { SubmissionResult } from "@/components/practice/SubmissionResult";
 import { PanelError, PanelHint, PanelLoading, PanelToolbar } from "@/components/panels/shared/PanelShell";
 import type { PanelProps } from "@/components/runtime/types";
@@ -96,6 +97,7 @@ export function CodeEditorPanel({ runtime, mode, nodeId, panel }: PanelProps) {
 
   const { run, pending: running, error: runError } = useRunner(workspace);
   const submit = useSubmitAttempt(task?.id ?? null, workspace);
+  const gate = useSessionGate();
 
   useEffect(() => {
     if (!task) return;
@@ -156,14 +158,20 @@ export function CodeEditorPanel({ runtime, mode, nodeId, panel }: PanelProps) {
           })}
         </div>
         <div className="ml-2 flex shrink-0 items-center gap-1.5">
-          <Button size="xs" variant="secondary" onClick={onRun} loading={running} disabled={running}>
-            <Play className="size-3" aria-hidden />
-            Run
-          </Button>
-          <Button size="xs" variant="primary" onClick={onSubmit} loading={submit.isPending} disabled={submit.isPending}>
-            <Send className="size-3" aria-hidden />
-            Submit
-          </Button>
+          {gate.locked ? null : (
+            <Button size="xs" variant="secondary" onClick={onRun} loading={running} disabled={running}>
+              <Play className="size-3" aria-hidden />
+              Run
+            </Button>
+          )}
+          {gate.locked ? (
+            <SignInToAct action="submit this solution" />
+          ) : (
+            <Button size="xs" variant="primary" onClick={onSubmit} loading={submit.isPending} disabled={submit.isPending}>
+              <Send className="size-3" aria-hidden />
+              Submit
+            </Button>
+          )}
         </div>
       </PanelToolbar>
 

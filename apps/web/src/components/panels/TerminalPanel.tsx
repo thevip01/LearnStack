@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 // type for it and there is none. The xterm *code* is still loaded lazily below, which
 // is the part worth deferring.
 import "@xterm/xterm/css/xterm.css";
+import { SignInToAct, useSessionGate } from "@/components/practice/SignInToAct";
 import { SubmissionResult } from "@/components/practice/SubmissionResult";
 import { PanelError, PanelHint, PanelLoading, PanelToolbar } from "@/components/panels/shared/PanelShell";
 import type { PanelProps } from "@/components/runtime/types";
@@ -47,6 +48,7 @@ export function TerminalPanel({ runtime, mode, nodeId, panel }: PanelProps) {
   const result = useWorkspaceStore((state) => (task ? state.results[task.id] : undefined));
   const { run } = useRunner(workspace);
   const submit = useSubmitAttempt(task?.id ?? null, workspace);
+  const gate = useSessionGate();
 
   const [commands, setCommands] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
@@ -197,17 +199,21 @@ export function TerminalPanel({ runtime, mode, nodeId, panel }: PanelProps) {
             allowed: {task.allowed_commands.join(", ")}
           </span>
         ) : null}
-        <Button
-          size="xs"
-          variant="primary"
-          className="ml-auto"
-          onClick={onSubmit}
-          loading={submit.isPending}
-          disabled={submit.isPending || commands.length === 0}
-        >
-          <Send className="size-3" aria-hidden />
-          Submit
-        </Button>
+        {gate.locked ? (
+          <SignInToAct action="submit the transcript" className="ml-auto" />
+        ) : (
+          <Button
+            size="xs"
+            variant="primary"
+            className="ml-auto"
+            onClick={onSubmit}
+            loading={submit.isPending}
+            disabled={submit.isPending || commands.length === 0}
+          >
+            <Send className="size-3" aria-hidden />
+            Submit
+          </Button>
+        )}
       </PanelToolbar>
 
       {submit.error ? (
